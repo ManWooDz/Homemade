@@ -1,0 +1,50 @@
+# =========================
+# Security (ห้ามหลุดเด็ดขาด!)
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# Backend (Python / FastAPI)
+# =========================
+backend/venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+pip-log.txt
+
+# (Optional) ถ้าไฟล์โมเดล YOLO ใหญ่เกินไป
+# backend/*.pt 
+
+# =========================
+# Frontend (React / Vite)
+# =========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Editor & OS files
+# =========================
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
