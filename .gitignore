@@ -15,6 +15,7 @@ __pycache__/
 *.pyo
 *.pyd
 pip-log.txt
+backend/images/test_model
 
 # (Optional) ถ้าไฟล์โมเดล YOLO ใหญ่เกินไป
 # backend/*.pt 

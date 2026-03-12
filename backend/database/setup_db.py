@@ -87,7 +87,7 @@ def setup_mock_db():
             "short_description": "Spicy minced pork stir-fried with holy basil, garlic, and chilies (Pad Kra Pao).",
             "ratings": 4.8,
             "review": 450,
-            "image": "https://images.unsplash.com/photo-1626804475297-41609aeee8ec?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            "image": "https://thewoksoflife.com/wp-content/uploads/2016/08/pad-kra-pao-7.jpg",
             "tags": ["Asian Food", "Thai Food"],
             "ingredients": ["minced pork", "holy basil leaves", "garlic", "bird's eye chilies", "oyster sauce", "soy sauce", "fish sauce", "sugar", "vegetable oil"],
             "nutrition": {"calories": 480, "protein_g": 28, "carbs_g": 12, "fat_g": 35},
