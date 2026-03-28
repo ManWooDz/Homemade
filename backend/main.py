@@ -51,6 +51,8 @@ async def startup_event():
             CREATE TABLE IF NOT EXISTS user_ingredients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
+                category TEXT DEFAULT 'Other',
+                quantity TEXT DEFAULT '1',
                 image TEXT
             )
         """)
@@ -285,7 +287,24 @@ async def generate_recipe(
 
 class UserIngredientCreate(BaseModel):
     name: str
-    image: str = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150"
+    category: str = "Other"
+    quantity: str = "1"
+    image: str = "http://localhost:8000/images/No-image-available.png"
+
+@app.get("/api/ingredient-images")
+async def get_ingredient_images():
+    images_dir = os.path.join(os.path.dirname(__file__), "images", "ingredients")
+    try:
+        images = []
+        if os.path.exists(images_dir):
+            for file in os.listdir(images_dir):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    images.append(f"http://localhost:8000/images/ingredients/{file}")
+        
+        fallback = "http://localhost:8000/images/No-image-available.png"
+        return {"status": "success", "data": {"images": images, "fallback": fallback}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/api/user-ingredients")
 async def get_user_ingredients():
@@ -293,9 +312,9 @@ async def get_user_ingredients():
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, image FROM user_ingredients")
+        cursor.execute("SELECT id, name, category, quantity, image FROM user_ingredients")
         rows = cursor.fetchall()
-        ingredients = [{"id": row[0], "name": row[1], "image": row[2], "selected": True} for row in rows]
+        ingredients = [{"id": row[0], "name": row[1], "category": row[2], "quantity": row[3], "image": row[4], "selected": True} for row in rows]
         conn.close()
         return {"status": "success", "data": ingredients}
     except Exception as e:
@@ -307,11 +326,12 @@ async def add_user_ingredient(ingredient: UserIngredientCreate):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO user_ingredients (name, image) VALUES (?, ?)", (ingredient.name, ingredient.image))
+        cursor.execute("INSERT INTO user_ingredients (name, category, quantity, image) VALUES (?, ?, ?, ?)", 
+                       (ingredient.name, ingredient.category, ingredient.quantity, ingredient.image))
         conn.commit()
         new_id = cursor.lastrowid
         conn.close()
-        return {"status": "success", "data": {"id": new_id, "name": ingredient.name, "image": ingredient.image, "selected": True}}
+        return {"status": "success", "data": {"id": new_id, "name": ingredient.name, "category": ingredient.category, "quantity": ingredient.quantity, "image": ingredient.image, "selected": True}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -337,8 +357,8 @@ class GenerateRecipeTextRequest(BaseModel):
 async def generate_recipe_text(request: GenerateRecipeTextRequest):
     try:
         user_prefs = request.preferences
-        # Extract just the ingredient names if they are dicts
-        ingredients_list = [ing.get("name", ing) if isinstance(ing, dict) else ing for ing in request.ingredients]
+        # Extract ingredient names (and quantity if available) if they are dicts
+        ingredients_list = [f"{ing.get('name', ing)} ({ing.get('quantity', 'N/A')})" if isinstance(ing, dict) else ing for ing in request.ingredients]
         base_recipe = request.recipe
         
         print(f"\n📥 [1] Text Request | Prefs: {user_prefs}")

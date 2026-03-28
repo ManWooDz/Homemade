@@ -16,6 +16,7 @@ import CreateRecipe from "./pages/CreateRecipe";
 import CookingPage from "./pages/CookingPage";
 import UserIngredients from "./pages/UserIngredients";
 import CustomCookingPage from "./pages/CustomCookingPage";
+import AddIngredient from "./pages/AddIngredient";
 
 function App() {
     const [activeTab, setActiveTab] = useState("home");
@@ -168,10 +169,23 @@ function App() {
                 setActiveTab={handleTabChange}
                 userIngredients={userIngredients}
                 setUserIngredients={setUserIngredients}
+                goToAddIngredient={() => setCurrentView("add-ingredient")}
                 onBack={() => {
                     setCurrentView("home");
                     setActiveTab("home");
                 }}
+            />
+        );
+    }
+
+    if (currentView === "add-ingredient") {
+        return (
+            <AddIngredient
+                userIngredients={userIngredients}
+                setUserIngredients={setUserIngredients}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => setCurrentView("user-ingredients")}
             />
         );
     }
