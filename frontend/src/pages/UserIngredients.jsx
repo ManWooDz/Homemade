@@ -147,7 +147,7 @@ export default function UserIngredients({
                 {/* Floating Action Button */}
                 <button
                     onClick={goToAddIngredient}
-                    className="absolute bottom-28 right-6 w-14 h-14 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40"
+                    className="absolute bottom-28 right-6 w-14 h-14 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40"
                     style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 >
                     <Plus className="w-7 h-7" />

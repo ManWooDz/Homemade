@@ -31,6 +31,7 @@ function App() {
     
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [cookingSource, setCookingSource] = useState("create-recipe"); // "create-recipe" | "custom-cooking"
 
     useEffect(() => {
         const fetchRecipes = async () => {
@@ -86,7 +87,7 @@ function App() {
             setSelectedRecipe(null);
         } else if (tab === "fridge") {
             setCurrentView("user-ingredients");
-        } else if (tab === "cooking" && currentView === "home") {
+        } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient")) {
             setSelectedRecipe(null);
             setCurrentView("custom-cooking");
         }
@@ -122,6 +123,8 @@ function App() {
                 onBack={() => setCurrentView("recipe-detail")}
                 onGenerate={async (preferences, updatedIngredients) => {
                     setCurrentView("cooking-page");
+                    setCookingSource("create-recipe");
+                    setGeneratedRecipe(null);
                     setIsGenerating(true);
                     try {
                         const response = await fetch("http://localhost:8000/api/generate-recipe-text", {
@@ -157,7 +160,7 @@ function App() {
                 isGenerating={isGenerating}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
-                onBack={() => setCurrentView("create-recipe")}
+                onBack={() => setCurrentView(cookingSource)}
             />
         );
     }
@@ -202,6 +205,8 @@ function App() {
                 }}
                 onGenerate={async (preferences) => {
                     setCurrentView("cooking-page");
+                    setCookingSource("custom-cooking");
+                    setGeneratedRecipe(null);
                     setIsGenerating(true);
                     try {
                         const response = await fetch("http://localhost:8000/api/generate-recipe-text", {

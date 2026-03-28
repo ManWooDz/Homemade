@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -8,7 +8,6 @@ import os
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from model.yolo_services import detect_ingredients_from_image
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
@@ -66,81 +65,135 @@ async def startup_event():
 # Serves local images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
-# ==========================================
-# 🔍 ฟังก์ชัน RAG: Match Scoring (ค้นหาสูตร)
-# ==========================================
-def retrieve_base_recipe(detected_ingredients, user_prefs):
-    """
-    รับ Array วัตถุดิบจาก YOLO ไปค้นหาสูตรใน SQLite ที่ตรงกันมากที่สุด
-    """
-    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+
+BASIC_INGREDIENTS = ["salt", "pepper", "oil", "soy sauce", "fish sauce", "sugar", "water"]
+
+BAD_FLAVOR_PAIRS = [
+    ("milk", "fish sauce"),
+    ("chocolate", "garlic"),
+]
+
+# -------------------------------
+# 1. Ingredient Check (No hallucination)
+# -------------------------------
+def check_ingredients(recipe, user_ingredients):
+    for item in recipe["adjusted_ingredients"]:
+        # The LLM writes adjusted_ingredients in Thai (non-ASCII).
+        # We can only validate English/ASCII ingredient names, so skip Thai-script lines.
+        if not item.isascii():
+            continue
+        name = item.lower()
+        if not any(ing in name for ing in user_ingredients + BASIC_INGREDIENTS):
+            return False, f"Invalid ingredient found: {item}"
+    return True, "OK"
+
+
+# -------------------------------
+# 2. Flavor Check
+# -------------------------------
+def check_flavor(recipe):
+    ingredients_text = " ".join(recipe["adjusted_ingredients"]).lower()
     
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # ดึงสูตรอาหารทั้งหมดออกมาจาก Database
-        cursor.execute("SELECT * FROM base_recipes")
-        rows = cursor.fetchall()
-        
-        best_recipe = None
-        highest_score = -1
-        
-        # ทำ Match Scoring ด้วยการนับจำนวนจุดตัด (Intersection)
-        detected_set = set([item.lower() for item in detected_ingredients])
-        
-        for row in rows:
-            recipe_id = row[0]
-            recipe_name = row[1]
-            recipe_short_description = row[2]
-            recipe_ratings = row[3]
-            recipe_review = row[4]
-            recipe_image = row[5]
-            recipe_tags = json.loads(row[6])
-            recipe_ingredients = json.loads(row[7])
-            recipe_nutrition = json.loads(row[8])
-            recipe_instructions = json.loads(row[9])
-            
-            recipe_set = set([item.lower() for item in recipe_ingredients])
-            
-            # คำนวณคะแนน: เจอวัตถุดิบตรงกันกี่ชิ้น?
-            match_score = len(detected_set.intersection(recipe_set))
-            
-            # (Option เสริม) ถ้าผู้ใช้มีเงื่อนไข เช่น Diet: Keto แล้วสูตรนี้เป็น Keto ให้คะแนนบวกเพิ่ม!
-            diet_pref = user_prefs.get("diet", "")
-            if diet_pref and diet_pref in recipe_tags:
-                match_score += 1 
-                
-            # เก็บสูตรที่คะแนนสูงสุดไว้
-            if match_score > highest_score:
-                highest_score = match_score
-                best_recipe = {
-                    "id": recipe_id,
-                    "recipe_name": recipe_name,
-                    "short_description": recipe_short_description,
-                    "ratings": recipe_ratings,
-                    "review": recipe_review,
-                    "image": recipe_image,
-                    "base_ingredients": recipe_ingredients,
-                    "base_nutrition": recipe_nutrition,
-                    "diet_tags": recipe_tags,
-                    "instructions": recipe_instructions,
-                    "match_score": match_score
-                }
-                
-        conn.close()
-        
-        # ถ้าคะแนนเป็น 0 (หาของไม่ตรงกับเมนูไหนเลย) ส่งค่า Default กลับไป
-        if highest_score == 0:
-            return {"error": "ไม่พบสูตรอาหารที่ตรงกับวัตถุดิบนี้ในระบบ กรุณาลองรูปอื่น"}
-            
-        return best_recipe
-        
-    except Exception as e:
-        return {"error": f"Database Error: {str(e)}"}
+    for a, b in BAD_FLAVOR_PAIRS:
+        if a in ingredients_text and b in ingredients_text:
+            return False, f"Bad flavor combination: {a} + {b}"
+    
+    return True, "OK"
+
+
+# -------------------------------
+# 3. Cooking Logic Check
+# -------------------------------
+def check_logic(recipe):
+    instructions = " ".join(recipe["instructions"]).lower()
+
+    has_oil = "oil" in instructions or "น้ำมัน" in instructions
+
+    if "ทอด" in instructions and not has_oil:
+        return False, "Frying without oil"
+
+    if "ผัด" in instructions and not has_oil:
+        return False, "Stir-fry without oil"
+
+    return True, "OK"
+
+
+# -------------------------------
+# 4. Nutrition Check
+# -------------------------------
+def check_nutrition(recipe):
+    nutrition = recipe["nutrition"]
+
+    if nutrition["calories"] <= 0 or nutrition["calories"] > 1500:
+        return False, "Unrealistic calories"
+
+    if nutrition["protein_g"] < 0:
+        return False, "Invalid protein value"
+
+    return True, "OK"
+
+
+# -------------------------------
+# 5. Allergy Check
+# -------------------------------
+def check_allergy(recipe, user_prefs):
+    ingredients_text = " ".join(recipe["adjusted_ingredients"]).lower()
+    
+    if "allergic to shrimp" in str(user_prefs).lower() and "shrimp" in ingredients_text:
+        return False, "Allergy violation: shrimp found"
+
+    return True, "OK"
+
+
+# -------------------------------
+# 6. Core Ingredient Check
+# -------------------------------
+def check_core(recipe, user_ingredients):
+    name = recipe["recipe_name"].lower()
+
+    if "steak" in name and not any("beef" in ing for ing in user_ingredients):
+        return False, "Missing core ingredient: beef for steak"
+
+    return True, "OK"
+
+
+# -------------------------------
+# Main Validation Pipeline
+# -------------------------------
+def validate_recipe(recipe, user_ingredients, user_prefs):
+    checks = [
+        check_ingredients,
+        check_flavor,
+        check_logic,
+        check_nutrition,
+        check_allergy,
+        check_core
+    ]
+
+    # Map each check to how it should be called
+    single_arg_checks = {check_flavor, check_logic, check_nutrition}
+
+    for check in checks:
+        if check in single_arg_checks:
+            valid, msg = check(recipe)
+        elif check == check_allergy:
+            valid, msg = check(recipe, user_prefs)
+        else:  # check_ingredients, check_core
+            valid, msg = check(recipe, user_ingredients)
+
+        if not valid:
+            return {
+                "status": "fail",
+                "reason": msg
+            }
+
+    return {
+        "status": "pass",
+        "recipe": recipe
+    }
 
 # ==========================================
-# 🧠 ฟังก์ชัน AI (รอเชื่อมต่อ Gemini สัปดาห์หน้า)
+# LLM Agent
 # ==========================================
 def call_agentic_llm(ingredients, user_prefs, base_recipe):
     print("Agentic LLM (Gemini) is thinking and calculating...")
@@ -201,14 +254,14 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe):
         return result_json
 
     except Exception as e:
-        print(f"❌ Gemini API Error: {e}")
+        print(f"Gemini API Error: {e}")
         return {
             "error": "ไม่สามารถสร้างสูตรอาหารได้ในขณะนี้",
             "details": str(e)
         }
 
 # ==========================================
-# 🚀 API Endpoint (ช่องทางรับส่งข้อมูล)
+#  API Endpoint (ช่องทางรับส่งข้อมูล)
 # ==========================================
 @app.get("/api/recipes")
 async def get_all_recipes():
@@ -235,13 +288,17 @@ async def get_all_recipes():
                     "image": img_url
                 })
 
+            image_val = row[5]
+            if image_val and not image_val.startswith("http"):
+                image_val = f"http://localhost:8000/{image_val}"
+
             recipes.append({
                 "id": row[0],
                 "name": row[1],
                 "short_description": row[2],
                 "ratings": row[3],
                 "review": row[4],
-                "image": row[5],
+                "image": image_val,
                 "tags": json.loads(row[6]),
                 "ingredients": mapped_ingredients,
                 "nutrition": json.loads(row[8]),
@@ -252,38 +309,7 @@ async def get_all_recipes():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.post("/api/generate-recipe")
-async def generate_recipe(
-    image: UploadFile = File(...), 
-    preferences: str = Form("{}") 
-):
-    try:
-        image_bytes = await image.read()
-        user_prefs = json.loads(preferences)
-        print(f"\n📥 [1] Received Request | Prefs: {user_prefs}")
 
-        # สเตป 2: ให้ YOLO ดูรูป
-        detected_ingredients = detect_ingredients_from_image(image_bytes)
-        print(f"👀 [2] YOLO Detected: {detected_ingredients}")
-
-        # สเตป 3: ให้ RAG ค้นหาสูตร
-        base_recipe = retrieve_base_recipe(detected_ingredients, user_prefs)
-        
-        if "error" in base_recipe:
-            return {"status": "error", "message": base_recipe["error"]}
-            
-        print(f"🔍 [3] RAG Found Match: {base_recipe['recipe_name']} (Score: {base_recipe['match_score']})")
-
-        # สเตป 4: ส่งให้ LLM (ตอนนี้เป็น Mock)
-        final_output = call_agentic_llm(detected_ingredients, user_prefs, base_recipe)
-
-        return {
-            "status": "success",
-            "data": final_output
-        }
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
 
 class UserIngredientCreate(BaseModel):
     name: str
@@ -358,14 +384,43 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
     try:
         user_prefs = request.preferences
         # Extract ingredient names (and quantity if available) if they are dicts
-        ingredients_list = [f"{ing.get('name', ing)} ({ing.get('quantity', 'N/A')})" if isinstance(ing, dict) else ing for ing in request.ingredients]
+        ingredients_list_for_llm = [f"{ing.get('name', ing)} ({ing.get('quantity', 'N/A')})" if isinstance(ing, dict) else ing for ing in request.ingredients]
+        # สกัดเฉพาะชื่อวัตถุดิบเพื่อเอาไปใช้ validate
+        ingredients_name_only = [ing.get('name', ing).lower() if isinstance(ing, dict) else ing.lower() for ing in request.ingredients]
+        
         base_recipe = request.recipe
         
-        print(f"\n📥 [1] Text Request | Prefs: {user_prefs}")
-        print(f"👀 [2] Text Ingredients: {ingredients_list}")
-        print(f"🔍 [3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
+        print(f"\n[1] Text Request | Prefs: {user_prefs}")
+        print(f"[2] Text Ingredients: {ingredients_list_for_llm}")
+        print(f"[3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
 
-        final_output = call_agentic_llm(ingredients_list, user_prefs, base_recipe)
+        max_retries = 3
+        attempt = 0
+        final_output = None
+        
+        while attempt < max_retries:
+            attempt += 1
+            print(f"Generation Attempt: {attempt}/{max_retries}")
+            
+            recipe = call_agentic_llm(ingredients_list_for_llm, user_prefs, base_recipe)
+            
+            if "error" in recipe:
+                final_output = recipe
+                break
+                
+            result = validate_recipe(recipe, ingredients_name_only, user_prefs)
+            
+            if result["status"] == "fail":
+                print(f"Recipe rejected: {result['reason']}")
+            else:
+                print("Recipe approved")
+                final_output = recipe
+                break
+                
+        if not final_output:
+             return {"status": "error", "message": "Failed to generate a valid recipe after multiple attempts due to validation failures."}
+        elif "error" in final_output:
+             return {"status": "error", "message": final_output["error"]}
 
         return {
             "status": "success",

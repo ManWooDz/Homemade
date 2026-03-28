@@ -3,11 +3,28 @@ import { ChevronLeft, Plus } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 
-export default function AddIngredient({ userIngredients, setUserIngredients, onBack, activeTab, setActiveTab }) {
+export default function AddIngredient({
+    userIngredients,
+    setUserIngredients,
+    onBack,
+    activeTab,
+    setActiveTab,
+}) {
     const [name, setName] = useState("");
     const [category, setCategory] = useState("Meat & poultry");
-    const [quantity, setQuantity] = useState("1");
-    
+    const [quantityAmount, setQuantityAmount] = useState("1");
+    const [quantityUnit, setQuantityUnit] = useState("pcs");
+
+    const unitOptions = [
+        { label: "pcs", value: "pieces (ชิ้น)" },
+        { label: "g", value: "grams (กรัม)" },
+        { label: "kg", value: "kilograms (กิโลกรัม)" },
+        { label: "ml", value: "ml (มิลลิลิตร)" },
+        { label: "L", value: "liters (ลิตร)" },
+        { label: "tbsp", value: "tablespoon (ช้อนโต๊ะ)" },
+        { label: "tsp", value: "teaspoon (ช้อนชา)" },
+    ];
+
     const [availableImages, setAvailableImages] = useState([]);
     const [fallbackImage, setFallbackImage] = useState("");
     const [selectedImage, setSelectedImage] = useState("");
@@ -18,7 +35,9 @@ export default function AddIngredient({ userIngredients, setUserIngredients, onB
     useEffect(() => {
         const fetchImages = async () => {
             try {
-                const response = await fetch("http://localhost:8000/api/ingredient-images");
+                const response = await fetch(
+                    "http://localhost:8000/api/ingredient-images",
+                );
                 const result = await response.json();
                 if (result.status === "success") {
                     setAvailableImages(result.data.images);
@@ -35,7 +54,7 @@ export default function AddIngredient({ userIngredients, setUserIngredients, onB
     const filteredImages = availableImages.filter((img) => {
         if (!name.trim()) return true;
         const searchTerm = name.toLowerCase().trim();
-        const filename = img.split('/').pop().toLowerCase();
+        const filename = img.split("/").pop().toLowerCase();
         return filename.includes(searchTerm);
     });
 
@@ -43,16 +62,19 @@ export default function AddIngredient({ userIngredients, setUserIngredients, onB
         if (!name.trim()) return;
         setIsSaving(true);
         try {
-            const response = await fetch("http://localhost:8000/api/user-ingredients", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: name,
-                    category: category,
-                    quantity: quantity,
-                    image: selectedImage
-                })
-            });
+            const response = await fetch(
+                "http://localhost:8000/api/user-ingredients",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: name,
+                        category: category,
+                        quantity: `${quantityAmount} ${quantityUnit}`,
+                        image: selectedImage,
+                    }),
+                },
+            );
             const result = await response.json();
             if (result.status === "success") {
                 setUserIngredients([...userIngredients, result.data]);
@@ -87,14 +109,20 @@ export default function AddIngredient({ userIngredients, setUserIngredients, onB
 
                 <div className="flex-1 overflow-y-auto px-5 pb-32">
                     <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">Add Ingredient</h2>
-                        <p className="text-sm text-gray-500 mt-1">Fill in the details for your new ingredient.</p>
+                        <h2 className="text-2xl font-bold text-gray-900">
+                            Add Ingredient
+                        </h2>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Fill in the details for your new ingredient.
+                        </p>
                     </div>
 
                     <div className="flex flex-col gap-6">
                         {/* Name Input */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">Ingredient Name</h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                Ingredient Name
+                            </h3>
                             <input
                                 type="text"
                                 placeholder="e.g. Eggs, Pork Belly..."
@@ -108,55 +136,115 @@ export default function AddIngredient({ userIngredients, setUserIngredients, onB
                         <div className="flex justify-center mb-2">
                             <div className="w-32 h-32 bg-gray-100 rounded-full overflow-hidden shadow-sm border-2 border-gray-200">
                                 {selectedImage && (
-                                    <img src={selectedImage} alt="Preview" className="w-full h-full object-cover" />
+                                    <img
+                                        src={selectedImage}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover"
+                                    />
                                 )}
                             </div>
                         </div>
 
                         {/* Image Picker */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">Choose an Image</h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                Choose an Image
+                            </h3>
                             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide py-1">
                                 {/* Fallback Option */}
                                 <button
-                                    onClick={() => setSelectedImage(fallbackImage)}
-                                    className={`w-14 h-14 shrink-0 rounded-2xl overflow-hidden border-2 transition ${selectedImage === fallbackImage ? 'border-[#EF5A3A] p-0.5' : 'border-transparent'}`}
+                                    onClick={() =>
+                                        setSelectedImage(fallbackImage)
+                                    }
+                                    className={`w-14 h-14 shrink-0 rounded-2xl overflow-hidden border-2 transition ${selectedImage === fallbackImage ? "border-[#EF5A3A] p-0.5" : "border-transparent"}`}
                                 >
                                     <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-xl overflow-hidden">
-                                        <img src={fallbackImage} alt="None" className="w-full h-full object-cover opacity-60" />
+                                        <img
+                                            src={fallbackImage}
+                                            alt="None"
+                                            className="w-full h-full object-cover opacity-60"
+                                        />
                                     </div>
                                 </button>
-                                
+
                                 {filteredImages.map((img, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => setSelectedImage(img)}
-                                        className={`w-14 h-14 shrink-0 rounded-2xl overflow-hidden border-2 transition ${selectedImage === img ? 'border-[#EF5A3A] p-0.5' : 'border-transparent shadow-sm'}`}
+                                        className={`w-14 h-14 shrink-0 rounded-2xl overflow-hidden border-2 transition ${selectedImage === img ? "border-[#EF5A3A] p-0.5" : "border-transparent shadow-sm"}`}
                                     >
                                         <div className="w-full h-full rounded-xl overflow-hidden">
-                                            <img src={img} alt="Ingredient" className="w-full h-full object-cover" />
+                                            <img
+                                                src={img}
+                                                alt="Ingredient"
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-
                         {/* Quantity Input */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">Quantity</h3>
-                            <input
-                                type="text"
-                                placeholder="e.g. 500g, 2 pieces..."
-                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
-                            />
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                Quantity
+                            </h3>
+                            <div className="flex gap-3">
+                                {/* Amount number input */}
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    placeholder="1"
+                                    className="w-24 bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition text-center"
+                                    value={quantityAmount}
+                                    onChange={(e) =>
+                                        setQuantityAmount(e.target.value)
+                                    }
+                                />
+                                {/* Unit dropdown */}
+                                <div className="relative flex-1">
+                                    <select
+                                        value={quantityUnit}
+                                        onChange={(e) =>
+                                            setQuantityUnit(e.target.value)
+                                        }
+                                        className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 pr-10 outline-none text-base focus:border-[#EF5A3A] transition cursor-pointer text-gray-700"
+                                    >
+                                        {unitOptions.map((opt) => (
+                                            <option
+                                                key={opt.value}
+                                                value={opt.value}
+                                            >
+                                                {opt.label} — {opt.value}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {/* Custom arrow icon */}
+                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="w-4 h-4"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                        >
+                                            <path
+                                                fillRule="evenodd"
+                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                clipRule="evenodd"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Category Selection */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">Category</h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                Category
+                            </h3>
                             <div className="grid grid-cols-2 gap-3">
                                 {categories.map((cat) => (
                                     <button
@@ -175,7 +263,7 @@ export default function AddIngredient({ userIngredients, setUserIngredients, onB
                         </div>
                     </div>
 
-                    <button 
+                    <button
                         onClick={handleSave}
                         disabled={!name.trim() || isSaving}
                         className="w-full mt-8 bg-[#EF5A3A] text-white py-4 rounded-full text-lg font-bold shadow-md hover:bg-orange-600 disabled:opacity-50 transition flex justify-center items-center"

@@ -5,13 +5,21 @@ import logo from "../assets/HomeMade_Logo.png";
 
 import BottomMenu from "../components/bottomMenu";
 
-export default function RecipeDetail({ recipe, onBack, onConfirm, activeTab, setActiveTab }) {
+export default function RecipeDetail({
+    recipe,
+    onBack,
+    onConfirm,
+    activeTab,
+    setActiveTab,
+}) {
     const [ingredients, setIngredients] = useState(() => {
         if (recipe && recipe.ingredients) {
             return recipe.ingredients.map((ing, index) => ({
                 id: index + 1,
                 name: ing.name || ing,
-                image: ing.image || "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150",
+                image:
+                    ing.image ||
+                    "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150",
                 selected: true,
             }));
         }
@@ -75,9 +83,9 @@ export default function RecipeDetail({ recipe, onBack, onConfirm, activeTab, set
                         <img
                             src={
                                 recipe?.image ||
-                                "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                                "/backend/images/No-image-available.png"
                             }
-                            alt={recipe?.name || "Superfood Veggie Bowl"}
+                            alt={recipe?.name || "Error Recipe Name"}
                             className="w-full h-full object-cover"
                         />
                     </div>
@@ -114,8 +122,7 @@ export default function RecipeDetail({ recipe, onBack, onConfirm, activeTab, set
                             Description
                         </h3>
                         <p className="text-black text-sm mb-6 leading-relaxed">
-                            {recipe?.short_description ||
-                                "error"}
+                            {recipe?.short_description || "error"}
                         </p>
 
                         {/* Nutrition Section */}

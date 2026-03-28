@@ -7,12 +7,21 @@ def image_path(name):
     name = name.lower()
     name = re.sub(r"[']", "", name)
     name = name.replace(" ", "_")
+    
+    base_dir = os.path.join(os.path.dirname(__file__), "..", "images", "ingredients")
+    for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+        if os.path.exists(os.path.join(base_dir, f"{name}{ext}")):
+            return f"images/ingredients/{name}{ext}"
+            
     return f"images/ingredients/{name}.jpg"
 
 def generate_ingredients_table():
     db_path = os.path.join(os.path.dirname(__file__), "recipes.db")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
+    # Drop table to start fresh and reset AUTOINCREMENT
+    cursor.execute("DROP TABLE IF EXISTS ingredients")
 
     # Create ingredients table
     cursor.execute("""
