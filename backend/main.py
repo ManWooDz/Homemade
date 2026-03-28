@@ -41,6 +41,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_ingredients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                category TEXT DEFAULT 'Other',
+                quantity TEXT DEFAULT '1',
+                image TEXT
+            )
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"Error initializing DB: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 # Serves local images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
@@ -263,6 +285,69 @@ async def generate_recipe(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+class UserIngredientCreate(BaseModel):
+    name: str
+    category: str = "Other"
+    quantity: str = "1"
+    image: str = "http://localhost:8000/images/No-image-available.png"
+
+@app.get("/api/ingredient-images")
+async def get_ingredient_images():
+    images_dir = os.path.join(os.path.dirname(__file__), "images", "ingredients")
+    try:
+        images = []
+        if os.path.exists(images_dir):
+            for file in os.listdir(images_dir):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    images.append(f"http://localhost:8000/images/ingredients/{file}")
+        
+        fallback = "http://localhost:8000/images/No-image-available.png"
+        return {"status": "success", "data": {"images": images, "fallback": fallback}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/user-ingredients")
+async def get_user_ingredients():
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, category, quantity, image FROM user_ingredients")
+        rows = cursor.fetchall()
+        ingredients = [{"id": row[0], "name": row[1], "category": row[2], "quantity": row[3], "image": row[4], "selected": True} for row in rows]
+        conn.close()
+        return {"status": "success", "data": ingredients}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/user-ingredients")
+async def add_user_ingredient(ingredient: UserIngredientCreate):
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO user_ingredients (name, category, quantity, image) VALUES (?, ?, ?, ?)", 
+                       (ingredient.name, ingredient.category, ingredient.quantity, ingredient.image))
+        conn.commit()
+        new_id = cursor.lastrowid
+        conn.close()
+        return {"status": "success", "data": {"id": new_id, "name": ingredient.name, "category": ingredient.category, "quantity": ingredient.quantity, "image": ingredient.image, "selected": True}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.delete("/api/user-ingredients/{ingredient_id}")
+async def delete_user_ingredient(ingredient_id: int):
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM user_ingredients WHERE id = ?", (ingredient_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 class GenerateRecipeTextRequest(BaseModel):
     recipe: Dict[str, Any]
     ingredients: List[Any]
@@ -272,8 +357,8 @@ class GenerateRecipeTextRequest(BaseModel):
 async def generate_recipe_text(request: GenerateRecipeTextRequest):
     try:
         user_prefs = request.preferences
-        # Extract just the ingredient names if they are dicts
-        ingredients_list = [ing.get("name", ing) if isinstance(ing, dict) else ing for ing in request.ingredients]
+        # Extract ingredient names (and quantity if available) if they are dicts
+        ingredients_list = [f"{ing.get('name', ing)} ({ing.get('quantity', 'N/A')})" if isinstance(ing, dict) else ing for ing in request.ingredients]
         base_recipe = request.recipe
         
         print(f"\n📥 [1] Text Request | Prefs: {user_prefs}")

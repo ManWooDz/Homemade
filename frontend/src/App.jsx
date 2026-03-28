@@ -14,11 +14,15 @@ import BottomMenu from "./components/bottomMenu";
 import RecipeDetail from "./pages/RecipeDetail";
 import CreateRecipe from "./pages/CreateRecipe";
 import CookingPage from "./pages/CookingPage";
+import UserIngredients from "./pages/UserIngredients";
+import CustomCookingPage from "./pages/CustomCookingPage";
+import AddIngredient from "./pages/AddIngredient";
 
 function App() {
     const [activeTab, setActiveTab] = useState("home");
-    const [currentView, setCurrentView] = useState("home"); // "home" | "recipe-detail" | "create-recipe" | "cooking-page"
+    const [currentView, setCurrentView] = useState("home"); // "home" | "recipe-detail" | "create-recipe" | "cooking-page" | "user-ingredients" | "custom-cooking"
     const [selectedIngredients, setSelectedIngredients] = useState([]);
+    const [userIngredients, setUserIngredients] = useState([]);
     const [selectedRecipe, setSelectedRecipe] = useState(null);
 
     const [recipes, setRecipes] = useState([]);
@@ -50,7 +54,21 @@ function App() {
                 console.error("Error fetching recipes:", error);
             }
         };
+
+        const fetchUserIngredients = async () => {
+            try {
+                const response = await fetch("http://localhost:8000/api/user-ingredients");
+                const result = await response.json();
+                if (result.status === "success") {
+                    setUserIngredients(result.data);
+                }
+            } catch (error) {
+                console.error("Error fetching user ingredients:", error);
+            }
+        };
+
         fetchRecipes();
+        fetchUserIngredients();
     }, []);
 
     const filteredRecipes =
@@ -65,6 +83,12 @@ function App() {
         setActiveTab(tab);
         if (tab === "home") {
             setCurrentView("home");
+            setSelectedRecipe(null);
+        } else if (tab === "fridge") {
+            setCurrentView("user-ingredients");
+        } else if (tab === "cooking" && currentView === "home") {
+            setSelectedRecipe(null);
+            setCurrentView("custom-cooking");
         }
     };
 
@@ -92,10 +116,11 @@ function App() {
             <CreateRecipe
                 recipe={selectedRecipe}
                 selectedIngredients={selectedIngredients}
+                userIngredients={userIngredients}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView("recipe-detail")}
-                onGenerate={async (preferences) => {
+                onGenerate={async (preferences, updatedIngredients) => {
                     setCurrentView("cooking-page");
                     setIsGenerating(true);
                     try {
@@ -104,7 +129,7 @@ function App() {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 recipe: selectedRecipe,
-                                ingredients: selectedIngredients,
+                                ingredients: updatedIngredients || selectedIngredients,
                                 preferences
                             })
                         });
@@ -133,6 +158,73 @@ function App() {
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView("create-recipe")}
+            />
+        );
+    }
+
+    if (currentView === "user-ingredients") {
+        return (
+            <UserIngredients
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                userIngredients={userIngredients}
+                setUserIngredients={setUserIngredients}
+                goToAddIngredient={() => setCurrentView("add-ingredient")}
+                onBack={() => {
+                    setCurrentView("home");
+                    setActiveTab("home");
+                }}
+            />
+        );
+    }
+
+    if (currentView === "add-ingredient") {
+        return (
+            <AddIngredient
+                userIngredients={userIngredients}
+                setUserIngredients={setUserIngredients}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => setCurrentView("user-ingredients")}
+            />
+        );
+    }
+
+    if (currentView === "custom-cooking") {
+        return (
+            <CustomCookingPage
+                userIngredients={userIngredients}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => {
+                    setCurrentView("home");
+                    setActiveTab("home");
+                }}
+                onGenerate={async (preferences) => {
+                    setCurrentView("cooking-page");
+                    setIsGenerating(true);
+                    try {
+                        const response = await fetch("http://localhost:8000/api/generate-recipe-text", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                recipe: { name: "Custom Recipe from Fridge" },
+                                ingredients: userIngredients,
+                                preferences
+                            })
+                        });
+                        const result = await response.json();
+                        if (result.status === "success") {
+                            setGeneratedRecipe(result.data);
+                        } else {
+                            console.error("Failed to generate:", result.message);
+                        }
+                    } catch (err) {
+                        console.error("Error generating recipe text:", err);
+                    } finally {
+                        setIsGenerating(false);
+                    }
+                }}
             />
         );
     }
