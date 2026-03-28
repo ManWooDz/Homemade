@@ -1,13 +1,21 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Plus, Refrigerator } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-export default function CreateRecipe({ recipe, selectedIngredients, onBack, activeTab, setActiveTab, onGenerate }) {
+export default function CreateRecipe({ recipe, selectedIngredients, userIngredients, onBack, activeTab, setActiveTab, onGenerate }) {
     const [taste, setTaste] = useState("");
     const [allergies, setAllergies] = useState("");
     const [equipment, setEquipment] = useState("");
     const [extra, setExtra] = useState("");
+    
+    // local state for ingredients including those added from fridge
+    const [currentIngredients, setCurrentIngredients] = useState([]);
+    const [showFridge, setShowFridge] = useState(false);
+
+    useEffect(() => {
+        setCurrentIngredients(selectedIngredients || []);
+    }, [selectedIngredients]);
 
     const handleGenerateClick = () => {
         onGenerate({
@@ -15,7 +23,18 @@ export default function CreateRecipe({ recipe, selectedIngredients, onBack, acti
             allergies,
             equipment,
             extra
-        });
+        }, currentIngredients);
+    };
+
+    const addFromFridge = (ing) => {
+        // check if already added
+        if (!currentIngredients.find(cur => cur.name === ing.name)) {
+            setCurrentIngredients([...currentIngredients, { ...ing, id: Date.now() }]);
+        }
+    };
+    
+    const removeIngredient = (idToRemove) => {
+        setCurrentIngredients(currentIngredients.filter(ing => ing.id !== idToRemove));
     };
 
     return (
@@ -77,14 +96,23 @@ export default function CreateRecipe({ recipe, selectedIngredients, onBack, acti
 
                     {/* Description Textarea */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold text-black mb-4">
-                            วัตถุดิบที่เลือก
-                        </h3>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-black mb-0">
+                                วัตถุดิบที่เลือก
+                            </h3>
+                            <button 
+                                onClick={() => setShowFridge(!showFridge)}
+                                className={`flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-full transition ${showFridge ? 'bg-orange-100 text-[#EF5A3A]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                <Refrigerator className="w-4 h-4" />
+                                {showFridge ? "ปิดตู้เย็น" : "+ จากตู้เย็น"}
+                            </button>
+                        </div>
                         {/* Display Selected Ingredients */}
-                        {selectedIngredients &&
-                            selectedIngredients.length > 0 && (
+                        {currentIngredients &&
+                            currentIngredients.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mb-4">
-                                    {selectedIngredients.map((ing) => (
+                                    {currentIngredients.map((ing) => (
                                         <div
                                             key={ing.id}
                                             className="bg-orange-50 border border-[#EF5A3A] px-3 py-1.5 rounded-full flex items-center gap-2"
@@ -97,10 +125,46 @@ export default function CreateRecipe({ recipe, selectedIngredients, onBack, acti
                                             <span className="text-sm font-medium text-[#EF5A3A]">
                                                 {ing.name}
                                             </span>
+                                            <button 
+                                                onClick={() => removeIngredient(ing.id)}
+                                                className="w-4 h-4 rounded-full bg-red-100 text-red-500 flex items-center justify-center ml-1"
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
                             )}
+
+                        {/* Fridge Items Selection UI */}
+                        {showFridge && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-3xl p-4 mb-6 shadow-inner">
+                                <h4 className="text-sm font-bold text-gray-700 mb-3">วัตถุดิบใน My Fridge</h4>
+                                {userIngredients && userIngredients.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {userIngredients.map(ing => {
+                                            const isSelected = currentIngredients.some(c => c.name === ing.name);
+                                            return (
+                                                <button
+                                                    key={ing.id}
+                                                    onClick={() => !isSelected && addFromFridge(ing)}
+                                                    className={`px-3 py-1.5 rounded-full flex items-center gap-2 text-sm transition ${isSelected ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60' : 'bg-white border border-gray-300 shadow-sm text-gray-700 hover:border-orange-400 hover:text-orange-500'}`}
+                                                    disabled={isSelected}
+                                                >
+                                                    <img src={ing.image} alt={ing.name} className="w-5 h-5 rounded-full object-cover" onError={(e) => e.target.src = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150"} />
+                                                    {ing.name}
+                                                    {!isSelected && <Plus className="w-3 h-3 ml-1 text-gray-400" />}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500 text-center py-2">ไม่มีวัตถุดิบในตู้เย็น (คุณสามารถกดเพิ่มได้ที่แถบ My Fridge ด้านล่าง)</p>
+                                )}
+                            </div>
+                        )}
 
                         <h3 className="text-lg font-bold text-black mt-2 mb-2">
                             รสชาติ

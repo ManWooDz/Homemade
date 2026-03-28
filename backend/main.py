@@ -41,6 +41,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_ingredients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                image TEXT
+            )
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"Error initializing DB: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 # Serves local images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
@@ -260,6 +280,51 @@ async def generate_recipe(
             "data": final_output
         }
 
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+class UserIngredientCreate(BaseModel):
+    name: str
+    image: str = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150"
+
+@app.get("/api/user-ingredients")
+async def get_user_ingredients():
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, image FROM user_ingredients")
+        rows = cursor.fetchall()
+        ingredients = [{"id": row[0], "name": row[1], "image": row[2], "selected": True} for row in rows]
+        conn.close()
+        return {"status": "success", "data": ingredients}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/user-ingredients")
+async def add_user_ingredient(ingredient: UserIngredientCreate):
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO user_ingredients (name, image) VALUES (?, ?)", (ingredient.name, ingredient.image))
+        conn.commit()
+        new_id = cursor.lastrowid
+        conn.close()
+        return {"status": "success", "data": {"id": new_id, "name": ingredient.name, "image": ingredient.image, "selected": True}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.delete("/api/user-ingredients/{ingredient_id}")
+async def delete_user_ingredient(ingredient_id: int):
+    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM user_ingredients WHERE id = ?", (ingredient_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
