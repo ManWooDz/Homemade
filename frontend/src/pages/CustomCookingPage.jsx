@@ -3,19 +3,38 @@ import { ChevronLeft } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 
-export default function CustomCookingPage({ userIngredients, onBack, activeTab, setActiveTab, onGenerate }) {
+export default function CustomCookingPage({
+    userIngredients,
+    onBack,
+    activeTab,
+    setActiveTab,
+    onGenerate,
+}) {
     const [taste, setTaste] = useState("");
     const [allergies, setAllergies] = useState("");
     const [equipment, setEquipment] = useState("");
     const [extra, setExtra] = useState("");
+    const [selectedIngredients, setSelectedIngredients] = useState([]);
+
+    const toggleIngredient = (id) => {
+        setSelectedIngredients((prev) =>
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+        );
+    };
 
     const handleGenerateClick = () => {
-        onGenerate({
-            taste,
-            allergies,
-            equipment,
-            extra
-        });
+        const selectedObjs = userIngredients.filter((ing) =>
+            selectedIngredients.includes(ing.id),
+        );
+        onGenerate(
+            {
+                taste,
+                allergies,
+                equipment,
+                extra,
+            },
+            selectedObjs,
+        );
     };
 
     return (
@@ -25,7 +44,7 @@ export default function CustomCookingPage({ userIngredients, onBack, activeTab, 
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
                         onClick={onBack}
-                        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
+                        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -38,45 +57,66 @@ export default function CustomCookingPage({ userIngredients, onBack, activeTab, 
 
                 <div className="flex-1 overflow-y-auto px-5 pb-32">
                     {/* Page Title */}
-                    <div className="mb-6">
+                    <div className="mb-3 flex justify-center">
                         <h2 className="text-2xl font-bold text-gray-900 leading-tight">
                             Custom Cooking
                         </h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Generate a new menu using just the ingredients in your fridge.
-                        </p>
                     </div>
 
                     {/* Description Textarea */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold text-black mb-4">
-                            วัตถุดิบจากตู้เย็น (My Fridge)
-                        </h3>
+                        <div className="flex justify-between items-end mb-4">
+                            <h3 className="text-lg font-bold text-black">
+                                วัตถุดิบที่ต้องการใช้
+                            </h3>
+                            <span className="text-sm text-red-700">
+                                เลือกอย่างน้อย 1 อย่าง
+                            </span>
+                        </div>
                         {/* Display Fridge Ingredients */}
                         {userIngredients && userIngredients.length > 0 ? (
                             <div className="flex flex-wrap gap-2 mb-6">
-                                {userIngredients.map((ing) => (
-                                    <div
-                                        key={ing.id}
-                                        className="bg-orange-50 border border-[#EF5A3A] px-3 py-1.5 rounded-full flex items-center gap-2"
-                                    >
-                                        <img
-                                            src={ing.image}
-                                            alt={ing.name}
-                                            className="w-5 h-5 rounded-full object-cover"
-                                            onError={(e) => {
-                                                e.target.src = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150";
-                                            }}
-                                        />
-                                        <span className="text-sm font-medium text-[#EF5A3A]">
-                                            {ing.name}
-                                        </span>
-                                    </div>
-                                ))}
+                                {userIngredients.map((ing) => {
+                                    const isSelected =
+                                        selectedIngredients.includes(ing.id);
+                                    return (
+                                        <div
+                                            key={ing.id}
+                                            onClick={() =>
+                                                toggleIngredient(ing.id)
+                                            }
+                                            className={`px-3 py-1.5 rounded-full flex items-center gap-2 cursor-pointer transition-colors ${
+                                                isSelected
+                                                    ? "bg-orange-50 border border-[#EF5A3A]"
+                                                    : "bg-gray-50 border border-gray-300 opacity-60 hover:bg-gray-100/80"
+                                            }`}
+                                        >
+                                            <img
+                                                src={ing.image}
+                                                alt={ing.name}
+                                                className="w-5 h-5 rounded-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.src =
+                                                        "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150";
+                                                }}
+                                            />
+                                            <span
+                                                className={`text-sm font-medium ${
+                                                    isSelected
+                                                        ? "text-[#EF5A3A]"
+                                                        : "text-gray-500"
+                                                }`}
+                                            >
+                                                {ing.name}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="bg-gray-50 rounded-2xl p-4 text-center text-sm text-gray-500 mb-6">
-                                ตู้เย็นของคุณว่างเปล่า คุณสามารถไปเพิ่มวัตถุดิบได้ที่ My Fridge
+                                ตู้เย็นของคุณว่างเปล่า
+                                คุณสามารถไปเพิ่มวัตถุดิบได้ที่ My Fridge
                             </div>
                         )}
 
@@ -113,17 +153,17 @@ export default function CustomCookingPage({ userIngredients, onBack, activeTab, 
                         </h3>
                         <textarea
                             className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-gray-500 placeholder-gray-500 text-base outline-none resize-none shadow-sm"
-                            placeholder="เช่น สิ่งที่ต้องระวัง"
+                            placeholder="เช่น สิ่งที่ต้องระวัง หรือ ลักษณะของเมนูที่อยากได้"
                             value={extra}
                             onChange={(e) => setExtra(e.target.value)}
                         ></textarea>
                     </div>
 
                     {/* Action Button */}
-                    <button 
+                    <button
                         onClick={handleGenerateClick}
-                        disabled={!userIngredients || userIngredients.length === 0}
-                        className="w-full bg-[#EF5A3A] text-white py-4.5 rounded-full text-lg font-medium shadow-md flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 transition"
+                        disabled={selectedIngredients.length === 0}
+                        className="w-full bg-[#EF5A3A] text-white py-4.5 rounded-full text-lg font-medium shadow-md flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 transition cursor-pointer"
                     >
                         <svg
                             className="w-6 h-6"

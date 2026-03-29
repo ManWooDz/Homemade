@@ -161,6 +161,7 @@ function App() {
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView(cookingSource)}
+                isCustom={cookingSource === "custom-cooking"}
             />
         );
     }
@@ -203,7 +204,7 @@ function App() {
                     setCurrentView("home");
                     setActiveTab("home");
                 }}
-                onGenerate={async (preferences) => {
+                onGenerate={async (preferences, selectedIngredients) => {
                     setCurrentView("cooking-page");
                     setCookingSource("custom-cooking");
                     setGeneratedRecipe(null);
@@ -214,7 +215,7 @@ function App() {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 recipe: { name: "Custom Recipe from Fridge" },
-                                ingredients: userIngredients,
+                                ingredients: selectedIngredients,
                                 preferences
                             })
                         });

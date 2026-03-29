@@ -6,7 +6,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
             <div className="flex justify-between items-center relative">
                 <button
                     onClick={() => setActiveTab("home")}
-                    className={`flex flex-col items-center gap-1 ${activeTab === "home" ? "text-orange-500" : "text-gray-400"}`}
+                    className={`flex flex-col items-center gap-1 cursor-pointer ${activeTab === "home" ? "text-orange-500" : "text-gray-400"}`}
                 >
                     <Home className="w-6 h-6" />
                     <span className="text-[10px] font-bold">HOME</span>
@@ -14,7 +14,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
 
                 <button
                     onClick={() => setActiveTab("fridge")}
-                    className={`flex flex-col items-center gap-1 ${activeTab === "fridge" ? "text-orange-500" : "text-gray-400"}`}
+                    className={`flex flex-col items-center gap-1 cursor-pointer ${activeTab === "fridge" ? "text-orange-500" : "text-gray-400"}`}
                 >
                     <Refrigerator className="w-6 h-6" />
                     <span className="text-[10px] font-bold">MY FRIDGE</span>
@@ -24,7 +24,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                 <div className="relative -top-5">
                     <button
                         onClick={() => setActiveTab("cooking")}
-                        className={`${activeTab === "cooking" ? "bg-[#EF5A3A] shadow-md shadow-orange-500/30" : "bg-gray-200 hover:bg-gray-300"} p-4.5 rounded-full flex flex-col items-center justify-center transition-all`}
+                        className={`${activeTab === "cooking" ? "bg-[#EF5A3A] shadow-md shadow-orange-500/30" : "bg-gray-200 hover:bg-gray-300"} p-4.5 rounded-full cursor-pointer flex flex-col items-center justify-center transition-all`}
                     >
                         <CookingPot className={`w-7 h-7 ${activeTab === "cooking" ? "text-white" : "text-gray-500"}`} />
                     </button>

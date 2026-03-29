@@ -78,12 +78,12 @@ export default function RecipeDetail({
                             className="h-[72px] object-contain"
                         />
                     </div>
-                    {/* Big Salad Image */}
+                    {/* Image */}
                     <div className="w-64 h-64 rounded-full overflow-hidden shadow-sm">
                         <img
                             src={
                                 recipe?.image ||
-                                "/backend/images/No-image-available.png"
+                                "backend/images/No-image-available.png"
                             }
                             alt={recipe?.name || "Error Recipe Name"}
                             className="w-full h-full object-cover"
