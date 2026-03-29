@@ -15,10 +15,9 @@ from typing import List, Dict, Any
 #       uvicorn main:app --reload
 # 
 
-# โหลด API Key จากไฟล์ .env
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# ตั้งค่า Gemini API
+# Gemini API
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
 else:
@@ -239,7 +238,7 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe):
         }}
         """
         
-        # ยิง API ด้วย Syntax แบบใหม่
+        # API to Gemini
         response = client.models.generate_content(
             # model='gemini-2.5-flash-lite',
             model='gemini-3.1-flash-lite-preview',
@@ -249,7 +248,6 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe):
             ),
         )
         
-        # แปลงข้อความ JSON ที่ได้มา
         result_json = json.loads(response.text)
         return result_json
 
@@ -263,6 +261,8 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe):
 # ==========================================
 #  API Endpoint (ช่องทางรับส่งข้อมูล)
 # ==========================================
+
+# get recipes from database(SQLite)
 @app.get("/api/recipes")
 async def get_all_recipes():
     db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
@@ -317,6 +317,7 @@ class UserIngredientCreate(BaseModel):
     quantity: str = "1"
     image: str = "http://localhost:8000/images/No-image-available.png"
 
+# get ingredient images from folder images/ingredients
 @app.get("/api/ingredient-images")
 async def get_ingredient_images():
     images_dir = os.path.join(os.path.dirname(__file__), "images", "ingredients")
@@ -332,6 +333,7 @@ async def get_ingredient_images():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+# get user ingredients from database(user_ingredients table)
 @app.get("/api/user-ingredients")
 async def get_user_ingredients():
     db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
@@ -346,6 +348,7 @@ async def get_user_ingredients():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+# add user ingredients to database(user_ingredients table)
 @app.post("/api/user-ingredients")
 async def add_user_ingredient(ingredient: UserIngredientCreate):
     db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
@@ -361,6 +364,7 @@ async def add_user_ingredient(ingredient: UserIngredientCreate):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+# delete user ingredients from database(user_ingredients table)
 @app.delete("/api/user-ingredients/{ingredient_id}")
 async def delete_user_ingredient(ingredient_id: int):
     db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
@@ -379,6 +383,7 @@ class GenerateRecipeTextRequest(BaseModel):
     ingredients: List[Any]
     preferences: Dict[str, str]
 
+# generate recipe text from base recipe and user ingredients
 @app.post("/api/generate-recipe-text")
 async def generate_recipe_text(request: GenerateRecipeTextRequest):
     try:
@@ -422,6 +427,8 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
         elif "error" in final_output:
              return {"status": "error", "message": final_output["error"]}
 
+        print(f"[4] Final Output: {final_output}");
+        
         return {
             "status": "success",
             "data": final_output
