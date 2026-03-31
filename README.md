@@ -1,72 +1,93 @@
 # 🍳 Homemade AI Recipe
 
-แอปพลิเคชันแนะนำสูตรอาหารอัจฉริยะ เพียงแค่ถ่ายรูปวัตถุดิบในตู้เย็น ระบบจะใช้ AI วิเคราะห์วัตถุดิบและคิดค้นเมนูอาหารสุดพิเศษพร้อมวิธีทำและข้อมูลโภชนาการให้คุณทันที!
+แอปพลิเคชันแนะนำสูตรอาหารอัจฉริยะที่ช่วยจัดการวัตถุดิบในบ้านและคิดค้นเมนูอาหารสุดพิเศษที่ตอบโจทย์ความต้องการและสุขภาพของคุณโดยเฉพาะ!
+
+## 🌟 จุดเด่นของโปรเจกต์ (Core Features)
+*   **🛒 My Fridge:** ระบบจัดการวัตถุดิบในตู้เย็น (เพิ่ม/ลบ/เลือก) เพื่อนำมาคำนวณสูตรอาหาร
+*   **🤖 Smart AI Chef:** ใช้ AI (Gemini 3.1 Flash) วิเคราะห์วัตถุดิบที่คุณมีและสร้างสรรค์เมนูใหม่ที่ทำได้จริง
+*   **🛡️ 6-Stage Validation:** ระบบตรวจสอบสูตรอาหารอัจฉริยะ 6 ขั้นตอนเพื่อให้มั่นใจว่าสูตรที่ AI สร้างมานั้น:
+    1.  **Safety First:** ปลอดภัย (เนื้อสัตว์ต้องสุก, ไม่มีขั้นตอนอันตราย)
+    2.  **Ingredient Logic:** ใช้วัตถุดิบที่มีจริงตามที่ระบุ
+    3.  **Cooking Logic:** ขั้นตอนการทำถูกต้องตามหลักพื้นฐาน
+    4.  **Nutrition Check:** ข้อมูลโภชนาการสมเหตุสมผล
+    5.  **Flavor Pairing:** รสชาติเข้ากันได้ดี
+    6.  **Allergy Safety:** ปลอดภัยตามเงื่อนไขการแพ้อาหารของผู้ใช้
+*   **📊 Nutrition Info:** ข้อมูลแคลอรี และสารอาหารครบถ้วน (Protein, Carbs, Fat)
 
 ## 🚀 Tech Stack
-* **Frontend:** React + Vite, Tailwind CSS v4, Lucide React
-* **Backend:** FastAPI, Python
-* **AI Models:** YOLO11 (Object Detection), Gemini 2.0 Flash (Agentic LLM)
+*   **Frontend:** React + Vite, Tailwind CSS v4, Lucide React(icons)
+*   **Backend:** FastAPI (Python)
+*   **Database:** SQLite
+*   **AI Models:** Gemini 3.1 Flash (Google Generative AI)
 
 ---
 
 ## 🛠️ วิธีการติดตั้งและรันโปรเจกต์ (Getting Started)
 
-เนื่องจากโปรเจกต์นี้แยกการทำงานเป็น 2 ส่วน (Frontend และ Backend) คุณจำเป็นต้องเปิด Terminal 2 หน้าต่างเพื่อรันทั้งสองฝั่งพร้อมกันครับ
+### 1️⃣ การตั้งค่า Backend (FastAPI + Database)
+เปิด Terminal ในโฟลเดอร์ `backend`:
 
-### 1️⃣ การตั้งค่า Backend (FastAPI + AI)
-เปิด Terminal หน้าต่างที่ 1 แล้วทำตามขั้นตอนต่อไปนี้:
-
-1. เข้าไปที่โฟลเดอร์ backend
-   > cd backend
-
-2. สร้างและเปิดใช้งาน Virtual Environment
-   > python -m venv venv  
-   > .\venv\Scripts\activate
-
-3. ติดตั้งไลบรารีที่จำเป็น
-   > pip install -r requirements.txt
-
-4. สร้างไฟล์ .env ไว้ในโฟลเดอร์ backend/ และใส่ API Key ของ Gemini
-   > GEMINI_API_KEY=ใส่_API_KEY_ของคุณที่นี่
-
-5. รันเซิร์ฟเวอร์
-   > uvicorn main:app --reload  
-   > (เซิร์ฟเวอร์จะรันอยู่ที่: http://127.0.0.1:8000)
+1.  **สร้างและเปิดใช้งาน Virtual Environment**
+    ```bash
+    python -m venv venv
+    .\venv\Scripts\activate  # สำหรับ Windows
+    ```
+2.  **ติดตั้ง Libraries**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **ตั้งค่า Environment Variable**
+    สร้างไฟล์ `.env` ไว้ในโฟลเดอร์ `backend/` แล้วใส่ API Key:
+    ```env
+    GEMINI_API_KEY=ใส่_API_KEY_ของคุณที่นี่
+    ```
+4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
+    คุณจำเป็นต้องรันสคริปต์เพื่อสร้างฐานข้อมูลและข้อมูลตัวอย่างก่อน:
+    ```bash
+    python database/setup_db.py
+    python database/setup_ingredients.py
+    ```
+5.  **รันเซิร์ฟเวอร์**
+    ```bash
+    uvicorn main:app --reload
+    ```
+    *(เซิร์ฟเวอร์จะรันอยู่ที่: http://127.0.0.1:8000)*
 
 ---
 
 ### 2️⃣ การตั้งค่า Frontend (React + Vite)
-เปิด Terminal หน้าต่างที่ 2 แล้วทำตามขั้นตอนต่อไปนี้:
+เปิด Terminal ในโฟลเดอร์ `frontend`:
 
-1. เข้าไปที่โฟลเดอร์ frontend
-   > cd frontend
-
-2. ติดตั้ง Dependencies
-   > bun install  
-   > (หรือใช้ npm install)
-
-3. รันหน้าเว็บแอปพลิเคชัน
-   > bun dev  
-   > (หรือใช้ npm run dev)  
-   > (หน้าเว็บจะรันอยู่ที่: http://localhost:5173)
+1.  **ติดตั้ง Dependencies**
+    ```bash
+    npm install  # หรือใช้ bun install
+    ```
+2.  **รันหน้าเว็บ**
+    ```bash
+    npm run dev  # หรือใช้ bun dev
+    ```
+    *(หน้าเว็บจะรันอยู่ที่: http://localhost:5173)*
 
 ---
 
 ## 📁 โครงสร้างโปรเจกต์ (Project Structure)
-> homemade/  
-> ├── backend/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# ระบบ API และ AI Models  
-> │&emsp;&emsp;├── main.py&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# ไฟล์หลักของ FastAPI  
-> │&emsp;&emsp;├── requirements.txt&emsp;&emsp;&emsp;# รายชื่อไลบรารี Python  
-> │&emsp;&emsp;└── .env&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# (ต้องสร้างเอง) เก็บ API Key  
-> │  
-> └── frontend/           # ระบบหน้าบ้าน  
->&emsp;&emsp;&emsp;├── src/  
->&emsp;&emsp;&emsp;│&emsp;&emsp;├── pages/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# หน้าจอต่างๆ ของแอป (Home, Cooking, ฯลฯ)  
->&emsp;&emsp;&emsp;│&emsp;&emsp;├── App.jsx&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# ตัวจัดการ Routing ควบคุมหน้าจอ  
->&emsp;&emsp;&emsp;│&emsp;&emsp;└── index.css&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# ตั้งค่า Tailwind CSS v4  
->&emsp;&emsp;&emsp;└── package.json&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;# รายชื่อไลบรารี Node.js  
+```text
+homemade/
+├── backend/               # ระบบ API และ Database
+│   ├── database/          # ไฟล์ SQLite และสคริปต์ Setup
+│   ├── model/             # (Internal) บริการเสริมอื่นๆ
+│   ├── images/            # เก็บรูปภาพวัตถุดิบและเมนู
+│   ├── main.py            # ไฟล์หลักของ FastAPI
+│   └── .env               # (ต้องสร้างเอง) เก็บ API Key
+└── frontend/              # ระบบ UI (React)
+    ├── src/
+    │   ├── pages/         # หน้าจอต่างๆ (Home, Fridge, Cooking, ฯลฯ)
+    │   ├── components/    # Common Components
+    │   └── App.jsx        # ตัวจัดการ Routing
+    └── tailwind.config.js # การตั้งค่า Design System
+```
 
-## 🤝 สำหรับผู้ร่วมพัฒนา (Contributors)
-* ห้ามนำไฟล์ .env หรือ API Key ขึ้น GitHub เด็ดขาด
-* หากมีการเพิ่มไลบรารีฝั่ง Python อย่าลืมอัปเดตไฟล์ requirements.txt (ใช้คำสั่ง pip freeze > requirements.txt)
-* หากแก้ไข UI ให้ยึดดีไซน์แบบ Mobile-first (จำกัดความกว้างที่ max-w-[430px])
+## 🤝 ข้อกำหนดสำหรับทีมพัฒนา
+*   **Mobile-First Design:** ทุกการแก้ไข UI ต้องรองรับการแสดงผลบนมือถือ (Max-width 430px)
+*   **Security:** ห้าม Commit ไฟล์ `.env` ขึ้น Git เด็ดขาด
+*   **Validation:** หากมีการแก้ไข Logic การสร้างสูตรอาหาร ต้องทดสอบผ่าน Validation Pipeline ใน `main.py` เสมอ
