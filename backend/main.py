@@ -237,23 +237,30 @@ def validate_recipe(recipe, user_ingredients, user_prefs):
 # ==========================================
 # LLM Agent
 # ==========================================
-def call_agentic_llm(ingredients, user_prefs, base_recipe):
+def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
     print("Agentic LLM (Gemini) is thinking and calculating...")
-    
+
     if not client:
         return {"error": "API Key is missing. Please check your .env file."}
-    
+
     try:
+        feedback_section = ""
+        if feedback:
+            feedback_section = f"""
+        ผลตรวจสอบจากรอบก่อนหน้า (MUST FIX): สูตรที่คุณสร้างในรอบก่อนไม่ผ่านการตรวจสอบ เนื่องจาก: "{feedback}"
+        กรุณาแก้ไขปัญหานี้โดยเฉพาะในรอบนี้ โดยยังคงรักษาส่วนอื่นที่ถูกต้องไว้เหมือนเดิม
+        """
+
         prompt = f"""
         คุณคือ Executive Chef และนักโภชนาการคลินิกที่มีประสบการณ์สูง
-        หน้าที่ของคุณคือการนำ "สูตรอาหารตั้งต้น" มาดัดแปลงให้เข้ากับ "วัตถุดิบที่ผู้ใช้มี" และ "เงื่อนไขโภชนาการ" 
+        หน้าที่ของคุณคือการนำ "สูตรอาหารตั้งต้น" มาดัดแปลงให้เข้ากับ "วัตถุดิบที่ผู้ใช้มี" และ "เงื่อนไขโภชนาการ"
         โดยต้องคำนึงถึงความปลอดภัยทางอาหาร (Food Safety) และหลักการทำอาหารที่ถูกต้องเป็นอันดับหนึ่ง
 
         ข้อมูลของคุณมีดังนี้:
         1. วัตถุดิบที่ผู้ใช้มี : {ingredients}
         2. เงื่อนไขและข้อควรระวังของผู้ใช้: {user_prefs}
         3. สูตรอาหารตั้งต้น (อ้างอิงโภชนาการจากสูตรนี้): {base_recipe}
-        
+        {feedback_section}
         กฎเหล็กด้านความปลอดภัยและคุณภาพ (MUST FOLLOW STRICTLY):
         1. ความปลอดภัยอาหาร (Food Safety): ห้ามแนะนำให้รับประทานเนื้อสัตว์ดิบ (ยกเว้นวัตถุดิบที่ระบุว่าทานดิบได้) ต้องระบุการทำเนื้อสัตว์ ไก่ หมู หรืออาหารทะเลให้สุกอย่างชัดเจน และห้ามมีขั้นตอนที่เสี่ยงต่อการปนเปื้อนข้าม (Cross-contamination)
         2. ข้อควรระวังการแพ้ (Allergy Risks): ต้องตรวจสอบและปฏิบัติตาม {user_prefs} อย่างเคร่งครัด หากมีการแพ้อาหาร ห้ามใส่วัตถุดิบนั้นและวัตถุดิบแฝงเด็ดขาด
@@ -445,21 +452,23 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
         max_retries = 3
         attempt = 0
         final_output = None
-        
+        feedback = None
+
         while attempt < max_retries:
             attempt += 1
             print(f"Generation Attempt: {attempt}/{max_retries}")
-            
-            recipe = call_agentic_llm(ingredients_list_for_llm, user_prefs, base_recipe)
-            
+
+            recipe = call_agentic_llm(ingredients_list_for_llm, user_prefs, base_recipe, feedback=feedback)
+
             if "error" in recipe:
                 final_output = recipe
                 break
-                
+
             result = validate_recipe(recipe, ingredients_name_only, user_prefs)
-            
+
             if result["status"] == "fail":
-                print(f"Recipe rejected: {result['reason']}")
+                feedback = result["reason"]
+                print(f"Recipe rejected: {feedback}")
             else:
                 print("Recipe approved")
                 final_output = recipe
