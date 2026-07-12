@@ -124,7 +124,7 @@ export default function CustomCookingPage({
                             รสชาติ
                         </h3>
                         <textarea
-                            className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-gray-500 placeholder-gray-500 text-base outline-none resize-none shadow-sm"
+                            className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
                             placeholder="เช่น ระดับความเผ็ด เปรี้ยว หวาน เค็ม"
                             value={taste}
                             onChange={(e) => setTaste(e.target.value)}
@@ -134,7 +134,7 @@ export default function CustomCookingPage({
                             อาการแพ้อาหาร
                         </h3>
                         <textarea
-                            className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-gray-500 placeholder-gray-500 text-base outline-none resize-none shadow-sm"
+                            className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
                             placeholder="เช่น แพ้กุ้ง แพ้ถั่ว"
                             value={allergies}
                             onChange={(e) => setAllergies(e.target.value)}
@@ -143,7 +143,7 @@ export default function CustomCookingPage({
                             อุปกรณ์ที่มี
                         </h3>
                         <textarea
-                            className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-gray-500 placeholder-gray-500 text-base outline-none resize-none shadow-sm"
+                            className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
                             placeholder="เช่น ไมโครเวฟ, หม้อทอดไร้น้ำมัน"
                             value={equipment}
                             onChange={(e) => setEquipment(e.target.value)}
@@ -152,7 +152,7 @@ export default function CustomCookingPage({
                             เงื่อนไขเพิ่มเติม, สิ่งที่อยากได้
                         </h3>
                         <textarea
-                            className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-gray-500 placeholder-gray-500 text-base outline-none resize-none shadow-sm"
+                            className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
                             placeholder="เช่น สิ่งที่ต้องระวัง หรือ ลักษณะของเมนูที่อยากได้"
                             value={extra}
                             onChange={(e) => setExtra(e.target.value)}
