@@ -47,6 +47,9 @@ export default function CookingPage({ recipe, generatedRecipe, isGenerating, onB
             <h2 className="text-[26px] font-bold text-black mb-2 leading-tight">
                 {generatedRecipe.recipe_name}
             </h2>
+            <p className="text-sm text-gray-500 mb-3">
+                สำหรับ {generatedRecipe.servings} ที่
+            </p>
             
             {/* Diet Tags */}
             {generatedRecipe.diet_tags && generatedRecipe.diet_tags.length > 0 && (
@@ -72,14 +75,22 @@ export default function CookingPage({ recipe, generatedRecipe, isGenerating, onB
             {/* Nutrition Section */}
             {generatedRecipe.nutrition && (
                 <div className="mb-6">
-                    <h3 className="text-xl font-medium text-black mb-4">โภชนาการที่คาดการณ์</h3>
+                    <h3 className="text-xl font-medium text-black mb-4">
+                        {generatedRecipe.nutrition.basis === "per_serving"
+                            ? "โภชนาการต่อ 1 ที่ (คาดการณ์)"
+                            : "โภชนาการที่คาดการณ์"}
+                    </h3>
                     <div className="flex flex-col gap-3">
                         <div className="bg-[#FFF6F2] rounded-3xl p-5 flex justify-between items-center shadow-sm">
                             <div className="flex flex-col gap-1">
                                 <span className="text-4xl font-semibold text-[#EF5A3A] leading-none">
                                     {generatedRecipe.nutrition.calories}
                                 </span>
-                                <span className="text-lg text-gray-500 font-medium">แคลอรี่รวม</span>
+                                <span className="text-lg text-gray-500 font-medium">
+                                    {generatedRecipe.nutrition.basis === "per_serving"
+                                        ? "แคลอรี่ต่อ 1 ที่"
+                                        : "แคลอรี่"}
+                                </span>
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-3">
@@ -103,6 +114,9 @@ export default function CookingPage({ recipe, generatedRecipe, isGenerating, onB
             {/* Ingredients */}
             <div className="mb-6">
                 <h3 className="text-xl font-medium text-black mb-4">วัตถุดิบที่ปรับแก้แล้ว</h3>
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    ตรวจสอบวัตถุดิบและปริมาณจริงก่อนเริ่มทำอาหาร
+                </div>
                 <ul className="flex flex-col gap-2">
                     {generatedRecipe.adjusted_ingredients?.map((ing, idx) => (
                         <li key={idx} className="bg-gray-50 flex items-center gap-3 p-3 rounded-xl border border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">

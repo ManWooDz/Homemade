@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, Plus } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { toUserIngredientCreate } from "../utils/ingredientPayload";
 
 export default function AddIngredient({
     userIngredients,
@@ -12,18 +13,6 @@ export default function AddIngredient({
 }) {
     const [name, setName] = useState("");
     const [category, setCategory] = useState("Meat & poultry");
-    const [quantityAmount, setQuantityAmount] = useState("1");
-    const [quantityUnit, setQuantityUnit] = useState("pcs");
-
-    const unitOptions = [
-        { label: "pcs", value: "pieces (ชิ้น)" },
-        { label: "g", value: "grams (กรัม)" },
-        { label: "kg", value: "kilograms (กิโลกรัม)" },
-        { label: "ml", value: "ml (มิลลิลิตร)" },
-        { label: "L", value: "liters (ลิตร)" },
-        { label: "tbsp", value: "tablespoon (ช้อนโต๊ะ)" },
-        { label: "tsp", value: "teaspoon (ช้อนชา)" },
-    ];
 
     const [availableImages, setAvailableImages] = useState([]);
     const [fallbackImage, setFallbackImage] = useState("");
@@ -67,12 +56,13 @@ export default function AddIngredient({
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name: name,
-                        category: category,
-                        quantity: `${quantityAmount} ${quantityUnit}`,
-                        image: selectedImage,
-                    }),
+                    body: JSON.stringify(
+                        toUserIngredientCreate({
+                            name,
+                            category,
+                            image: selectedImage,
+                        }),
+                    ),
                 },
             );
             const result = await response.json();
@@ -182,61 +172,6 @@ export default function AddIngredient({
                                         </div>
                                     </button>
                                 ))}
-                            </div>
-                        </div>
-
-                        {/* Quantity Input */}
-                        <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">
-                                Quantity
-                            </h3>
-                            <div className="flex gap-3">
-                                {/* Amount number input */}
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    placeholder="1"
-                                    className="w-24 bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition text-center"
-                                    value={quantityAmount}
-                                    onChange={(e) =>
-                                        setQuantityAmount(e.target.value)
-                                    }
-                                />
-                                {/* Unit dropdown */}
-                                <div className="relative flex-1">
-                                    <select
-                                        value={quantityUnit}
-                                        onChange={(e) =>
-                                            setQuantityUnit(e.target.value)
-                                        }
-                                        className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 pr-10 outline-none text-base focus:border-[#EF5A3A] transition cursor-pointer text-gray-700"
-                                    >
-                                        {unitOptions.map((opt) => (
-                                            <option
-                                                key={opt.value}
-                                                value={opt.value}
-                                            >
-                                                {opt.label} — {opt.value}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {/* Custom arrow icon */}
-                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="w-4 h-4"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 

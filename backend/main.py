@@ -11,6 +11,9 @@ from google.genai import types
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
+from fridge_repository import insert_user_ingredient, list_user_ingredients
+from recipe_contracts import ingredient_names, validate_generated_recipe_shape
+
 #
 #       uvicorn main:app --reload
 # 
@@ -125,6 +128,31 @@ def check_flavor(recipe):
 # -------------------------------
 def check_logic(recipe):
     instructions = " ".join(recipe["instructions"]).lower()
+    safety_warning = recipe.get("safety_warning", "")
+    if not isinstance(safety_warning, str):
+        safety_warning = ""
+    cooking_text = f"{instructions} {safety_warning.lower()}"
+
+    prohibited_stock_conclusions = (
+        "วัตถุดิบไม่พอ",
+        "วัตถุดิบไม่เพียงพอ",
+        "ต้องซื้อเพิ่ม",
+        "ต้องซื้อวัตถุดิบเพิ่ม",
+        "วัตถุดิบเพียงพอ",
+        "มีวัตถุดิบเพียงพอ",
+        "not enough ingredients",
+        "insufficient ingredients",
+        "have enough ingredients",
+        "enough ingredients",
+        "ingredients are sufficient",
+        "need to buy more",
+        "needs to buy more",
+        "must buy more",
+        "have to buy more",
+        "buy more ingredients",
+    )
+    if any(claim in cooking_text for claim in prohibited_stock_conclusions):
+        return False, "Prohibited stock conclusion"
 
     has_oil = "oil" in instructions or "น้ำมัน" in instructions
 
@@ -141,6 +169,10 @@ def check_logic(recipe):
 # 4. Nutrition Check
 # -------------------------------
 def check_nutrition(recipe):
+    valid, reason = validate_generated_recipe_shape(recipe)
+    if not valid:
+        return False, reason
+
     nutrition = recipe["nutrition"]
 
     if nutrition["calories"] <= 0 or nutrition["calories"] > 1500:
@@ -203,6 +235,13 @@ def check_core(recipe, user_ingredients):
 # Main Validation Pipeline
 # -------------------------------
 def validate_recipe(recipe, user_ingredients, user_prefs):
+    valid, msg = validate_generated_recipe_shape(recipe)
+    if not valid:
+        return {
+            "status": "fail",
+            "reason": msg
+        }
+
     checks = [
         check_ingredients,
         check_flavor,
@@ -260,6 +299,12 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         1. วัตถุดิบที่ผู้ใช้มี : {ingredients}
         2. เงื่อนไขและข้อควรระวังของผู้ใช้: {user_prefs}
         3. สูตรอาหารตั้งต้น (อ้างอิงโภชนาการจากสูตรนี้): {base_recipe}
+        รายการวัตถุดิบนี้บอกเฉพาะชนิดที่ผู้ใช้ระบุว่ามี ไม่ได้ระบุปริมาณคงเหลือจริง
+        ห้ามสรุปว่าวัตถุดิบเพียงพอ ไม่เพียงพอ หรือต้องซื้อเพิ่มจากรายการนี้
+        servings คือจำนวนที่เสิร์ฟของสูตรนี้
+        ปริมาณใน adjusted_ingredients ต้องเป็นปริมาณรวมสำหรับทั้งสูตร ซึ่งครอบคลุมจำนวนที่เสิร์ฟตาม servings
+        ค่า calories, protein_g, carbs_g และ fat_g ใน nutrition ต้องเป็นค่าต่อ 1 ที่เสิร์ฟ
+        หากประมาณค่าโภชนาการเป็นค่ารวมทั้งสูตร ต้องหารด้วย servings ก่อนตอบ
         {feedback_section}
         กฎเหล็กด้านความปลอดภัยและคุณภาพ (MUST FOLLOW STRICTLY):
         1. ความปลอดภัยอาหาร (Food Safety): ห้ามแนะนำให้รับประทานเนื้อสัตว์ดิบ (ยกเว้นวัตถุดิบที่ระบุว่าทานดิบได้) ต้องระบุการทำเนื้อสัตว์ ไก่ หมู หรืออาหารทะเลให้สุกอย่างชัดเจน และห้ามมีขั้นตอนที่เสี่ยงต่อการปนเปื้อนข้าม (Cross-contamination)
@@ -275,9 +320,11 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         
         {{
             "recipe_name": "ชื่อเมนูที่สมเหตุสมผล (MUST BE IN ENGLISH)",
+            "servings": 2,
             "adjusted_ingredients": ["วัตถุดิบ 1 (พร้อมระบุปริมาณที่ถูกต้อง IN THAI)", "วัตถุดิบ 2 (IN THAI)"],
             "diet_tags": ["tag1 (MUST BE IN ENGLISH)", "tag2 (MUST BE IN ENGLISH)"],
             "nutrition": {{
+                "basis": "per_serving",
                 "calories": ตัวเลข,
                 "protein_g": ตัวเลข,
                 "carbs_g": ตัวเลข,
@@ -364,7 +411,6 @@ async def get_all_recipes():
 class UserIngredientCreate(BaseModel):
     name: str
     category: str = "Other"
-    quantity: str = "1"
     image: str = "http://localhost:8000/images/No-image-available.png"
 
 # get ingredient images from folder images/ingredients
@@ -387,32 +433,36 @@ async def get_ingredient_images():
 @app.get("/api/user-ingredients")
 async def get_user_ingredients():
     db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    conn = None
     try:
         conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, category, quantity, image FROM user_ingredients")
-        rows = cursor.fetchall()
-        ingredients = [{"id": row[0], "name": row[1], "category": row[2], "quantity": row[3], "image": row[4], "selected": True} for row in rows]
-        conn.close()
+        ingredients = list_user_ingredients(conn)
         return {"status": "success", "data": ingredients}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    finally:
+        if conn is not None:
+            conn.close()
 
 # add user ingredients to database(user_ingredients table)
 @app.post("/api/user-ingredients")
 async def add_user_ingredient(ingredient: UserIngredientCreate):
     db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+    conn = None
     try:
         conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO user_ingredients (name, category, quantity, image) VALUES (?, ?, ?, ?)", 
-                       (ingredient.name, ingredient.category, ingredient.quantity, ingredient.image))
-        conn.commit()
-        new_id = cursor.lastrowid
-        conn.close()
-        return {"status": "success", "data": {"id": new_id, "name": ingredient.name, "category": ingredient.category, "quantity": ingredient.quantity, "image": ingredient.image, "selected": True}}
+        created = insert_user_ingredient(
+            conn,
+            name=ingredient.name,
+            category=ingredient.category,
+            image=ingredient.image,
+        )
+        return {"status": "success", "data": created}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    finally:
+        if conn is not None:
+            conn.close()
 
 # delete user ingredients from database(user_ingredients table)
 @app.delete("/api/user-ingredients/{ingredient_id}")
@@ -438,10 +488,8 @@ class GenerateRecipeTextRequest(BaseModel):
 async def generate_recipe_text(request: GenerateRecipeTextRequest):
     try:
         user_prefs = request.preferences
-        # Extract ingredient names (and quantity if available) if they are dicts
-        ingredients_list_for_llm = [f"{ing.get('name', ing)} ({ing.get('quantity', 'N/A')})" if isinstance(ing, dict) else ing for ing in request.ingredients]
-        # สกัดเฉพาะชื่อวัตถุดิบเพื่อเอาไปใช้ validate
-        ingredients_name_only = [ing.get('name', ing).lower() if isinstance(ing, dict) else ing.lower() for ing in request.ingredients]
+        ingredients_list_for_llm = ingredient_names(request.ingredients)
+        ingredients_name_only = [name.lower() for name in ingredients_list_for_llm]
         
         base_recipe = request.recipe
         
@@ -460,7 +508,7 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
 
             recipe = call_agentic_llm(ingredients_list_for_llm, user_prefs, base_recipe, feedback=feedback)
 
-            if "error" in recipe:
+            if isinstance(recipe, dict) and "error" in recipe:
                 final_output = recipe
                 break
 
@@ -476,7 +524,7 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
                 
         if not final_output:
              return {"status": "error", "message": "Failed to generate a valid recipe after multiple attempts due to validation failures."}
-        elif "error" in final_output:
+        elif isinstance(final_output, dict) and "error" in final_output:
              return {"status": "error", "message": final_output["error"]}
 
         # Pretty JSON Output

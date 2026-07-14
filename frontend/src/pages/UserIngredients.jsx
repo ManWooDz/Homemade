@@ -125,9 +125,6 @@ export default function UserIngredients({
                                             <span className="font-semibold text-gray-800 text-lg leading-tight">
                                                 {ing.name}
                                             </span>
-                                            <span className="text-sm text-gray-500 mt-0.5 font-medium">
-                                                Qty: {ing.quantity || "1"}
-                                            </span>
                                         </div>
                                     </div>
                                     <button

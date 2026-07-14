@@ -17,6 +17,7 @@ import CookingPage from "./pages/CookingPage";
 import UserIngredients from "./pages/UserIngredients";
 import CustomCookingPage from "./pages/CustomCookingPage";
 import AddIngredient from "./pages/AddIngredient";
+import { toPresenceIngredients } from "./utils/ingredientPayload";
 
 function App() {
     const [activeTab, setActiveTab] = useState("home");
@@ -132,7 +133,9 @@ function App() {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 recipe: selectedRecipe,
-                                ingredients: updatedIngredients || selectedIngredients,
+                                ingredients: toPresenceIngredients(
+                                    updatedIngredients || selectedIngredients,
+                                ),
                                 preferences
                             })
                         });
@@ -215,7 +218,7 @@ function App() {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 recipe: { name: "Custom Recipe from Fridge" },
-                                ingredients: selectedIngredients,
+                                ingredients: toPresenceIngredients(selectedIngredients),
                                 preferences
                             })
                         });
