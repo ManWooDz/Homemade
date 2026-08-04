@@ -20,6 +20,7 @@ import AddIngredient from "./pages/AddIngredient";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
 
 function App() {
+
     const [activeTab, setActiveTab] = useState("home");
     const [currentView, setCurrentView] = useState("home"); // "home" | "recipe-detail" | "create-recipe" | "cooking-page" | "user-ingredients" | "custom-cooking"
     const [selectedIngredients, setSelectedIngredients] = useState([]);
