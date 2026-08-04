@@ -13,10 +13,71 @@ export default function CreateRecipe({
   setActiveTab,
   onGenerate,
 }) {
+  const OTHER_OPTION = "อื่นๆ";
+
+  const TASTE_OPTIONS = [
+    "ไม่ระบุ",
+    "เผ็ดน้อย",
+    "เผ็ดปานกลาง",
+    "เผ็ดมาก",
+    "รสจัดจ้าน",
+    "รสหวานนำ",
+    "รสเปรี้ยวนำ",
+    "รสกลมกล่อม ไม่จัดจ้าน",
+    OTHER_OPTION,
+  ];
+  const ALLERGY_NONE = "ไม่มี";
+  const ALLERGY_OPTIONS = [
+    ALLERGY_NONE,
+    "กุ้ง/อาหารทะเล",
+    "ถั่ว",
+    "นม/ผลิตภัณฑ์จากนม",
+    "ไข่",
+    "แป้งสาลี/กลูเตน",
+    "ถั่วเหลือง",
+    "งา",
+    OTHER_OPTION,
+  ];
+  const EQUIPMENT_NONE = "ไม่มีอุปกรณ์พิเศษ";
+  const EQUIPMENT_OPTIONS = [
+    EQUIPMENT_NONE,
+    "ไมโครเวฟ",
+    "หม้อทอดไร้น้ำมัน",
+    "เตาอบ",
+    "หม้อหุงข้าว",
+    "กระทะ/เตาแก๊สทั่วไป",
+    "หม้อตุ๋น/สโลว์คุก",
+    "เครื่องปั่น",
+    OTHER_OPTION,
+  ];
+
   const [taste, setTaste] = useState("");
-  const [allergies, setAllergies] = useState("");
-  const [equipment, setEquipment] = useState("");
+  const [tasteOther, setTasteOther] = useState("");
+  const [allergies, setAllergies] = useState([]);
+  const [allergiesOther, setAllergiesOther] = useState("");
+  const [equipment, setEquipment] = useState([]);
+  const [equipmentOther, setEquipmentOther] = useState("");
   const [extra, setExtra] = useState("");
+
+  // multi-select toggle where selecting `noneValue` clears every other
+  // selection, and selecting anything else clears `noneValue`
+  const toggleInList = (list, setList, option, noneValue) => {
+    if (option === noneValue) {
+      setList(list.includes(noneValue) ? [] : [noneValue]);
+      return;
+    }
+    if (list.includes(option)) {
+      setList(list.filter((item) => item !== option));
+    } else {
+      setList([...list.filter((item) => item !== noneValue), option]);
+    }
+  };
+
+  const resolveOther = (value, otherText) =>
+    value === OTHER_OPTION ? otherText.trim() || OTHER_OPTION : value;
+
+  const resolveOtherInList = (list, otherText) =>
+    list.map((item) => resolveOther(item, otherText));
 
   // local state for ingredients including those added from fridge
   const [currentIngredients, setCurrentIngredients] = useState([]);
@@ -29,9 +90,9 @@ export default function CreateRecipe({
   const handleGenerateClick = () => {
     onGenerate(
       {
-        taste,
-        allergies,
-        equipment,
+        taste: resolveOther(taste, tasteOther),
+        allergies: resolveOtherInList(allergies, allergiesOther).join(", "),
+        equipment: resolveOtherInList(equipment, equipmentOther).join(", "),
         extra,
       },
       currentIngredients,
@@ -133,7 +194,7 @@ export default function CreateRecipe({
                       alt={ing.name}
                       className="w-5 h-5 rounded-full object-cover"
                     />
-                    <span className="text-sm font-medium text-[#EF5A3A]">
+                    <span className="text-sm font-medium text-[#EF5A3A] capitalize">
                       {ing.name}
                     </span>
                     <button
@@ -205,33 +266,107 @@ export default function CreateRecipe({
             )}
 
             <h3 className="text-lg font-bold text-black mt-2 mb-2">รสชาติ</h3>
-            <textarea
-              className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-              placeholder="เช่น ระดับความเผ็ด เปรี้ยว หวาน เค็ม"
-              value={taste}
-              onChange={(e) => setTaste(e.target.value)}
-            ></textarea>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {TASTE_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setTaste(option)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                    taste === option
+                      ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
+                      : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {taste === OTHER_OPTION && (
+              <input
+                type="text"
+                value={tasteOther}
+                onChange={(e) => setTasteOther(e.target.value)}
+                placeholder="ระบุรสชาติที่ต้องการ"
+                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
+              />
+            )}
+            {taste !== OTHER_OPTION && <div className="mb-2" />}
 
-            <h3 className="text-lg font-bold text-black  mt-2 mb-2">
+            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
               อาการแพ้อาหาร
+              <span className="text-xs font-normal text-gray-400">
+                เลือกได้มากกว่า 1 ข้อ
+              </span>
             </h3>
-            <textarea
-              className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-              placeholder="เช่น แพ้กุ้ง แพ้ถั่ว"
-              value={allergies}
-              onChange={(e) => setAllergies(e.target.value)}
-            ></textarea>
-            <h3 className="text-lg font-bold text-black  mt-2 mb-2">
+            <div className="flex flex-wrap gap-2 mb-2">
+              {ALLERGY_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() =>
+                    toggleInList(allergies, setAllergies, option, ALLERGY_NONE)
+                  }
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                    allergies.includes(option)
+                      ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
+                      : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {allergies.includes(OTHER_OPTION) && (
+              <input
+                type="text"
+                value={allergiesOther}
+                onChange={(e) => setAllergiesOther(e.target.value)}
+                placeholder="ระบุอาการแพ้อาหาร"
+                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
+              />
+            )}
+            {!allergies.includes(OTHER_OPTION) && <div className="mb-2" />}
+            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
               อุปกรณ์ที่มี
+              <span className="text-xs font-normal text-gray-400">
+                เลือกได้มากกว่า 1 ข้อ
+              </span>
             </h3>
-            <textarea
-              className="w-full h-20 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-              placeholder="เช่น ไมโครเวฟ, หม้อทอดไร้น้ำมัน"
-              value={equipment}
-              onChange={(e) => setEquipment(e.target.value)}
-            ></textarea>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {EQUIPMENT_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() =>
+                    toggleInList(
+                      equipment,
+                      setEquipment,
+                      option,
+                      EQUIPMENT_NONE,
+                    )
+                  }
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                    equipment.includes(option)
+                      ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
+                      : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {equipment.includes(OTHER_OPTION) && (
+              <input
+                type="text"
+                value={equipmentOther}
+                onChange={(e) => setEquipmentOther(e.target.value)}
+                placeholder="ระบุอุปกรณ์ที่มี"
+                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
+              />
+            )}
             <h3 className="text-lg font-bold text-black mt-2 mb-2">
-              เงื่อนไขเพิ่มเติม, สิ่งที่อยากได้
+              ความต้องการอื่นๆ (ถ้ามี)
             </h3>
             <textarea
               className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"

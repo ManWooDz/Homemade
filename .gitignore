@@ -1,5 +1,5 @@
 # =========================
-# Security (ห้ามหลุดเด็ดขาด!)
+# Security
 # =========================
 .env
 .env.*
@@ -27,6 +27,7 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+.vite/
 
 # Logs
 logs
@@ -49,3 +50,24 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+
+# =========================
+# Others
+# =========================
+.obsidian/
+docs/
+
+# =========================
+# AI collaboration scaffolding (local only)
+# =========================
+CLAUDE.md
+MEMORY.md
+spec.md
+AGENTS.md
+
+# Local developer launchers
+/start-homemade.ps1
+
+# Temp working files
+/tmp/
