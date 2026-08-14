@@ -51,23 +51,10 @@ lerna-debug.log*
 *.sln
 *.sw?
 
-
 # =========================
-# Others
+# Local-only (ไม่จำเป็นต้อง push)
 # =========================
 .obsidian/
+tmp/
 docs/
-
-# =========================
-# AI collaboration scaffolding (local only)
-# =========================
-CLAUDE.md
-MEMORY.md
-spec.md
-AGENTS.md
-
-# Local developer launchers
-/start-homemade.ps1
-
-# Temp working files
-/tmp/
+start-homemade.ps1
