@@ -69,6 +69,9 @@ export function AuthProvider({ children }) {
 
     const resetPassword = useCallback(async (newPassword, confirmPassword) => {
         await delay(MOCK_DELAY_MS);
+        if (!otpVerified) {
+            return { success: false, error: "Verify your code first" };
+        }
         if (!isValidPassword(newPassword)) {
             return { success: false, error: "Password must be at least 8 characters" };
         }
@@ -78,7 +81,7 @@ export function AuthProvider({ children }) {
         setPendingResetEmail(null);
         setOtpVerified(false);
         return { success: true };
-    }, []);
+    }, [otpVerified]);
 
     const logout = useCallback(() => {
         setIsAuthenticated(false);
