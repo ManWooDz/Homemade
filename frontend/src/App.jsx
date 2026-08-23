@@ -17,7 +17,10 @@ import CookingPage from "./pages/CookingPage";
 import UserIngredients from "./pages/UserIngredients";
 import CustomCookingPage from "./pages/CustomCookingPage";
 import AddIngredient from "./pages/AddIngredient";
+import Favorites from "./pages/Favorites";
+import Profile from "./pages/Profile";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
+import { getTagColor } from "./utils/tagColors";
 
 function App() {
 
@@ -26,6 +29,8 @@ function App() {
     const [selectedIngredients, setSelectedIngredients] = useState([]);
     const [userIngredients, setUserIngredients] = useState([]);
     const [selectedRecipe, setSelectedRecipe] = useState(null);
+    const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
+    const [cookingHistory, setCookingHistory] = useState([]);
 
     const [recipes, setRecipes] = useState([]);
     const [categories, setCategories] = useState(["All"]);
@@ -34,6 +39,21 @@ function App() {
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [cookingSource, setCookingSource] = useState("create-recipe"); // "create-recipe" | "custom-cooking"
+
+    useEffect(() => {
+        const viewToFile = {
+            home: "App.jsx",
+            "recipe-detail": "RecipeDetail.jsx",
+            "create-recipe": "CreateRecipe.jsx",
+            "cooking-page": "CookingPage.jsx",
+            "user-ingredients": "UserIngredients.jsx",
+            "add-ingredient": "AddIngredient.jsx",
+            "custom-cooking": "CustomCookingPage.jsx",
+            favorites: "Favorites.jsx",
+            profile: "Profile.jsx",
+        };
+        console.log("[PAGE]", viewToFile[currentView] ?? currentView);
+    }, [currentView]);
 
     useEffect(() => {
         const fetchRecipes = async () => {
@@ -74,6 +94,14 @@ function App() {
         fetchUserIngredients();
     }, []);
 
+    const toggleFavorite = (recipeId) => {
+        setFavoriteRecipeIds((prev) =>
+            prev.includes(recipeId)
+                ? prev.filter((id) => id !== recipeId)
+                : [...prev, recipeId],
+        );
+    };
+
     const filteredRecipes =
         selectedCategory === "All"
             ? recipes
@@ -89,6 +117,10 @@ function App() {
             setSelectedRecipe(null);
         } else if (tab === "fridge") {
             setCurrentView("user-ingredients");
+        } else if (tab === "favorites") {
+            setCurrentView("favorites");
+        } else if (tab === "me") {
+            setCurrentView("profile");
         } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient")) {
             setSelectedRecipe(null);
             setCurrentView("custom-cooking");
@@ -143,6 +175,15 @@ function App() {
                         const result = await response.json();
                         if (result.status === "success") {
                             setGeneratedRecipe(result.data);
+                            setCookingHistory((prev) => [
+                                {
+                                    id: Date.now(),
+                                    recipe_name: result.data.recipe_name,
+                                    image: selectedRecipe?.image || null,
+                                    diet_tags: result.data.diet_tags,
+                                },
+                                ...prev,
+                            ]);
                         } else {
                             console.error("Failed to generate:", result.message);
                         }
@@ -181,6 +222,28 @@ function App() {
                 onBack={() => {
                     setCurrentView("home");
                     setActiveTab("home");
+                }}
+            />
+        );
+    }
+
+    if (currentView === "favorites") {
+        return (
+            <Favorites
+                recipes={recipes}
+                categories={categories}
+                favoriteRecipeIds={favoriteRecipeIds}
+                toggleFavorite={toggleFavorite}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => {
+                    setCurrentView("home");
+                    setActiveTab("home");
+                }}
+                onSelectRecipe={(recipe) => {
+                    setSelectedRecipe(recipe);
+                    setActiveTab("cooking");
+                    setCurrentView("recipe-detail");
                 }}
             />
         );
@@ -226,6 +289,15 @@ function App() {
                         const result = await response.json();
                         if (result.status === "success") {
                             setGeneratedRecipe(result.data);
+                            setCookingHistory((prev) => [
+                                {
+                                    id: Date.now(),
+                                    recipe_name: result.data.recipe_name,
+                                    image: null,
+                                    diet_tags: result.data.diet_tags,
+                                },
+                                ...prev,
+                            ]);
                         } else {
                             console.error("Failed to generate:", result.message);
                         }
@@ -234,6 +306,20 @@ function App() {
                     } finally {
                         setIsGenerating(false);
                     }
+                }}
+            />
+        );
+    }
+
+    if (currentView === "profile") {
+        return (
+            <Profile
+                cookingHistory={cookingHistory}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => {
+                    setCurrentView("home");
+                    setActiveTab("home");
                 }}
             />
         );
@@ -328,8 +414,20 @@ function App() {
                                     setCurrentView("recipe-detail");
                                 }}
                             >
-                                <button className="absolute top-4 right-4 text-gray-300 hover:text-red-500 z-10">
-                                    <Heart className="w-6 h-6" />
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleFavorite(recipe.id);
+                                    }}
+                                    className={`absolute top-4 right-4 z-10 ${
+                                        favoriteRecipeIds.includes(recipe.id)
+                                            ? "text-red-500"
+                                            : "text-gray-300 hover:text-red-500"
+                                    }`}
+                                >
+                                    <Heart
+                                        className={`w-6 h-6 ${favoriteRecipeIds.includes(recipe.id) ? "fill-current" : ""}`}
+                                    />
                                 </button>
                                 <div className="w-full aspect-square bg-gray-100 rounded-full mb-3 overflow-hidden">
                                     <img
@@ -348,11 +446,7 @@ function App() {
                                             .map((tag, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full w-max ${
-                                                        idx === 0
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-yellow-100 text-yellow-700"
-                                                    }`}
+                                                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full w-max ${getTagColor(tag)}`}
                                                 >
                                                     {tag}
                                                 </span>

@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
-import { ChevronLeft, Heart, Star, CheckSquare } from "lucide-react";
+import { ChevronLeft, Heart, Star, CheckSquare, Clock } from "lucide-react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import logo from "../assets/HomeMade_Logo.png";
 
 import BottomMenu from "../components/bottomMenu";
+import { getTagColor } from "../utils/tagColors";
 
 export default function RecipeDetail({
   recipe,
@@ -66,13 +67,22 @@ export default function RecipeDetail({
     animate(sheetY, -300, { type: "spring", stiffness: 300, damping: 30 });
   };
 
+  const collapseSheet = () => {
+    animate(sheetY, 0, { type: "spring", stiffness: 300, damping: 30 });
+  };
+
   const isScrollAtBottom = (el) =>
     el.scrollHeight - el.scrollTop - el.clientHeight <= 1;
 
+  const isScrollAtTop = (el) => el.scrollTop <= 0;
+
   const handleWheel = (e) => {
     const el = contentRef.current;
-    if (el && isScrollAtBottom(el) && e.deltaY > 0) {
+    if (!el) return;
+    if (isScrollAtBottom(el) && e.deltaY > 0) {
       expandSheet();
+    } else if (sheetY.get() <= -300 && isScrollAtTop(el) && e.deltaY < 0) {
+      collapseSheet();
     }
   };
 
@@ -88,6 +98,8 @@ export default function RecipeDetail({
     lastTouchY.current = currentY;
     if (isScrollAtBottom(el) && deltaY > 0) {
       expandSheet();
+    } else if (sheetY.get() <= -300 && isScrollAtTop(el) && deltaY < 0) {
+      collapseSheet();
     }
   };
 
@@ -148,15 +160,36 @@ export default function RecipeDetail({
             <h2 className="text-[28px] font-bold text-black mb-2 leading-tight">
               {recipe?.name || "Dishes Name"}
             </h2>
-            <div className="flex items-center gap-2 mb-6">
-              <Star className="w-5 h-5 text-orange-400 fill-orange-400" />
-              <span className="font-bold text-black text-sm">
-                {recipe?.ratings || "error"}
-              </span>
-              <span className="text-gray-500 text-sm mb-0">
-                ({recipe?.review || "error"} Reviews)
-              </span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-orange-400 fill-orange-400" />
+                <span className="font-bold text-black text-sm">
+                  {recipe?.ratings || "error"}
+                </span>
+                <span className="text-gray-500 text-sm mb-0">
+                  ({recipe?.review || "error"} Reviews)
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <span className="text-gray-500 text-sm">
+                  {recipe?.usage_time || "error"}
+                </span>
+              </div>
             </div>
+
+            {recipe?.tags && recipe.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {recipe.tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    className={`${getTagColor(tag)} text-xs font-medium px-3 py-1 rounded-full`}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <h3 className="text-xl font-medium text-black mb-2">Description</h3>
             <p className="text-black text-sm mb-6 leading-relaxed">
@@ -235,6 +268,64 @@ export default function RecipeDetail({
                         ></div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Extra nutrients */}
+                  <div className="bg-white rounded-3xl p-5 shadow-sm flex flex-col gap-4">
+                    {[
+                      {
+                        label: "น้ำตาล",
+                        key: "sugar_g",
+                        unit: "g",
+                        max: 50,
+                        color: "#FF5C8A",
+                      },
+                      {
+                        label: "โซเดียม",
+                        key: "sodium_mg",
+                        unit: "mg",
+                        max: 2300,
+                        color: "#8B5CF6",
+                      },
+                      {
+                        label: "ใยอาหาร",
+                        key: "fiber_g",
+                        unit: "g",
+                        max: 30,
+                        color: "#22C55E",
+                      },
+                      {
+                        label: "วิตามินซี",
+                        key: "vitamin_c_mg",
+                        unit: "mg",
+                        max: 90,
+                        color: "#F59E0B",
+                      },
+                    ]
+                      .filter(
+                        (n) => recipe.nutrition[n.key] !== undefined && recipe.nutrition[n.key] !== null,
+                      )
+                      .map((n) => {
+                        const value = recipe.nutrition[n.key];
+                        const pct = Math.max(0, Math.min(100, (value / n.max) * 100));
+                        return (
+                          <div key={n.key} className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-[#767676] w-20 shrink-0">
+                              {n.label}
+                            </span>
+                            <div className="flex-1 h-2 bg-black/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${pct}%`, backgroundColor: n.color }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-semibold text-black w-16 text-right shrink-0">
+                              {value}
+                              {n.unit}
+                            </span>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               </div>

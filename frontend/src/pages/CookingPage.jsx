@@ -1,7 +1,9 @@
-import { ChevronLeft, Flame, AlertTriangle, ChefHat } from "lucide-react";
-import { motion } from "framer-motion";
+import { useRef, useState } from "react";
+import { ChevronLeft, Flame, AlertTriangle, ChefHat, Clock, Star, X } from "lucide-react";
+import { motion, useMotionValue, animate } from "framer-motion";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { getTagColor } from "../utils/tagColors";
 
 export default function CookingPage({
   recipe,
@@ -13,6 +15,74 @@ export default function CookingPage({
   isCustom,
 }) {
   console.log("CookingPage");
+
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+
+  const finishCooking = () => {
+    setShowRatingModal(true);
+  };
+
+  const submitRating = () => {
+    // TODO: send { recipe_name: generatedRecipe.recipe_name, stars: selectedRating }
+    // to backend once a rating-storage endpoint exists.
+    console.log("[RATING]", {
+      recipe_name: generatedRecipe?.recipe_name,
+      stars: selectedRating,
+    });
+    setShowRatingModal(false);
+    setActiveTab("home");
+  };
+
+  const skipRating = () => {
+    setShowRatingModal(false);
+    setActiveTab("home");
+  };
+
+  const sheetY = useMotionValue(0);
+  const contentRef = useRef(null);
+  const lastTouchY = useRef(null);
+
+  const expandSheet = () => {
+    animate(sheetY, -200, { type: "spring", stiffness: 300, damping: 30 });
+  };
+
+  const collapseSheet = () => {
+    animate(sheetY, 0, { type: "spring", stiffness: 300, damping: 30 });
+  };
+
+  const isScrollAtBottom = (el) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight <= 1;
+
+  const isScrollAtTop = (el) => el.scrollTop <= 0;
+
+  const handleWheel = (e) => {
+    const el = contentRef.current;
+    if (!el) return;
+    if (isScrollAtBottom(el) && e.deltaY > 0) {
+      expandSheet();
+    } else if (sheetY.get() <= -200 && isScrollAtTop(el) && e.deltaY < 0) {
+      collapseSheet();
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    lastTouchY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    const el = contentRef.current;
+    if (!el || lastTouchY.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = lastTouchY.current - currentY; // finger moving up = scrolling down
+    lastTouchY.current = currentY;
+    if (isScrollAtBottom(el) && deltaY > 0) {
+      expandSheet();
+    } else if (sheetY.get() <= -200 && isScrollAtTop(el) && deltaY < 0) {
+      collapseSheet();
+    }
+  };
 
   // Loading Screen
   if (isGenerating) {
@@ -65,9 +135,17 @@ export default function CookingPage({
       <h2 className="text-[26px] font-bold text-black mb-2 leading-tight">
         {generatedRecipe.recipe_name}
       </h2>
-      <p className="text-sm text-gray-500 mb-3">
-        สำหรับ {generatedRecipe.servings} ที่
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-500">
+          สำหรับ {generatedRecipe.servings} ที่
+        </p>
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-4 h-4 text-gray-400" />
+          <span className="text-gray-500 text-sm">
+            {generatedRecipe.usage_time || "error"}
+          </span>
+        </div>
+      </div>
 
       {/* Diet Tags */}
       {generatedRecipe.diet_tags && generatedRecipe.diet_tags.length > 0 && (
@@ -75,7 +153,7 @@ export default function CookingPage({
           {generatedRecipe.diet_tags.map((tag, idx) => (
             <span
               key={idx}
-              className="bg-orange-100 text-[#EF5A3A] px-3 py-1 rounded-full text-[12px] font-medium border border-orange-200"
+              className={`${getTagColor(tag)} px-3 py-1 rounded-full text-[12px] font-medium`}
             >
               {tag}
             </span>
@@ -141,6 +219,66 @@ export default function CookingPage({
                 </span>
               </div>
             </div>
+
+            {/* Extra nutrients */}
+            <div className="bg-white rounded-3xl p-5 shadow-sm flex flex-col gap-4">
+              {[
+                {
+                  label: "น้ำตาล",
+                  key: "sugar_g",
+                  unit: "g",
+                  max: 50,
+                  color: "#FF5C8A",
+                },
+                {
+                  label: "โซเดียม",
+                  key: "sodium_mg",
+                  unit: "mg",
+                  max: 2300,
+                  color: "#8B5CF6",
+                },
+                {
+                  label: "ใยอาหาร",
+                  key: "fiber_g",
+                  unit: "g",
+                  max: 30,
+                  color: "#22C55E",
+                },
+                {
+                  label: "วิตามินซี",
+                  key: "vitamin_c_mg",
+                  unit: "mg",
+                  max: 90,
+                  color: "#F59E0B",
+                },
+              ]
+                .filter(
+                  (n) =>
+                    generatedRecipe.nutrition[n.key] !== undefined &&
+                    generatedRecipe.nutrition[n.key] !== null,
+                )
+                .map((n) => {
+                  const value = generatedRecipe.nutrition[n.key];
+                  const pct = Math.max(0, Math.min(100, (value / n.max) * 100));
+                  return (
+                    <div key={n.key} className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-[#767676] w-20 shrink-0">
+                        {n.label}
+                      </span>
+                      <div className="flex-1 h-2 bg-black/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${pct}%`, backgroundColor: n.color }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-semibold text-black w-16 text-right shrink-0">
+                        {value}
+                        {n.unit}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         </div>
       )}
@@ -191,15 +329,71 @@ export default function CookingPage({
 
       {/* Done Button */}
       <button
-        onClick={() => {
-          setActiveTab("home");
-        }}
+        onClick={finishCooking}
         className="bg-[#EF5A3A] text-white px-5 py-4.5 rounded-full text-lg font-bold shadow-md mt-6 w-full mb-8 hover:bg-orange-600 transition"
       >
         เสร็จสิ้น
       </button>
     </>
   );
+
+  const renderRatingModal = () =>
+    showRatingModal && (
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 relative">
+          <button
+            onClick={skipRating}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <h3 className="text-xl font-bold text-black text-center mb-2">
+            ให้คะแนนเมนูนี้
+          </h3>
+          <p className="text-sm text-gray-500 text-center mb-6">
+            {generatedRecipe?.recipe_name}
+          </p>
+
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const filled = n <= (hoverRating || selectedRating);
+              return (
+                <button
+                  key={n}
+                  onClick={() => setSelectedRating(n)}
+                  onMouseEnter={() => setHoverRating(n)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  className="p-1"
+                >
+                  <Star
+                    className={`w-9 h-9 transition-colors ${
+                      filled
+                        ? "text-orange-400 fill-orange-400"
+                        : "text-gray-300"
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={submitRating}
+            disabled={selectedRating === 0}
+            className="bg-[#EF5A3A] text-white px-5 py-3 rounded-full text-base font-bold shadow-md w-full disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orange-600 transition"
+          >
+            ส่งคะแนน
+          </button>
+          <button
+            onClick={skipRating}
+            className="text-gray-400 text-sm font-medium w-full text-center mt-3"
+          >
+            ข้าม
+          </button>
+        </div>
+      </div>
+    );
 
   return (
     <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
@@ -238,16 +432,21 @@ export default function CookingPage({
             {/* Draggable Bottom Sheet overlay */}
             <motion.div
               className="absolute left-0 right-0 mx-auto w-full max-w-[430px] bg-white rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 pb-10"
-              initial={{ y: "10%" }}
               drag="y"
               dragConstraints={{ top: -200, bottom: 0 }}
-              style={{ top: "45%", height: "90%" }}
+              style={{ top: "45%", height: "90%", y: sheetY }}
             >
               <div className="w-full flex justify-center pt-4 pb-2">
                 <div className="w-12 h-1.5 bg-gray-200 rounded-full"></div>
               </div>
 
-              <div className="px-6 h-full overflow-y-auto pb-50 scrollbar-hide">
+              <div
+                ref={contentRef}
+                onWheel={handleWheel}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                className="px-6 h-full overflow-y-auto pb-50 scrollbar-hide"
+              >
                 {renderRecipeContent()}
               </div>
             </motion.div>
@@ -256,6 +455,8 @@ export default function CookingPage({
 
         {/* Bottom Navigation */}
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {renderRatingModal()}
       </div>
     </div>
   );

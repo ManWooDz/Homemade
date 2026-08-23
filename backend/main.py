@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import json
 import sqlite3
 import os
+import uuid
+import requests
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -20,6 +22,7 @@ from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 # Gemini API
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
@@ -426,6 +429,46 @@ async def get_ingredient_images():
         
         fallback = "http://localhost:8000/images/No-image-available.png"
         return {"status": "success", "data": {"images": images, "fallback": fallback}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# search online ingredient images via Pexels
+@app.get("/api/ingredient-images/search")
+async def search_ingredient_images(q: str):
+    if not PEXELS_API_KEY:
+        return {"status": "error", "message": "PEXELS_API_KEY not configured"}
+    if not q.strip():
+        return {"status": "success", "data": {"images": []}}
+    try:
+        response = requests.get(
+            "https://api.pexels.com/v1/search",
+            headers={"Authorization": PEXELS_API_KEY},
+            params={"query": q, "per_page": 12},
+            timeout=10,
+        )
+        response.raise_for_status()
+        photos = response.json().get("photos", [])
+        images = [photo["src"]["medium"] for photo in photos]
+        return {"status": "success", "data": {"images": images}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# upload/capture a custom ingredient image, saved to images/ingredients
+@app.post("/api/ingredient-images/upload")
+async def upload_ingredient_image(file: UploadFile = File(...)):
+    images_dir = os.path.join(os.path.dirname(__file__), "images", "ingredients")
+    allowed_ext = {".png", ".jpg", ".jpeg", ".webp"}
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in allowed_ext:
+        return {"status": "error", "message": f"Unsupported file type: {ext or 'unknown'}"}
+    try:
+        os.makedirs(images_dir, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}{ext}"
+        file_path = os.path.join(images_dir, filename)
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+        url = f"http://localhost:8000/images/ingredients/{filename}"
+        return {"status": "success", "data": {"image": url}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

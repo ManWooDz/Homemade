@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, Trash2, Plus } from "lucide-react";
+import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 
@@ -96,7 +97,12 @@ export default function UserIngredients({
 
                     {/* Ingredients List */}
                     <div className="flex flex-col gap-3 px-5">
-                        {filteredIngredients.length === 0 ? (
+                        {filteredIngredients.length === 0 && selectedCategory === "All" ? (
+                            <div className="flex flex-col items-center text-center text-gray-400 mt-10">
+                                <FaUtensils className="w-12 h-12 mb-3" />
+                                <p>Add your ingredient to get started</p>
+                            </div>
+                        ) : filteredIngredients.length === 0 ? (
                             <div className="text-center text-gray-400 mt-10">
                                 <p>No items found in '{selectedCategory}'.</p>
                             </div>

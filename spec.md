@@ -63,6 +63,27 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 ## Current state
 
+**AddIngredient image picker → online search + upload (2026-08-23) — product envelope, ไม่ใช่ contribution ที่ต้องมี evaluation:**
+- เดิม `frontend/src/pages/AddIngredient.jsx` เลือกรูปจาก local library ที่ backend list ให้ (`GET /api/ingredient-images`); ตอนนี้เปลี่ยนเป็น **online image search** (Pexels) พิมพ์ค้นหา/auto-search ตามชื่อวัตถุดิบ debounce 400ms, ถ้า search fail หรือหา provider ไม่เจอมีปุ่ม **Upload or Take Photo** (`<input type="file" accept="image/*" capture="environment">`) เป็น fallback
+- Backend เพิ่ม 2 endpoints ใหม่ใน `backend/main.py` (ขอ confirm แล้วก่อนแก้ตาม Hard Rule):
+  - `GET /api/ingredient-images/search?q=<term>` — proxy เรียก Pexels Search API ด้วย `PEXELS_API_KEY` (server-side, ไม่ expose key ให้ frontend), คืน list URL รูป (`photo.src.medium`)
+  - `POST /api/ingredient-images/upload` (multipart) — save ไฟล์ลง `backend/images/ingredients/` ด้วยชื่อสุ่ม (`uuid4().hex` + นามสกุลเดิม), คืน URL แบบเดียวกับรูป static เดิม
+  - `requests` package เพิ่มใน `backend/requirements.txt` แต่ **ไม่ต้อง pip install ใหม่** เพราะติดมากับ `google-genai` dependency อยู่แล้ว (เช็คแล้วด้วย `python -c "import requests"` ผ่าน)
+- `GET /api/ingredient-images` (list local library) ยังอยู่เหมือนเดิม — ตอนนี้ frontend ใช้แค่ดึง `fallback` URL (default "no image" placeholder) เท่านั้น ไม่ได้ใช้ full list แล้ว
+- **ค้างอยู่:** `PEXELS_API_KEY` ยังไม่ได้ตั้งใน `backend/.env` — ผู้ใช้จะสมัคร/ใส่เองทีหลัง จนกว่าจะใส่ search endpoint จะคืน `{"status":"error","message":"PEXELS_API_KEY not configured"}` เสมอ (ทดสอบแล้วว่า error graceful ไม่ crash, frontend แสดงข้อความ error ชี้ไปปุ่ม upload แทน)
+- Verify: `python -m py_compile backend/main.py` ผ่าน, `bun run build` (frontend) exit 0, ทดสอบ live: dev server (`--host 127.0.0.1 --port 5173 --strictPort`) HTTP 200, backend `uvicorn` local เรียก `/api/ingredient-images/search` เจอ error ตามคาด, เรียก `/api/ingredient-images/upload` ด้วยไฟล์ทดสอบ (`No-image-available.png`) สำเร็จ ได้ URL คืนมา และ URL นั้น serve ได้จริง (HTTP 200) — ลบไฟล์ทดสอบที่ upload ออกหลังตรวจแล้ว ไม่ทดสอบผ่าน browser UI จริง (ผู้ใช้ควรตรวจหน้า AddIngredient เองผ่าน dev server อีกที โดยเฉพาะหลังใส่ `PEXELS_API_KEY` แล้ว)
+- ไฟล์ที่แก้: `backend/main.py`, `backend/requirements.txt`, `frontend/src/pages/AddIngredient.jsx`
+
+**Profile page (frontend-only, 2026-08-18) — เข้าเงื่อนไข "product envelope" ไม่ใช่ contribution ที่ต้องมี evaluation:**
+- ไฟล์ใหม่ `frontend/src/pages/Profile.jsx` ผูกกับ bottom-tab "me" ผ่าน `App.jsx` (`currentView === "profile"`); internal sub-view switching ในไฟล์เดียว (main/history/language/preferences/helps) ตาม pattern เดียวกับ `CreateRecipe.jsx`
+- Username/email/avatar เป็น **hardcoded placeholder** — ยังไม่มี auth/user backend (เช็คแล้วว่า `/backend/` ไม่มี endpoint user/profile ใดๆ) ตรงตาม NO MAGIC ห้ามเดา infra
+- Cooking History ดึงจาก `cookingHistory` state ใหม่ใน `App.jsx` — push เข้า array ทุกครั้งที่ `generate-recipe-text` สำเร็จ (ทั้งสอง flow: create-recipe และ custom-cooking) เก็บ **in-session เท่านั้น** รีเฟรชหน้าแล้วหาย เพราะยังไม่มี persistence/backend
+- Language menu: เลือกได้ (ไทย/English) แต่เป็น **visual only ไม่มี i18n wiring จริง** (ยังไม่มี locale infra ในโปรเจกต์)
+- Preferences menu: ใช้ pill-select pattern เดิมจาก `CreateRecipe.jsx` (รสชาติ/อาการแพ้อาหาร/อุปกรณ์ที่มี) เก็บเป็น local state ใน `Profile.jsx` เท่านั้น **ยังไม่ได้ผูกเป็นค่า default ให้ `CreateRecipe.jsx`** จริง (ไม่ได้อยู่ในขอบเขตที่ขอ ถ้าจะทำเป็นงานถัดไป)
+- Logout button: แดง วางไว้ตาม UI spec แต่ยังเป็น **no-op** (`console.log` เฉยๆ) เพราะยังไม่มี auth/session backend ให้ logout จริง
+- Verify: `npx eslint` ผ่าน (0 error/warning บนไฟล์ที่แก้), `npx vite build` exit 0 — **ไม่ได้ทำ visual browser verification** (playwright chromium cache version ไม่ตรงกับที่ npx ต้องการ ต้องโหลดใหม่ ผู้ใช้เลือก skip ไม่ดาวน์โหลด) ผู้ใช้ต้องตรวจ UI จริงเองผ่าน dev server
+- ไฟล์ที่แก้: `frontend/src/App.jsx` (เพิ่ม `cookingHistory` state, route `"profile"`, tab handler `"me"`), ไฟล์ใหม่ `frontend/src/pages/Profile.jsx` — ไม่แตะ `/backend/`, ไม่ติดตั้ง package ใหม่
+
 **Local development launcher (implemented and locally verified — 2026-07-14):**
 - เป้าหมาย: ดับเบิลคลิก Windows Desktop shortcut ครั้งเดียวเพื่อเปิด FastAPI backend, Vite frontend และ `http://127.0.0.1:5173` ใน default browser โดยไม่ต้องเปิด VS Code/activate venv เอง
 - launcher จะอยู่ที่ root ชื่อ `start-homemade.ps1` และต้องถูก `.gitignore` แบบเจาะจงเพื่อไม่ให้ push ขึ้น GitHub; Desktop shortcut อยู่นอก repo
@@ -130,6 +151,20 @@ Request:  { name, category, image }
 Response: { status, data: {id, name, category, image, selected} }
 ```
 ⚠️ ยังไม่มี `user_id` — ต้องเพิ่มตอน migrate ไป PostgreSQL พร้อม auth
+
+**`GET /api/ingredient-images/search`** (active contract, 2026-08-23):
+```
+Request:  query param q: string
+Response: { status: "success"|"error", data?: {images: string[]}, message?: string }
+```
+`status: "error"` เมื่อ `PEXELS_API_KEY` ไม่ได้ตั้งใน `.env` หรือเรียก Pexels API ไม่สำเร็จ — frontend ต้อง fallback ไปปุ่ม upload
+
+**`POST /api/ingredient-images/upload`** (active contract, 2026-08-23):
+```
+Request:  multipart/form-data, field "file" (.png/.jpg/.jpeg/.webp เท่านั้น)
+Response: { status: "success"|"error", data?: {image: string}, message?: string }
+```
+ไฟล์ถูก save ลง `backend/images/ingredients/` ด้วยชื่อสุ่ม (`uuid4`), ยังไม่มี size limit หรือ virus/content scan — เหมาะกับ local dev เท่านั้น ต้องทำเพิ่มก่อน production
 
 **ยังไม่ได้ออกแบบ (ต้องทำก่อนเริ่ม auth):** `/api/auth/register`, `/api/auth/login` (OAuth2PasswordRequestForm → JWT), `/api/barcode-lookup`, `/api/favorites`, `/api/ratings`, `/api/history`
 ## Research note (2026-07-15)

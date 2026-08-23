@@ -1,6 +1,7 @@
 
 fastapi
 uvicorn
+requests
 python-multipart     
 ultralytics           
 google-genai          
