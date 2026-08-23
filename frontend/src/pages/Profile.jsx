@@ -198,7 +198,7 @@ export default function Profile({
   const goMain = () => setView("main");
 
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -427,7 +427,7 @@ export default function Profile({
               </h3>
               <div className="flex items-center gap-1.5 text-gray-500 text-sm truncate">
                 <Mail className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{PLACEHOLDER_USER.email}</span>
+                <span className="truncate">{user?.email ?? PLACEHOLDER_USER.email}</span>
               </div>
             </div>
           </div>

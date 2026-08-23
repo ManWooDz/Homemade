@@ -65,10 +65,18 @@ export default function OtpVerify() {
         inputRefs.current[0]?.focus();
     };
 
+    const handleBack = () => {
+        if (window.history.state?.idx > 0) {
+            navigate(-1);
+        } else {
+            navigate("/reset-password");
+        }
+    };
+
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
             <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-                <AuthHeader onBack={() => navigate(-1)} />
+                <AuthHeader onBack={handleBack} />
                 <div className="flex-1 overflow-y-auto px-6 pb-10 flex flex-col">
                     <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
                         Enter verification code
