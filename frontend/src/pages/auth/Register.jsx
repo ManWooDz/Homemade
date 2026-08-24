@@ -19,7 +19,7 @@ export default function Register() {
         const result = await register(email, password, confirmPassword);
         setIsSubmitting(false);
         if (result.success) {
-            navigate("/login", { state: { message: "Account created — please log in." } });
+            navigate("/onboarding");
         } else {
             setError(result.error);
         }

@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Loading from "./pages/auth/Loading.jsx";
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
+import Onboarding from "./pages/auth/Onboarding.jsx";
 import ResetPasswordEmail from "./pages/auth/ResetPasswordEmail.jsx";
 import OtpVerify from "./pages/auth/OtpVerify.jsx";
 import ResetPasswordConfirm from "./pages/auth/ResetPasswordConfirm.jsx";
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")).render(
                     <Route path="/" element={<Loading />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
                     <Route path="/reset-password" element={<ResetPasswordEmail />} />
                     <Route path="/reset-password/otp" element={<OtpVerify />} />
                     <Route path="/reset-password/confirm" element={<ResetPasswordConfirm />} />

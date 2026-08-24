@@ -63,6 +63,14 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 ## Current state
 
+**User Profiling onboarding wizard (frontend-only, 2026-08-24) — เข้าเงื่อนไข "product envelope" ไม่ใช่ contribution ที่ต้องมี evaluation:**
+- ไฟล์ใหม่ `frontend/src/pages/auth/Onboarding.jsx` — 6-page wizard เก็บ birthdate, cuisine preferences, dietary restrictions, equipment, cooking frequency, cooking goals; internal `step` state (1–6) ในไฟล์เดียว มี back/next ทุกหน้า
+- Route ใหม่ `/onboarding` เพิ่มใน `frontend/src/main.jsx`; `Register.jsx` เปลี่ยนจาก navigate ตรงไป `/login` เป็น navigate ไป `/onboarding` หลัง register สำเร็จ (mock), จบ wizard แล้ว navigate ต่อไป `/login`
+- Birthdate เป็น custom wheel picker (3 คอลัมน์ day/month(ไทย)/year) ทำเองด้วย CSS `scroll-snap` — **ไม่ติดตั้ง package ใหม่** ตาม Hard Rule
+- เก็บผลเป็น local state เท่านั้น ยังไม่มี backend call — มี stub function `submitProfile()` ใน `Onboarding.jsx` พร้อม comment `TODO(backend): POST /api/user-preferences once SQLite -> PostgreSQL migration lands` รอ backend พร้อมค่อยผูกจริง (payload shape ออกแบบไว้ล่วงหน้าแล้ว: `birth_date, cuisine_preferences[], dietary_restrictions[], equipment[], cooking_frequency, cooking_goals[]`)
+- Verify: `npx eslint .` ไม่มี error/warning ใหม่จาก 3 ไฟล์ที่แก้ (baseline เดิม 7 errors ในไฟล์อื่นยังอยู่เหมือนเดิม ไม่เกี่ยวกับงานนี้), `npx vite build` exit 0, dev server (`--host 127.0.0.1 --port 5183 --strictPort`) ตอบ HTTP 200 — **ไม่ได้ทำ visual browser verification** (ไม่มี browser tool ใน session นี้ ผู้ใช้ต้องตรวจ UI จริงเองผ่าน dev server โดยเฉพาะ wheel picker scroll behavior)
+- ไฟล์ที่แก้: `frontend/src/main.jsx`, `frontend/src/pages/auth/Register.jsx`, ไฟล์ใหม่ `frontend/src/pages/auth/Onboarding.jsx` — ไม่แตะ `/backend/`, ไม่ติดตั้ง package ใหม่
+
 **AddIngredient image picker → online search + upload (2026-08-23) — product envelope, ไม่ใช่ contribution ที่ต้องมี evaluation:**
 - เดิม `frontend/src/pages/AddIngredient.jsx` เลือกรูปจาก local library ที่ backend list ให้ (`GET /api/ingredient-images`); ตอนนี้เปลี่ยนเป็น **online image search** (Pexels) พิมพ์ค้นหา/auto-search ตามชื่อวัตถุดิบ debounce 400ms, ถ้า search fail หรือหา provider ไม่เจอมีปุ่ม **Upload or Take Photo** (`<input type="file" accept="image/*" capture="environment">`) เป็น fallback
 - Backend เพิ่ม 2 endpoints ใหม่ใน `backend/main.py` (ขอ confirm แล้วก่อนแก้ตาม Hard Rule):
@@ -166,7 +174,7 @@ Response: { status: "success"|"error", data?: {image: string}, message?: string 
 ```
 ไฟล์ถูก save ลง `backend/images/ingredients/` ด้วยชื่อสุ่ม (`uuid4`), ยังไม่มี size limit หรือ virus/content scan — เหมาะกับ local dev เท่านั้น ต้องทำเพิ่มก่อน production
 
-**ยังไม่ได้ออกแบบ (ต้องทำก่อนเริ่ม auth):** `/api/auth/register`, `/api/auth/login` (OAuth2PasswordRequestForm → JWT), `/api/barcode-lookup`, `/api/favorites`, `/api/ratings`, `/api/history`
+**ยังไม่ได้ออกแบบ (ต้องทำก่อนเริ่ม auth):** `/api/auth/register`, `/api/auth/login` (OAuth2PasswordRequestForm → JWT), `/api/barcode-lookup`, `/api/favorites`, `/api/ratings`, `/api/history`, `/api/user-preferences` (payload shape ร่างไว้แล้วใน `Onboarding.jsx`'s `submitProfile()` stub — ยังไม่มี endpoint จริง)
 ## Research note (2026-07-15)
 
 - Official CPI reference checked: TPSO/Ministry of Commerce annual CPI release for December 2568 and year 2568.
