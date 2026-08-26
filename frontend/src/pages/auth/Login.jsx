@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/HomeMade_Logo.png";
+import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
@@ -58,12 +59,10 @@ export default function Login() {
                             <label className="text-sm font-bold text-gray-700 mb-2 block">
                                 Password
                             </label>
-                            <input
-                                type="password"
+                            <PasswordInput
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
                                 required
                             />
                         </div>

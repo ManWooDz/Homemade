@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthHeader from "../../components/AuthHeader";
+import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Register() {
@@ -60,12 +61,10 @@ export default function Register() {
                             <label className="text-sm font-bold text-gray-700 mb-2 block">
                                 Password
                             </label>
-                            <input
-                                type="password"
+                            <PasswordInput
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="At least 8 characters"
-                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
                                 required
                             />
                         </div>
@@ -73,12 +72,10 @@ export default function Register() {
                             <label className="text-sm font-bold text-gray-700 mb-2 block">
                                 Confirm Password
                             </label>
-                            <input
-                                type="password"
+                            <PasswordInput
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="Re-enter password"
-                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
                                 required
                             />
                         </div>

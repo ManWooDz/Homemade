@@ -74,6 +74,18 @@ const pad2 = (n) => String(n).padStart(2, "0");
 
 const daysInMonth = (year, monthIndex) => new Date(year, monthIndex + 1, 0).getDate();
 
+const TODAY = new Date();
+const TODAY_MONTH_INDEX = TODAY.getMonth();
+const TODAY_DAY = TODAY.getDate();
+
+const maxSelectableMonthIndex = (yearIndex) =>
+  YEARS[yearIndex] === CURRENT_YEAR ? TODAY_MONTH_INDEX : 11;
+
+const maxSelectableDay = (yearIndex, monthIndex) =>
+  YEARS[yearIndex] === CURRENT_YEAR && monthIndex === TODAY_MONTH_INDEX
+    ? TODAY_DAY
+    : daysInMonth(YEARS[yearIndex], monthIndex);
+
 const toggleInList = (list, option, noneValue) => {
   if (option === noneValue) {
     return list.includes(noneValue) ? [] : [noneValue];
@@ -219,9 +231,13 @@ function WheelColumn({ items, selectedIndex, onChangeIndex }) {
 }
 
 function DateWheel({ dayIndex, monthIndex, yearIndex, onChangeDay, onChangeMonth, onChangeYear }) {
+  const maxMonthIndex = maxSelectableMonthIndex(yearIndex);
+  const months = useMemo(() => MONTHS_TH.slice(0, maxMonthIndex + 1), [maxMonthIndex]);
+  const clampedMonthIndex = Math.min(monthIndex, maxMonthIndex);
+
   const days = useMemo(
-    () => Array.from({ length: daysInMonth(YEARS[yearIndex], monthIndex) }, (_, i) => i + 1),
-    [monthIndex, yearIndex],
+    () => Array.from({ length: maxSelectableDay(yearIndex, clampedMonthIndex) }, (_, i) => i + 1),
+    [yearIndex, clampedMonthIndex],
   );
   const clampedDayIndex = Math.min(dayIndex, days.length - 1);
 
@@ -229,7 +245,7 @@ function DateWheel({ dayIndex, monthIndex, yearIndex, onChangeDay, onChangeMonth
     <div className="relative bg-gray-50 rounded-2xl px-4 flex gap-2">
       <div className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 h-10 bg-orange-50 border border-[#EF5A3A]/40 rounded-xl z-0" />
       <WheelColumn items={days} selectedIndex={clampedDayIndex} onChangeIndex={onChangeDay} />
-      <WheelColumn items={MONTHS_TH} selectedIndex={monthIndex} onChangeIndex={onChangeMonth} />
+      <WheelColumn items={months} selectedIndex={clampedMonthIndex} onChangeIndex={onChangeMonth} />
       <WheelColumn items={YEARS} selectedIndex={yearIndex} onChangeIndex={onChangeYear} />
     </div>
   );
@@ -262,12 +278,13 @@ export default function Onboarding() {
   const [cookingFrequency, setCookingFrequency] = useState("");
   const [cookingGoals, setCookingGoals] = useState([]);
 
+  const clampedMonthIndex = Math.min(monthIndex, maxSelectableMonthIndex(yearIndex));
   const days = useMemo(
-    () => Array.from({ length: daysInMonth(YEARS[yearIndex], monthIndex) }, (_, i) => i + 1),
-    [monthIndex, yearIndex],
+    () => Array.from({ length: maxSelectableDay(yearIndex, clampedMonthIndex) }, (_, i) => i + 1),
+    [yearIndex, clampedMonthIndex],
   );
 
-  const birthDate = `${YEARS[yearIndex]}-${pad2(monthIndex + 1)}-${pad2(days[Math.min(dayIndex, days.length - 1)])}`;
+  const birthDate = `${YEARS[yearIndex]}-${pad2(clampedMonthIndex + 1)}-${pad2(days[Math.min(dayIndex, days.length - 1)])}`;
 
   const handleBack = () => {
     if (step === 1) {
