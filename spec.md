@@ -52,7 +52,7 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
   - **ตัดออกจาก scope:** สัญญาณ "วัตถุดิบที่มักมีใน fridge เสมอ" — ต้องมี audit log การ add/remove วัตถุดิบข้ามเวลาซึ่งยังไม่ได้วางแผน (query fridge ปัจจุบันบอก pattern อดีตไม่ได้) เพิ่มทีหลังได้ถ้ามีเวลา ไม่ใช่ MVP
   - **คำที่ต้องใช้ตอนเขียนเล่ม/สอบ:** เรียก "rating-weighted aggregation heuristic" หรือ "rule-based taste profile summarizer" — **ห้ามเรียกว่า "AI เรียนรู้ preference"** เพราะไม่มี model train จริง เป็นแค่ SQL aggregation
 - Expiry Tracking + ranking (**demonstrated only** — ไม่เคลม "ลด food waste X%")
-- PostgreSQL migration + schema ใหม่ (users, ingredient_nutrition, generate_history, favorites, ratings, user_ingredients+expiry_date)
+- PostgreSQL migration + schema ใหม่ (users, ingredient_nutrition, generate_history, favorites, ratings, user_ingredients+expiry_date) — แผนเตรียมการละเอียดดูที่ [docs/postgres-migration-prep.md](docs/postgres-migration-prep.md) (ยังไม่ได้แก้ backend, รอ confirm ทีละ step)
 
 **Out of scope (ตัดสินใจแล้ว อย่าเสนอกลับมา):**
 - YOLO ingredient recognition (ตัดออกแล้ว ใช้ Barcode แทน)
@@ -62,6 +62,18 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 - ทำอาหารจริงทุกสูตรเพื่อทดสอบ (ใช้ 3-layer verification: rule-based safety + retrieval similarity + expert-rated sample เล็กแทน)
 
 ## Current state
+
+**Home search + filter panel (frontend-only, 2026-08-29) — เข้าเงื่อนไข "product envelope" ไม่ใช่ contribution ที่ต้องมี evaluation:**
+- `App.jsx` search box (เดิมเป็น placeholder เฉยๆ) ตอนนี้ filter `filteredRecipes` จริงตาม `recipe.name` (case-insensitive substring)
+- ปุ่ม filter (`SlidersHorizontal`) เปิด overlay panel — ตำแหน่ง top วัดจาก `searchBarRef.offsetTop + offsetHeight` ด้วย `useLayoutEffect` (anchor ใต้ช่อง search พอดี ไม่ hardcode pixel), scroll ภายใน panel ซ่อน scrollbar ด้วย `.scrollbar-hide` util เดิม (ใช้ pattern เดียวกับ `RecipeDetail.jsx`/`CookingPage.jsx`)
+- 5 tab: Ingredient, Meal Type, Dietary, Cuisine, Occasion — badge โชว์ `(n)` เมื่อ tab นั้นมีการเลือก
+  - Ingredient tab: search ในตัว, section Selected (มีปุ่ม X มุมขวาบนของรูปไว้เอาออก), section All Ingredient (ดึง unique ingredient จาก `recipes[].ingredients` จริง ไม่ mock, dim เมื่อเลือกแล้ว)
+  - อีก 4 tab: checkbox list มี emoji นำหน้าแต่ละ option (`OPTION_EMOJI` map)
+- **⚠️ ทราบแล้วและตัดสินใจร่วมกับผู้ใช้แล้ว (ไม่ใช่บั๊ก):** ตัวเลือกใน Meal Type/Dietary/Cuisine/Occasion (Breakfast, Vegan, Thai, Date Night ฯลฯ) เป็น label ที่ผู้ใช้ระบุเอง **ไม่ตรงกับ `tags` จริงใน `backend/database/setup_db.py`** (มีแค่ "Asian Food", "Thai Food", "Healthy / Diet", "Western Food", "High Protein", "Spicy", "Quick & Easy") — logic filter เทียบกับ `recipe.tags` ตรงๆ (case-insensitive) ตามที่ผู้ใช้เลือก ("Build UI, filter against tags as-is") ดังนั้น 4 tab นี้จะไม่ match recipe ไหนเลยจนกว่า backend จะเพิ่ม tags ที่ตรงกับ options เหล่านี้จริง — ไม่ใช่ NO MAGIC violation เพราะไม่ได้เดา/หลอกว่า match ได้ ผู้ใช้รับทราบ gap นี้แล้ว
+- Filter tab badge row เพิ่ม mouse click-drag-to-scroll (สำหรับใช้บนคอม/ไม่มี touch) — มี threshold 5px กัน drag ที่ตั้งใจ scroll ไป trigger tab-switch click โดยไม่ได้ตั้งใจ
+- Clear ล้างทุก selection ทั้ง 5 category (panel ยังเปิดอยู่), Apply แค่ปิด panel (selection apply แบบ live ระหว่างติ๊กอยู่แล้ว ไม่มี draft/commit state แยก — ตัดสินใจให้ minimal ตามขอบเขตที่ขอ)
+- Verify: `npx eslint src/App.jsx` ผ่าน 0 error/warning, `npx vite build` exit 0 (ทำซ้ำ 3 รอบระหว่างแก้ทีละส่วน ครั้งล่าสุดผ่านหมด), ผู้ใช้ทดสอบผ่าน dev server เองแล้วว่าใช้งานได้ (confirm ในแชท "ลอง dev server แล้วเรียบร้อย")
+- ไฟล์ที่แก้: `frontend/src/App.jsx` เท่านั้น (เพิ่มฟังก์ชัน `FilterCheckboxList` ในไฟล์เดียวกัน) — ไม่แตะ `/backend/`, ไม่ติดตั้ง package ใหม่
 
 **User Profiling onboarding wizard (frontend-only, 2026-08-24) — เข้าเงื่อนไข "product envelope" ไม่ใช่ contribution ที่ต้องมี evaluation:**
 - ไฟล์ใหม่ `frontend/src/pages/auth/Onboarding.jsx` — 6-page wizard เก็บ birthdate, cuisine preferences, dietary restrictions, equipment, cooking frequency, cooking goals; internal `step` state (1–6) ในไฟล์เดียว มี back/next ทุกหน้า
