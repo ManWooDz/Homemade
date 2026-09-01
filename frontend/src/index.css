@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+/* Design tokens derived from the previous hardcoded values (#EF5A3A, gray-50/300/400/700, etc.)
+   to back the semantic class names used by the pages_v2 redesign. Placeholders until real
+   Figma token values are provided. */
+@theme {
+  --color-background-primary: #ffffff;
+  --color-background-tertiary: #f9fafb;
+  --color-button-primary: #ef5a3a;
+  --color-button-neutral: #ffffff;
+  --color-button-secondary: #fdece5;
+  --color-text-black: #111827;
+  --color-text-white: #ffffff;
+  --color-text-neutral: #6b7280;
+  --color-text-brands: #ef5a3a;
+  --color-text-tertiary: #374151;
+  --color-stroke-text-field: #d1d5db;
+  --color-stroke-brands: #ef5a3a;
+  --color-border-stroke-btn-tertiary: #9ca3af;
+  --color-border-stroke-brands: #ef5a3a;
+  --color-forms-otp-fill-default: #f9fafb;
+  --color-forms-otp-fill-filled: #fdece5;
+
+  --text-h2: 1.25rem;
+  --text-body-large: 1rem;
+  --text-body-medium: 0.875rem;
+  --text-caption: 0.75rem;
+}
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
