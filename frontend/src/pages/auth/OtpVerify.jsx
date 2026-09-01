@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthHeader from "../../components/AuthHeader";
+import HeaderLogo from "../../components/HeaderLogo";
+import BackButton from "../../components/BackButton";
 import { useAuth } from "../../context/AuthContext";
 
 const OTP_LENGTH = 6;
@@ -65,68 +66,63 @@ export default function OtpVerify() {
         inputRefs.current[0]?.focus();
     };
 
-    const handleBack = () => {
-        if (window.history.state?.idx > 0) {
-            navigate(-1);
-        } else {
-            navigate("/reset-password");
-        }
-    };
-
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-                <AuthHeader onBack={handleBack} />
-                <div className="flex-1 overflow-y-auto px-6 pb-10 flex flex-col">
-                    <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
-                        Enter verification code
-                    </h2>
-                    <p className="text-sm text-gray-500 text-center mb-8">
-                        We sent a code to {pendingResetEmail}
-                    </p>
+            <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto">
+                <div className="w-full min-h-full px-8 pt-6 pb-10 bg-background-primary flex flex-col justify-start items-center">
+                    <HeaderLogo />
 
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                        <div className="flex justify-center gap-2">
-                            {digits.map((digit, index) => (
-                                <input
-                                    key={index}
-                                    ref={(el) => (inputRefs.current[index] = el)}
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={1}
-                                    value={digit}
-                                    onChange={(e) => handleChange(index, e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className="w-11 h-13 text-center text-xl font-bold bg-gray-50 border border-gray-300 rounded-2xl outline-none focus:border-[#EF5A3A] transition"
-                                />
-                            ))}
+                    <div className="w-full flex justify-start items-center">
+                        <BackButton to="/reset-password" />
+                    </div>
+
+                    <form
+                        onSubmit={handleSubmit}
+                        className="w-full flex flex-col justify-start items-center mt-24"
+                    >
+                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">
+                            ใส่รหัส OTP
+                        </h1>
+
+                        <div className="w-full flex justify-between items-center gap-3">
+                            <div className="flex gap-2">
+                                {digits.map((digit, index) => (
+                                    <input
+                                        key={index}
+                                        ref={(el) => (inputRefs.current[index] = el)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={(e) => handleChange(index, e.target.value)}
+                                        onKeyDown={(e) => handleKeyDown(index, e)}
+                                        className="w-10 h-11 bg-forms-otp-fill-default text-center text-body-large text-text-black rounded-lg focus:outline-none focus:bg-forms-otp-fill-filled focus:border focus:border-stroke-brands"
+                                    />
+                                ))}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleResend}
+                                disabled={cooldown > 0}
+                                className="h-11 px-4 bg-button-neutral rounded-full border border-stroke-brands text-text-brands text-body-medium font-normal flex justify-center items-center whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {cooldown > 0 ? `ส่งอีกครั้ง (${cooldown}s)` : "ส่งอีกครั้ง"}
+                            </button>
                         </div>
 
-                        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                        {error && (
+                            <p className="w-full text-body-medium text-red-500 mt-4">{error}</p>
+                        )}
 
                         <button
                             type="submit"
                             disabled={isSubmitting || digits.some((d) => !d)}
-                            className="w-full bg-[#EF5A3A] text-white py-4 rounded-full text-lg font-bold shadow-md hover:bg-orange-600 disabled:opacity-50 transition"
+                            className="w-full h-11 mt-24 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "Verifying..." : "Verify"}
+                            {isSubmitting ? "กำลังยืนยัน..." : "ยืนยัน"}
                         </button>
                     </form>
-
-                    <div className="text-center mt-6">
-                        {cooldown > 0 ? (
-                            <p className="text-sm text-gray-400">
-                                Resend code in {cooldown}s
-                            </p>
-                        ) : (
-                            <button
-                                onClick={handleResend}
-                                className="text-sm font-bold text-[#EF5A3A]"
-                            >
-                                Resend code
-                            </button>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

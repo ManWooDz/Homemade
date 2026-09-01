@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import logo from "../../assets/HomeMade_Logo.png";
+import HeaderLogo from "../../components/HeaderLogo";
 import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 
@@ -29,67 +29,65 @@ export default function Login() {
 
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-                <div className="flex-1 overflow-y-auto px-6 pt-16 pb-10 flex flex-col">
-                    <div className="flex justify-center mb-10">
-                        <img src={logo} alt="HomeMade" className="h-20 object-contain" />
-                    </div>
+            <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto">
+                <div className="w-full min-h-full px-6 py-10 bg-background-primary flex flex-col justify-center items-center">
+                    <div className="w-full h-auto flex flex-col justify-start items-center gap-8">
+                        <HeaderLogo />
 
-                    {successMessage && (
-                        <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-center mb-4">
-                            {successMessage}
-                        </p>
-                    )}
+                        {successMessage && (
+                            <p className="w-full text-body-medium text-green-600 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-center">
+                                {successMessage}
+                            </p>
+                        )}
 
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        <div>
-                            <label className="text-sm font-bold text-gray-700 mb-2 block">
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="you@example.com"
-                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-bold text-gray-700 mb-2 block">
-                                Password
-                            </label>
-                            <PasswordInput
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                            />
-                        </div>
-
-                        {error && <p className="text-sm text-red-500">{error}</p>}
-
-                        <div className="text-right -mt-1">
-                            <Link to="/reset-password" className="text-sm font-medium text-[#EF5A3A]">
-                                Forgot password?
-                            </Link>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full mt-4 bg-[#EF5A3A] text-white py-4 rounded-full text-lg font-bold shadow-md hover:bg-orange-600 disabled:opacity-50 transition"
+                        <form
+                            onSubmit={handleSubmit}
+                            className="w-full h-auto flex flex-col justify-start items-center gap-4"
                         >
-                            {isSubmitting ? "Logging in..." : "Log In"}
-                        </button>
-                    </form>
+                            <div className="w-full h-auto flex flex-col justify-start items-center gap-3">
+                                <input
+                                    type="email"
+                                    placeholder="Email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full h-11 px-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
+                                    required
+                                />
+                                <PasswordInput
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Password"
+                                    required
+                                />
+                            </div>
 
-                    <p className="text-center text-sm text-gray-500 mt-6">
-                        No account?{" "}
-                        <Link to="/register" className="text-[#EF5A3A] font-bold">
-                            Register
-                        </Link>
-                    </p>
+                            {error && <p className="text-body-medium text-red-500">{error}</p>}
+
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="w-full h-11 mt-2 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
+                            >
+                                {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "Login"}
+                            </button>
+
+                            <div className="w-full flex justify-center items-center gap-2 text-caption mt-1">
+                                <Link
+                                    to="/register"
+                                    className="text-text-brands font-normal hover:underline"
+                                >
+                                    Sign in
+                                </Link>
+                                <div className="w-px h-3 bg-text-black"></div>
+                                <Link
+                                    to="/reset-password"
+                                    className="text-text-black font-normal hover:underline"
+                                >
+                                    Forgot password?
+                                </Link>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

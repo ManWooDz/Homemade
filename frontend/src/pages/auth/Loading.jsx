@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import logo from "../../assets/HomeMade_Logo.png";
 import { useAuth } from "../../context/AuthContext";
 
@@ -19,14 +18,14 @@ export default function Loading() {
 
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col items-center justify-center shadow-2xl">
-                <motion.img
-                    src={logo}
-                    alt="HomeMade"
-                    className="h-24 object-contain"
-                    animate={{ scale: [1, 1.05, 1], opacity: [0.85, 1, 0.85] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                />
+            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+                <div className="w-full flex-1 flex flex-col justify-center items-center bg-background-primary overflow-hidden">
+                    <img
+                        src={logo}
+                        alt="HomeMade Logo"
+                        className="w-56 h-auto object-contain animate-pulse"
+                    />
+                </div>
             </div>
         </div>
     );
