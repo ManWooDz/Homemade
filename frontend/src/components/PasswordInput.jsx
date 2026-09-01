@@ -5,7 +5,7 @@ export default function PasswordInput({ value, onChange, placeholder, required }
     const [visible, setVisible] = useState(false);
 
     return (
-        <div className="relative">
+        <div className="relative w-full">
             <input
                 type={visible ? "text" : "password"}
                 value={value}

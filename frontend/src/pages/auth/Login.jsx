@@ -59,6 +59,14 @@ export default function Login() {
                                     placeholder="Password"
                                     required
                                 />
+                                <div className="w-full flex justify-end">
+                                    <Link
+                                        to="/reset-password"
+                                        className="text-text-black text-caption font-normal hover:underline"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
                             </div>
 
                             {error && <p className="text-body-medium text-red-500">{error}</p>}
@@ -71,19 +79,12 @@ export default function Login() {
                                 {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "Login"}
                             </button>
 
-                            <div className="w-full flex justify-center items-center gap-2 text-caption mt-1">
+                            <div className="w-full flex justify-center items-center text-caption mt-1">
                                 <Link
                                     to="/register"
                                     className="text-text-brands font-normal hover:underline"
                                 >
-                                    Sign in
-                                </Link>
-                                <div className="w-px h-3 bg-text-black"></div>
-                                <Link
-                                    to="/reset-password"
-                                    className="text-text-black font-normal hover:underline"
-                                >
-                                    Forgot password?
+                                    Sign Up
                                 </Link>
                             </div>
                         </form>

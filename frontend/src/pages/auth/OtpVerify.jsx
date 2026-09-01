@@ -68,7 +68,7 @@ export default function OtpVerify() {
 
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto">
+            <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto overflow-x-hidden">
                 <div className="w-full min-h-full px-8 pt-6 pb-10 bg-background-primary flex flex-col justify-start items-center">
                     <HeaderLogo />
 
@@ -81,10 +81,10 @@ export default function OtpVerify() {
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
                         <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">
-                            ใส่รหัส OTP
+                            Enter OTP
                         </h1>
 
-                        <div className="w-full flex justify-between items-center gap-3">
+                        <div className="w-full flex flex-col items-center gap-3">
                             <div className="flex gap-2">
                                 {digits.map((digit, index) => (
                                     <input
@@ -96,7 +96,7 @@ export default function OtpVerify() {
                                         value={digit}
                                         onChange={(e) => handleChange(index, e.target.value)}
                                         onKeyDown={(e) => handleKeyDown(index, e)}
-                                        className="w-10 h-11 bg-forms-otp-fill-default text-center text-body-large text-text-black rounded-lg focus:outline-none focus:bg-forms-otp-fill-filled focus:border focus:border-stroke-brands"
+                                        className="w-10 h-11 bg-forms-otp-fill-default border border-stroke-text-field text-center text-body-large text-text-black rounded-lg focus:outline-none focus:bg-forms-otp-fill-filled focus:border-stroke-brands"
                                     />
                                 ))}
                             </div>
@@ -107,7 +107,7 @@ export default function OtpVerify() {
                                 disabled={cooldown > 0}
                                 className="h-11 px-4 bg-button-neutral rounded-full border border-stroke-brands text-text-brands text-body-medium font-normal flex justify-center items-center whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {cooldown > 0 ? `ส่งอีกครั้ง (${cooldown}s)` : "ส่งอีกครั้ง"}
+                                {cooldown > 0 ? `Resend (${cooldown}s)` : "Resend"}
                             </button>
                         </div>
 
@@ -120,7 +120,7 @@ export default function OtpVerify() {
                             disabled={isSubmitting || digits.some((d) => !d)}
                             className="w-full h-11 mt-24 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "กำลังยืนยัน..." : "ยืนยัน"}
+                            {isSubmitting ? "Verifying..." : "Verify"}
                         </button>
                     </form>
                 </div>
