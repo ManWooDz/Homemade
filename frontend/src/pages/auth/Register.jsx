@@ -42,7 +42,7 @@ export default function Register() {
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
                         <h1 className="text-h2 font-semibold text-text-black text-center mb-4">
-                            Sign In
+                            Sign Up
                         </h1>
 
                         <div className="w-full flex flex-col justify-start items-center gap-4.25">
@@ -79,7 +79,7 @@ export default function Register() {
                             disabled={isSubmitting}
                             className="w-full h-11 mt-24.5 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "กำลังสร้างบัญชี..." : "Sign In"}
+                            {isSubmitting ? "Creating account..." : "Sign Up"}
                         </button>
                     </form>
                 </div>

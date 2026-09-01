@@ -60,9 +60,9 @@ export default function ResetPasswordEmail() {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full h-11 mt-24.5 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
+                            className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "กำลังส่ง..." : "รับ OTP"}
+                            {isSubmitting ? "Sending..." : "Send OTP"}
                         </button>
                     </form>
                 </div>

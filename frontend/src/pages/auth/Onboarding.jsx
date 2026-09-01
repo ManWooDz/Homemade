@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Picker from "react-mobile-picker";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -9,6 +9,7 @@ const OTHER_OPTION = "อื่น ๆ";
 const NO_RESTRICTION = "ไม่มีข้อจำกัด";
 
 const AGES = Array.from({ length: 66 }, (_, i) => String(15 + i));
+const AGE_ITEM_HEIGHT = 44; // matches the h-11 row rendered for each Picker.Item
 
 const CUISINE_OPTIONS = [
   "อาหารไทย",
@@ -31,7 +32,7 @@ const RESTRICTION_OPTIONS = [
   "แพ้ปลา",
   "ทาน Vegan",
   "ทานมังสวิรัติ",
-  "Halal",
+  "ฮาลาล",
   OTHER_OPTION,
 ];
 
@@ -102,10 +103,10 @@ function OptionChips({ options, selected, multiple, onToggle }) {
             key={option}
             type="button"
             onClick={() => onToggle(option)}
-            className={`h-11 px-5 rounded-full flex justify-center items-center text-body-large transition-all cursor-pointer ${
+            className={`h-11 px-5 rounded-full border flex justify-center items-center text-body-large transition-all cursor-pointer ${
               isSelected
-                ? "bg-button-primary text-text-white font-normal"
-                : "bg-button-neutral text-text-tertiary border border-border-stroke-btn-tertiary font-normal hover:bg-background-tertiary"
+                ? "bg-button-primary border-button-primary text-text-white font-normal"
+                : "bg-button-neutral border-border-stroke-btn-tertiary text-text-tertiary font-normal hover:bg-background-tertiary"
             }`}
           >
             {option}
@@ -172,8 +173,10 @@ export default function Onboarding() {
   const [equipmentOther, setEquipmentOther] = useState("");
   const [cookingFrequency, setCookingFrequency] = useState("");
   const [cookingGoals, setCookingGoals] = useState([]);
+  const [stepError, setStepError] = useState("");
 
   const handleBack = () => {
+    setStepError("");
     if (step === 1) {
       if (window.history.state?.idx > 0) {
         navigate(-1);
@@ -186,6 +189,16 @@ export default function Onboarding() {
   };
 
   const handleNext = () => {
+    setStepError("");
+    if (step === 3 && dietaryRestrictions.includes(OTHER_OPTION) && !restrictionOther.trim()) {
+      setStepError("กรุณาระบุข้อจำกัดของคุณก่อนไปต่อ");
+      return;
+    }
+    if (step === 4 && equipment.includes(OTHER_OPTION) && !equipmentOther.trim()) {
+      setStepError("กรุณาระบุอุปกรณ์ที่มีก่อนไปต่อ");
+      return;
+    }
+
     if (step === 6) {
       submitProfile({
         age: Number(pickerValue.age),
@@ -199,10 +212,40 @@ export default function Onboarding() {
         cooking_frequency: cookingFrequency,
         cooking_goals: cookingGoals,
       });
-      navigate("/login", { state: { message: "Account created — please log in." } });
+      navigate("/home", { replace: true });
       return;
     }
     setStep((s) => s + 1);
+  };
+
+  // react-mobile-picker only handles touch drags and desktop wheel scroll (wheelMode),
+  // it has no mouse click-drag support — add a minimal mouse-drag layer on top of it.
+  const ageDrag = useRef({ dragging: false, startY: 0, startIndex: 0 });
+
+  const handleAgePointerDown = (e) => {
+    if (e.pointerType !== "mouse") return;
+    ageDrag.current = {
+      dragging: true,
+      startY: e.clientY,
+      startIndex: AGES.indexOf(pickerValue.age),
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleAgePointerMove = (e) => {
+    if (!ageDrag.current.dragging) return;
+    const deltaY = e.clientY - ageDrag.current.startY;
+    const stepsMoved = Math.round(-deltaY / AGE_ITEM_HEIGHT);
+    const newIndex = Math.min(
+      AGES.length - 1,
+      Math.max(0, ageDrag.current.startIndex + stepsMoved),
+    );
+    const newAge = AGES[newIndex];
+    if (newAge !== pickerValue.age) setPickerValue({ age: newAge });
+  };
+
+  const handleAgePointerUp = () => {
+    ageDrag.current.dragging = false;
   };
 
   return (
@@ -219,11 +262,18 @@ export default function Onboarding() {
 
           {step === 1 && (
             <StepShell title="คุณอายุเท่าไหร่?">
-              <div className="w-full max-w-[200px] custom-picker-container">
+              <div
+                className="w-full max-w-[200px] custom-picker-container cursor-grab active:cursor-grabbing select-none"
+                onPointerDown={handleAgePointerDown}
+                onPointerMove={handleAgePointerMove}
+                onPointerUp={handleAgePointerUp}
+                onPointerCancel={handleAgePointerUp}
+              >
                 <Picker
                   value={pickerValue}
                   onChange={setPickerValue}
                   wheelMode="normal"
+                  itemHeight={AGE_ITEM_HEIGHT}
                 >
                   <Picker.Column name="age" className="w-full">
                     {AGES.map((age) => (
@@ -274,10 +324,18 @@ export default function Onboarding() {
                 <input
                   type="text"
                   value={restrictionOther}
-                  onChange={(e) => setRestrictionOther(e.target.value)}
+                  onChange={(e) => {
+                    setRestrictionOther(e.target.value);
+                    setStepError("");
+                  }}
                   placeholder="ระบุข้อจำกัดของคุณ"
                   className="w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
                 />
+              )}
+              {stepError && (
+                <p className="w-full max-w-[358px] text-body-medium text-red-500 mt-2">
+                  {stepError}
+                </p>
               )}
             </StepShell>
           )}
@@ -294,10 +352,18 @@ export default function Onboarding() {
                 <input
                   type="text"
                   value={equipmentOther}
-                  onChange={(e) => setEquipmentOther(e.target.value)}
+                  onChange={(e) => {
+                    setEquipmentOther(e.target.value);
+                    setStepError("");
+                  }}
                   placeholder="ระบุอุปกรณ์ที่มี"
                   className="w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
                 />
+              )}
+              {stepError && (
+                <p className="w-full max-w-[358px] text-body-medium text-red-500 mt-2">
+                  {stepError}
+                </p>
               )}
             </StepShell>
           )}

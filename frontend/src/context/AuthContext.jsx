@@ -40,6 +40,8 @@ export function AuthProvider({ children }) {
         if (!passwordsMatch(password, confirmPassword)) {
             return { success: false, error: "Passwords do not match" };
         }
+        setIsAuthenticated(true);
+        setUser({ email: email.trim() });
         return { success: true };
     }, []);
 
