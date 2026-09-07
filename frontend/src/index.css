@@ -34,3 +34,19 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* react-mobile-picker renders its selection-highlight divider lines as
+   inline-styled divs with no prop to disable them — hide by inline-style match. */
+.custom-picker-container [style*="pointer-events: none"] {
+  display: none;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}

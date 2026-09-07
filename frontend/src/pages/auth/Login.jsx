@@ -32,7 +32,7 @@ export default function Login() {
             <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto">
                 <div className="w-full min-h-full px-6 py-10 bg-background-primary flex flex-col justify-center items-center">
                     <div className="w-full h-auto flex flex-col justify-start items-center gap-8">
-                        <HeaderLogo />
+                        <HeaderLogo size="h-40" />
 
                         {successMessage && (
                             <p className="w-full text-body-medium text-green-600 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-center">

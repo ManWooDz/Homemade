@@ -41,7 +41,7 @@ export default function Register() {
                         onSubmit={handleSubmit}
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
-                        <h1 className="text-h2 font-semibold text-text-black text-center mb-4">
+                        <h1 className="text-h2 font-bold text-text-black text-center mb-4">
                             Sign Up
                         </h1>
 

@@ -22,6 +22,17 @@ const CUISINE_OPTIONS = [
   "อาหารทำง่าย ๆ",
 ];
 
+const CUISINE_EMOJI = {
+  "อาหารไทย": "🇹🇭",
+  "อาหารเอเชีย": "🍜",
+  "อาหารตะวันตก": "🍝",
+  "อาหารรสจัด": "🌶️",
+  "อาหารเพื่อสุขภาพ": "🥗",
+  "อาหาร Fast Food": "🍔",
+  "ของหวาน": "🍰",
+  "อาหารทำง่าย ๆ": "🍳",
+};
+
 const RESTRICTION_OPTIONS = [
   NO_RESTRICTION,
   "แพ้ถั่ว",
@@ -36,6 +47,20 @@ const RESTRICTION_OPTIONS = [
   OTHER_OPTION,
 ];
 
+const RESTRICTION_EMOJI = {
+  [NO_RESTRICTION]: "✅",
+  "แพ้ถั่ว": "🥜",
+  "แพ้นม / ผลิตภัณฑ์จากนม": "🥛",
+  "แพ้ไข่": "🥚",
+  "แพ้อาหารทะเล": "🦐",
+  "แพ้แป้งสาลี / Gluten": "🌾",
+  "แพ้ปลา": "🐟",
+  "ทาน Vegan": "🌱",
+  "ทานมังสวิรัติ": "🥦",
+  "ฮาลาล": "☪️",
+  [OTHER_OPTION]: "✏️",
+};
+
 const EQUIPMENT_OPTIONS = [
   "กระทะ",
   "หม้อ",
@@ -49,6 +74,19 @@ const EQUIPMENT_OPTIONS = [
   OTHER_OPTION,
 ];
 
+const EQUIPMENT_EMOJI = {
+  "กระทะ": "🍳",
+  "หม้อ": "🍲",
+  "หม้อหุงข้าว": "🍚",
+  "เตาไฟฟ้า": "🔌",
+  "เตาแก๊ส": "🔥",
+  "เตาอบ": "🥖",
+  "หม้อทอดไร้น้ำมัน": "🍟",
+  "ไมโครเวฟ": "⏱️",
+  "เครื่องปั่น": "🥤",
+  [OTHER_OPTION]: "✏️",
+};
+
 const FREQUENCY_OPTIONS = [
   "แทบไม่เคย — 0 ครั้ง/สัปดาห์",
   "เมนู + ทำ — 1–2 ครั้ง/สัปดาห์",
@@ -56,6 +94,14 @@ const FREQUENCY_OPTIONS = [
   "ทำเป็นประจำ — 5–6 ครั้ง/สัปดาห์",
   "ทำอาหารทุกวัน — 7 ครั้งขึ้นไป/สัปดาห์",
 ];
+
+const FREQUENCY_EMOJI = {
+  "แทบไม่เคย — 0 ครั้ง/สัปดาห์": "🚫",
+  "เมนู + ทำ — 1–2 ครั้ง/สัปดาห์": "🙂",
+  "ทำเป็นบางครั้ง — 3–4 ครั้ง/สัปดาห์": "👍",
+  "ทำเป็นประจำ — 5–6 ครั้ง/สัปดาห์": "💪",
+  "ทำอาหารทุกวัน — 7 ครั้งขึ้นไป/สัปดาห์": "🔥",
+};
 
 const GOAL_OPTIONS = [
   "ประหยัดค่าอาหาร",
@@ -65,6 +111,15 @@ const GOAL_OPTIONS = [
   "อยากลองเมนูใหม่ ๆ",
   "ประหยัดเวลา",
 ];
+
+const GOAL_EMOJI = {
+  "ประหยัดค่าอาหาร": "💰",
+  "ใช้วัตถุดิบที่มีได้คุ้มค่า": "♻️",
+  "อยากฝึกทำอาหาร": "👨‍🍳",
+  "ทำอาหารเพื่อสุขภาพ": "🥗",
+  "อยากลองเมนูใหม่ ๆ": "✨",
+  "ประหยัดเวลา": "⏱️",
+};
 
 const toggleInList = (list, option, noneValue) => {
   if (option === noneValue) {
@@ -91,7 +146,7 @@ function StepCounter({ step, total }) {
   );
 }
 
-function OptionChips({ options, selected, multiple, onToggle }) {
+function OptionChips({ options, selected, multiple, onToggle, emojiMap }) {
   return (
     <div className="w-full flex justify-center items-center gap-2 flex-wrap max-w-[358px]">
       {options.map((option) => {
@@ -109,6 +164,7 @@ function OptionChips({ options, selected, multiple, onToggle }) {
                 : "bg-button-neutral border-border-stroke-btn-tertiary text-text-tertiary font-normal hover:bg-background-tertiary"
             }`}
           >
+            {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
             {option}
           </button>
         );
@@ -117,7 +173,7 @@ function OptionChips({ options, selected, multiple, onToggle }) {
   );
 }
 
-function OptionList({ options, selected, multiple, onToggle }) {
+function OptionList({ options, selected, multiple, onToggle, emojiMap }) {
   return (
     <div className="w-full flex flex-col gap-2.5 max-w-[358px]">
       {options.map((option) => {
@@ -135,7 +191,10 @@ function OptionList({ options, selected, multiple, onToggle }) {
                 : "bg-background-primary border border-border-stroke-btn-tertiary text-text-tertiary hover:bg-background-tertiary"
             }`}
           >
-            <span className="text-body-medium font-normal truncate">{option}</span>
+            <span className="text-body-medium font-normal truncate">
+              {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
+              {option}
+            </span>
           </button>
         );
       })}
@@ -143,7 +202,7 @@ function OptionList({ options, selected, multiple, onToggle }) {
   );
 }
 
-function StepShell({ title, hint, children }) {
+function StepShell({ title, hint, error, children }) {
   return (
     <div className="w-full flex flex-col justify-start items-center mt-4">
       <h1 className="text-h2 font-semibold text-text-black text-center">
@@ -156,6 +215,11 @@ function StepShell({ title, hint, children }) {
       )}
       {!hint && <div className="mb-8" />}
       {children}
+      {error && (
+        <p className="w-full max-w-[358px] text-body-medium text-red-500 text-center mt-2">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -174,6 +238,10 @@ export default function Onboarding() {
   const [cookingFrequency, setCookingFrequency] = useState("");
   const [cookingGoals, setCookingGoals] = useState([]);
   const [stepError, setStepError] = useState("");
+  const [restrictionShakeKey, setRestrictionShakeKey] = useState(0);
+  const [equipmentShakeKey, setEquipmentShakeKey] = useState(0);
+
+  const SELECT_ONE_ERROR = "กรุณาเลือกอย่างน้อย 1 ตัวเลือก";
 
   const handleBack = () => {
     setStepError("");
@@ -190,12 +258,38 @@ export default function Onboarding() {
 
   const handleNext = () => {
     setStepError("");
-    if (step === 3 && dietaryRestrictions.includes(OTHER_OPTION) && !restrictionOther.trim()) {
-      setStepError("กรุณาระบุข้อจำกัดของคุณก่อนไปต่อ");
+    if (step === 2 && cuisinePreferences.length === 0) {
+      setStepError(SELECT_ONE_ERROR);
       return;
     }
-    if (step === 4 && equipment.includes(OTHER_OPTION) && !equipmentOther.trim()) {
-      setStepError("กรุณาระบุอุปกรณ์ที่มีก่อนไปต่อ");
+    if (step === 3) {
+      if (dietaryRestrictions.length === 0) {
+        setStepError(SELECT_ONE_ERROR);
+        return;
+      }
+      if (dietaryRestrictions.includes(OTHER_OPTION) && !restrictionOther.trim()) {
+        setStepError("กรุณาระบุข้อจำกัดของคุณ");
+        setRestrictionShakeKey((k) => k + 1);
+        return;
+      }
+    }
+    if (step === 4) {
+      if (equipment.length === 0) {
+        setStepError(SELECT_ONE_ERROR);
+        return;
+      }
+      if (equipment.includes(OTHER_OPTION) && !equipmentOther.trim()) {
+        setStepError("กรุณาระบุอุปกรณ์ที่มีก่อนไปต่อ");
+        setEquipmentShakeKey((k) => k + 1);
+        return;
+      }
+    }
+    if (step === 5 && !cookingFrequency) {
+      setStepError(SELECT_ONE_ERROR);
+      return;
+    }
+    if (step === 6 && cookingGoals.length === 0) {
+      setStepError(SELECT_ONE_ERROR);
       return;
     }
 
@@ -255,7 +349,7 @@ export default function Onboarding() {
           <div className="w-full flex flex-col items-center">
             <HeaderLogo />
             <div className="w-full flex justify-between items-center mt-6">
-              <BackButton onClick={handleBack} to="/login" />
+              <BackButton onClick={handleBack} to="/login" size="w-14 h-14" iconSize="w-7 h-7" />
               <StepCounter step={step} total={6} />
             </div>
           </div>
@@ -298,102 +392,128 @@ export default function Onboarding() {
           )}
 
           {step === 2 && (
-            <StepShell title="คุณชอบอาหารแบบไหน?" hint="เลือกได้มากกว่า 1 ข้อ">
+            <StepShell title="คุณชอบอาหารแบบไหน?" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionChips
                 options={CUISINE_OPTIONS}
                 selected={cuisinePreferences}
                 multiple
+                emojiMap={CUISINE_EMOJI}
                 onToggle={(option) =>
-                  setCuisinePreferences((prev) => toggleInList(prev, option))
+                  setCuisinePreferences((prev) => {
+                    const next = toggleInList(prev, option);
+                    if (next.length > 0) setStepError("");
+                    return next;
+                  })
                 }
               />
             </StepShell>
           )}
 
           {step === 3 && (
-            <StepShell title="อาการแพ้ หรือข้อจำกัดของคุณ" hint="เลือกได้มากกว่า 1 ข้อ">
+            <StepShell title="อาการแพ้ หรือข้อจำกัดของคุณ" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionChips
                 options={RESTRICTION_OPTIONS}
                 selected={dietaryRestrictions}
                 multiple
+                emojiMap={RESTRICTION_EMOJI}
                 onToggle={(option) =>
-                  setDietaryRestrictions((prev) => toggleInList(prev, option, NO_RESTRICTION))
+                  setDietaryRestrictions((prev) => {
+                    const next = toggleInList(prev, option, NO_RESTRICTION);
+                    if (next.length > 0 && (!next.includes(OTHER_OPTION) || restrictionOther.trim())) {
+                      setStepError("");
+                    }
+                    return next;
+                  })
                 }
               />
               {dietaryRestrictions.includes(OTHER_OPTION) && (
                 <input
+                  key={`restriction-other-${restrictionShakeKey}`}
                   type="text"
                   value={restrictionOther}
                   onChange={(e) => {
                     setRestrictionOther(e.target.value);
-                    setStepError("");
+                    if (e.target.value.trim()) setStepError("");
                   }}
                   placeholder="ระบุข้อจำกัดของคุณ"
-                  className="w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
+                  className={`w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands ${
+                    !restrictionOther.trim() && stepError ? "animate-shake border-red-400" : ""
+                  }`}
                 />
-              )}
-              {stepError && (
-                <p className="w-full max-w-[358px] text-body-medium text-red-500 mt-2">
-                  {stepError}
-                </p>
               )}
             </StepShell>
           )}
 
           {step === 4 && (
-            <StepShell title="คุณมีอุปกรณ์อะไรบ้าง?" hint="เลือกได้มากกว่า 1 ข้อ">
+            <StepShell title="คุณมีอุปกรณ์อะไรบ้าง?" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionChips
                 options={EQUIPMENT_OPTIONS}
                 selected={equipment}
                 multiple
-                onToggle={(option) => setEquipment((prev) => toggleInList(prev, option))}
+                emojiMap={EQUIPMENT_EMOJI}
+                onToggle={(option) =>
+                  setEquipment((prev) => {
+                    const next = toggleInList(prev, option);
+                    if (next.length > 0 && (!next.includes(OTHER_OPTION) || equipmentOther.trim())) {
+                      setStepError("");
+                    }
+                    return next;
+                  })
+                }
               />
               {equipment.includes(OTHER_OPTION) && (
                 <input
+                  key={`equipment-other-${equipmentShakeKey}`}
                   type="text"
                   value={equipmentOther}
                   onChange={(e) => {
                     setEquipmentOther(e.target.value);
-                    setStepError("");
+                    if (e.target.value.trim()) setStepError("");
                   }}
                   placeholder="ระบุอุปกรณ์ที่มี"
-                  className="w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
+                  className={`w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands ${
+                    !equipmentOther.trim() && stepError ? "animate-shake border-red-400" : ""
+                  }`}
                 />
-              )}
-              {stepError && (
-                <p className="w-full max-w-[358px] text-body-medium text-red-500 mt-2">
-                  {stepError}
-                </p>
               )}
             </StepShell>
           )}
 
           {step === 5 && (
-            <StepShell title="คุณทำอาหารบ่อยแค่ไหน?">
+            <StepShell title="คุณทำอาหารบ่อยแค่ไหน?" error={stepError}>
               <OptionList
                 options={FREQUENCY_OPTIONS}
                 selected={cookingFrequency}
                 multiple={false}
-                onToggle={setCookingFrequency}
+                emojiMap={FREQUENCY_EMOJI}
+                onToggle={(option) => {
+                  setCookingFrequency(option);
+                  setStepError("");
+                }}
               />
             </StepShell>
           )}
 
           {step === 6 && (
-            <StepShell title="คุณทำอาหารเพื่ออะไร?" hint="เลือกได้มากกว่า 1 ข้อ">
+            <StepShell title="คุณทำอาหารเพื่ออะไร?" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionList
                 options={GOAL_OPTIONS}
                 selected={cookingGoals}
                 multiple
+                emojiMap={GOAL_EMOJI}
                 onToggle={(option) =>
-                  setCookingGoals((prev) => toggleInList(prev, option))
+                  setCookingGoals((prev) => {
+                    const next = toggleInList(prev, option);
+                    if (next.length > 0) setStepError("");
+                    return next;
+                  })
                 }
               />
             </StepShell>
           )}
         </div>
 
-        <div className="w-full px-4 pb-6 flex justify-end bg-background-primary">
+        <div className="w-full px-4 pb-60 flex justify-end bg-background-primary">
           <NextButton onClick={handleNext} />
         </div>
       </div>

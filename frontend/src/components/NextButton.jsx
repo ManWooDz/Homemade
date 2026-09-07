@@ -17,9 +17,9 @@ export default function NextButton({ to, onClick }) {
       type="button"
       onClick={handleNext}
       aria-label="Next"
-      className="w-9 h-9 bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
+      className="w-14 h-14 bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
     >
-      <ChevronRight className="w-5 h-5" />
+      <ChevronRight className="w-7 h-7" />
     </button>
   );
 }

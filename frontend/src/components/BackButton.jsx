@@ -1,7 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function BackButton({ to, onClick }) {
+export default function BackButton({ to, onClick, size = "w-9 h-9", iconSize = "w-5 h-5" }) {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -21,9 +21,9 @@ export default function BackButton({ to, onClick }) {
       type="button"
       onClick={handleBack}
       aria-label="Back"
-      className="w-9 h-9 bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
+      className={`${size} bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer`}
     >
-      <ChevronLeft className="w-5 h-5" />
+      <ChevronLeft className={iconSize} />
     </button>
   );
 }
