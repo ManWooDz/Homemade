@@ -18,7 +18,7 @@
 ## 🚀 Tech Stack
 *   **Frontend:** React + Vite, Tailwind CSS v4, Lucide React(icons)
 *   **Backend:** FastAPI (Python)
-*   **Database:** SQLite
+*   **Database:** PostgreSQL (+ pgvector) via SQLAlchemy + Alembic
 *   **AI Models:** Gemini 3.1 Flash (Google Generative AI)
 
 ---
@@ -38,15 +38,21 @@
     pip install -r requirements.txt
     ```
 3.  **ตั้งค่า Environment Variable**
-    สร้างไฟล์ `.env` ไว้ในโฟลเดอร์ `backend/` แล้วใส่ API Key:
+    สร้างไฟล์ `.env` ไว้ในโฟลเดอร์ `backend/` แล้วใส่ API Key + DB config:
     ```env
     GEMINI_API_KEY=ใส่_API_KEY_ของคุณที่นี่
+    DATABASE_URL=postgresql+psycopg://homemade:homemade_dev_only@localhost:5432/homemade
+    JWT_SECRET_KEY=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
     ```
 4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
-    คุณจำเป็นต้องรันสคริปต์เพื่อสร้างฐานข้อมูลและข้อมูลตัวอย่างก่อน:
+    ต้องมี Docker รันอยู่ก่อน แล้วสั่ง (รันจาก root โปรเจกต์):
     ```bash
-    python database/setup_db.py
-    python database/setup_ingredients.py
+    docker compose up -d
+    ```
+    จากนั้นสร้างตาราง + seed ข้อมูลตัวอย่าง (รันจาก `backend/`):
+    ```bash
+    alembic upgrade head
+    python database/seed_postgres.py
     ```
 5.  **รันเซิร์ฟเวอร์**
     ```bash
@@ -75,7 +81,7 @@
 ```text
 homemade/
 ├── backend/               # ระบบ API และ Database
-│   ├── database/          # ไฟล์ SQLite และสคริปต์ Setup
+│   ├── database/          # SQLAlchemy models, Alembic migrations, seed script (SQLite ไฟล์เดิมยังอยู่แต่ deprecated ไม่ได้ใช้แล้ว)
 │   ├── model/             # (Internal) บริการเสริมอื่นๆ
 │   ├── images/            # เก็บรูปภาพวัตถุดิบและเมนู
 │   ├── main.py            # ไฟล์หลักของ FastAPI

@@ -1,3 +1,6 @@
+# DEPRECATED (2026-09-08): SQLite seeding, replaced by database/seed_postgres.py
+# after the PostgreSQL migration (see spec.md). Kept for reference only — not
+# imported anywhere. Flagged for manual removal by the user.
 import sqlite3
 import json
 import os

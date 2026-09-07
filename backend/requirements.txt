@@ -5,5 +5,11 @@ requests
 python-multipart     
 ultralytics           
 google-genai          
-python-dotenv         
-pillow                
+python-dotenv
+pillow
+sqlalchemy>=2.0
+psycopg[binary]
+alembic
+pgvector
+bcrypt
+python-jose[cryptography]

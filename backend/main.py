@@ -1,9 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 import uvicorn
 import json
-import sqlite3
 import os
 import uuid
 import requests
@@ -13,7 +14,10 @@ from google.genai import types
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-from fridge_repository import insert_user_ingredient, list_user_ingredients
+from auth import create_access_token, get_current_user, hash_password, verify_password
+from database.db import get_db
+from database.models import BaseRecipe, RecipeIngredientImage, User
+from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 
 #
@@ -45,27 +49,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS user_ingredients (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                category TEXT DEFAULT 'Other',
-                quantity TEXT DEFAULT '1',
-                image TEXT
-            )
-        """)
-        conn.commit()
-    except Exception as e:
-        print(f"Error initializing DB: {e}")
-    finally:
-        if 'conn' in locals():
-            conn.close()
+# DEV_USER_EMAIL: single dev user, stand-in until step 8 (JWT auth) lands.
+# Every endpoint below that needs a user_id resolves it via get_dev_user_id()
+# instead of a real authenticated user — see spec.md PostgreSQL migration notes.
+DEV_USER_EMAIL = "dev@local"
+
+
+def get_dev_user_id(db: Session) -> int:
+    user = db.query(User).filter_by(email=DEV_USER_EMAIL).first()
+    if user is None:
+        user = User(email=DEV_USER_EMAIL, hashed_password=None)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user.id
+
 
 # Serves local images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
@@ -362,25 +360,16 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
 #  API Endpoint (ช่องทางรับส่งข้อมูล)
 # ==========================================
 
-# get recipes from database(SQLite)
+# get recipes from database (PostgreSQL: base_recipes + recipe_ingredient_images)
 @app.get("/api/recipes")
-async def get_all_recipes():
-    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+async def get_all_recipes(db: Session = Depends(get_db)):
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT name, image FROM ingredients")
-        ingredient_rows = cursor.fetchall()
-        ingredient_map = {row[0].lower().strip(): row[1] for row in ingredient_rows}
+        ingredient_map = {row.name: row.image for row in db.query(RecipeIngredientImage).all()}
 
-        cursor.execute("SELECT * FROM base_recipes")
-        rows = cursor.fetchall()
-        
         recipes = []
-        for row in rows:
-            raw_ingredients = json.loads(row[7])
+        for recipe in db.query(BaseRecipe).order_by(BaseRecipe.id).all():
             mapped_ingredients = []
-            for ing in raw_ingredients:
+            for ing in recipe.ingredients:
                 img_path = ingredient_map.get(ing.lower().strip())
                 img_url = f"http://localhost:8000/{img_path}" if img_path else "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150"
                 mapped_ingredients.append({
@@ -388,23 +377,22 @@ async def get_all_recipes():
                     "image": img_url
                 })
 
-            image_val = row[5]
+            image_val = recipe.image
             if image_val and not image_val.startswith("http"):
                 image_val = f"http://localhost:8000/{image_val}"
 
             recipes.append({
-                "id": row[0],
-                "name": row[1],
-                "short_description": row[2],
-                "ratings": row[3],
-                "review": row[4],
+                "id": recipe.id,
+                "name": recipe.name,
+                "short_description": recipe.short_description,
+                "ratings": recipe.ratings,
+                "review": recipe.review,
                 "image": image_val,
-                "tags": json.loads(row[6]),
+                "tags": recipe.tags,
                 "ingredients": mapped_ingredients,
-                "nutrition": json.loads(row[8]),
-                "instructions": json.loads(row[9])
+                "nutrition": recipe.nutrition,
+                "instructions": recipe.instructions,
             })
-        conn.close()
         return {"status": "success", "data": recipes}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -472,30 +460,24 @@ async def upload_ingredient_image(file: UploadFile = File(...)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# get user ingredients from database(user_ingredients table)
+# get user ingredients from database (PostgreSQL: user_ingredients table)
 @app.get("/api/user-ingredients")
-async def get_user_ingredients():
-    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
-    conn = None
+async def get_user_ingredients(db: Session = Depends(get_db)):
     try:
-        conn = sqlite3.connect(db_path)
-        ingredients = list_user_ingredients(conn)
+        user_id = get_dev_user_id(db)
+        ingredients = list_user_ingredients(db, user_id)
         return {"status": "success", "data": ingredients}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    finally:
-        if conn is not None:
-            conn.close()
 
-# add user ingredients to database(user_ingredients table)
+# add user ingredients to database (PostgreSQL: user_ingredients table)
 @app.post("/api/user-ingredients")
-async def add_user_ingredient(ingredient: UserIngredientCreate):
-    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
-    conn = None
+async def add_user_ingredient(ingredient: UserIngredientCreate, db: Session = Depends(get_db)):
     try:
-        conn = sqlite3.connect(db_path)
+        user_id = get_dev_user_id(db)
         created = insert_user_ingredient(
-            conn,
+            db,
+            user_id=user_id,
             name=ingredient.name,
             category=ingredient.category,
             image=ingredient.image,
@@ -503,20 +485,15 @@ async def add_user_ingredient(ingredient: UserIngredientCreate):
         return {"status": "success", "data": created}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    finally:
-        if conn is not None:
-            conn.close()
 
-# delete user ingredients from database(user_ingredients table)
+# delete user ingredients from database (PostgreSQL: user_ingredients table)
 @app.delete("/api/user-ingredients/{ingredient_id}")
-async def delete_user_ingredient(ingredient_id: int):
-    db_path = os.path.join(os.path.dirname(__file__), "database", "recipes.db")
+async def remove_user_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM user_ingredients WHERE id = ?", (ingredient_id,))
-        conn.commit()
-        conn.close()
+        user_id = get_dev_user_id(db)
+        deleted = delete_user_ingredient(db, user_id=user_id, ingredient_id=ingredient_id)
+        if not deleted:
+            return {"status": "error", "message": "Ingredient not found"}
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -579,6 +556,56 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+# register a new user — email/password stored with a bcrypt hash
+@app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    email = request.email.strip().lower()
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Invalid email")
+    if len(request.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    if db.query(User).filter_by(email=email).first() is not None:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    user = User(email=email, hashed_password=hash_password(request.password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"status": "success", "data": {"id": user.id, "email": user.email}}
+
+
+# login — OAuth2 password flow (form fields: username, password); username holds the email
+@app.post("/api/auth/login", response_model=TokenResponse)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    email = form_data.username.strip().lower()
+    user = db.query(User).filter_by(email=email).first()
+    if user is None or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    token = create_access_token(user.id)
+    return {"access_token": token, "token_type": "bearer"}
+
+
+# current authenticated user, resolved from the bearer token
+@app.get("/api/auth/me")
+async def read_current_user(current_user: User = Depends(get_current_user)):
+    return {"status": "success", "data": {"id": current_user.id, "email": current_user.email}}
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
