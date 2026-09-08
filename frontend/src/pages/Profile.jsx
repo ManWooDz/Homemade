@@ -355,14 +355,14 @@ export default function Profile({
                 type="text"
                 value={restrictionOther}
                 onChange={(e) => setRestrictionOther(e.target.value)}
-                onBlur={() =>
-                  savePreferences({
-                    dietary_restrictions: [
-                      ...dietaryRestrictions.filter((r) => r !== OTHER_OPTION),
-                      restrictionOther || OTHER_OPTION,
-                    ],
-                  })
-                }
+                onBlur={() => {
+                  const next = [
+                    ...dietaryRestrictions.filter((r) => r !== OTHER_OPTION),
+                    restrictionOther || OTHER_OPTION,
+                  ];
+                  setDietaryRestrictions(next);
+                  savePreferences({ dietary_restrictions: next });
+                }}
                 placeholder="ระบุข้อจำกัดของคุณ"
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-4 mt-2 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
@@ -388,14 +388,14 @@ export default function Profile({
                 type="text"
                 value={equipmentOther}
                 onChange={(e) => setEquipmentOther(e.target.value)}
-                onBlur={() =>
-                  savePreferences({
-                    equipment: [
-                      ...equipment.filter((e) => e !== OTHER_OPTION),
-                      equipmentOther || OTHER_OPTION,
-                    ],
-                  })
-                }
+                onBlur={() => {
+                  const next = [
+                    ...equipment.filter((e) => e !== OTHER_OPTION),
+                    equipmentOther || OTHER_OPTION,
+                  ];
+                  setEquipment(next);
+                  savePreferences({ equipment: next });
+                }}
                 placeholder="ระบุอุปกรณ์ที่มี"
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-4 mt-2 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
