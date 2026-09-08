@@ -33,7 +33,7 @@ from auth import (
 )
 from csrf import verify_same_origin
 from database.db import get_db
-from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User
+from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 
@@ -685,6 +685,65 @@ async def logout(request: Request, response: Response, db: Session = Depends(get
 async def read_current_user(response: Response, current_user: User = Depends(get_current_user)):
     response.headers["Cache-Control"] = "no-store"
     return {"status": "success", "data": {"id": current_user.id, "email": current_user.email}}
+
+
+class UserPreferenceUpdate(BaseModel):
+    age: int | None = None
+    cuisine_preferences: list[str] = []
+    dietary_restrictions: list[str] = []
+    equipment: list[str] = []
+    cooking_frequency: str | None = None
+    cooking_goals: list[str] = []
+
+
+def _serialize_preferences(pref: UserPreference) -> dict:
+    return {
+        "age": pref.age,
+        "cuisine_preferences": pref.cuisine_preferences,
+        "dietary_restrictions": pref.dietary_restrictions,
+        "equipment": pref.equipment,
+        "cooking_frequency": pref.cooking_frequency,
+        "cooking_goals": pref.cooking_goals,
+    }
+
+
+# real per-user preferences (onboarding quiz + Profile edits) — real auth
+# from the start, no dev-bridge, since nothing pre-existing depends on it
+@app.get("/api/user-preferences")
+async def get_user_preferences(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    pref = db.get(UserPreference, current_user.id)
+    return {"status": "success", "data": _serialize_preferences(pref) if pref else None}
+
+
+@app.put("/api/user-preferences", dependencies=[Depends(verify_same_origin)])
+async def put_user_preferences(
+    request: UserPreferenceUpdate,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if request.age is not None and not (1 <= request.age <= 120):
+        raise HTTPException(status_code=400, detail="age must be between 1 and 120")
+
+    pref = db.get(UserPreference, current_user.id)
+    if pref is None:
+        pref = UserPreference(user_id=current_user.id)
+        db.add(pref)
+    pref.age = request.age
+    pref.cuisine_preferences = request.cuisine_preferences
+    pref.dietary_restrictions = request.dietary_restrictions
+    pref.equipment = request.equipment
+    pref.cooking_frequency = request.cooking_frequency
+    pref.cooking_goals = request.cooking_goals
+    db.commit()
+    db.refresh(pref)
+    response.headers["Cache-Control"] = "no-store"
+    return {"status": "success", "data": _serialize_preferences(pref)}
 
 
 if __name__ == "__main__":
