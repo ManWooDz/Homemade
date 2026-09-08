@@ -3,6 +3,7 @@ import { ChevronLeft, Trash2, Plus } from "lucide-react";
 import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { useAuth } from "../context/AuthContext";
 
 export default function UserIngredients({
     userIngredients,
@@ -12,6 +13,7 @@ export default function UserIngredients({
     setActiveTab,
     goToAddIngredient,
 }) {
+    const { apiFetch } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState("All");
 
     const categories = [
@@ -24,7 +26,7 @@ export default function UserIngredients({
 
     const handleDeleteIngredient = async (id) => {
         try {
-            const response = await fetch(
+            const response = await apiFetch(
                 `/api/user-ingredients/${id}`,
                 {
                     method: "DELETE",

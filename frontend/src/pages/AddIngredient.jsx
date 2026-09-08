@@ -3,6 +3,7 @@ import { ChevronLeft, Plus, Search, Upload, Loader2 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { toUserIngredientCreate } from "../utils/ingredientPayload";
+import { useAuth } from "../context/AuthContext";
 
 export default function AddIngredient({
     userIngredients,
@@ -11,6 +12,7 @@ export default function AddIngredient({
     activeTab,
     setActiveTab,
 }) {
+    const { apiFetch } = useAuth();
     const [name, setName] = useState("");
     const [category, setCategory] = useState("Meat & poultry");
 
@@ -106,7 +108,7 @@ export default function AddIngredient({
         if (!name.trim()) return;
         setIsSaving(true);
         try {
-            const response = await fetch(
+            const response = await apiFetch(
                 "/api/user-ingredients",
                 {
                     method: "POST",

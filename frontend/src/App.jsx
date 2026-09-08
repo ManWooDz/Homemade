@@ -22,8 +22,10 @@ import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
 import { getTagColor } from "./utils/tagColors";
+import { useAuth } from "./context/AuthContext";
 
 function App() {
+    const { apiFetch } = useAuth();
 
     const [activeTab, setActiveTab] = useState("home");
     const [currentView, setCurrentView] = useState("home"); // "home" | "recipe-detail" | "create-recipe" | "cooking-page" | "user-ingredients" | "custom-cooking"
@@ -94,7 +96,7 @@ function App() {
 
         const fetchUserIngredients = async () => {
             try {
-                const response = await fetch("/api/user-ingredients");
+                const response = await apiFetch("/api/user-ingredients");
                 const result = await response.json();
                 if (result.status === "success") {
                     setUserIngredients(result.data);
@@ -106,7 +108,7 @@ function App() {
 
         fetchRecipes();
         fetchUserIngredients();
-    }, []);
+    }, [apiFetch]);
 
     const FILTER_TABS = [
         { key: "ingredient", label: "Ingredient" },

@@ -66,22 +66,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# DEV_USER_EMAIL: single dev user, stand-in until step 8 (JWT auth) lands.
-# Every endpoint below that needs a user_id resolves it via get_dev_user_id()
-# instead of a real authenticated user — see spec.md PostgreSQL migration notes.
-DEV_USER_EMAIL = "dev@local"
-
-
-def get_dev_user_id(db: Session) -> int:
-    user = db.query(User).filter_by(email=DEV_USER_EMAIL).first()
-    if user is None:
-        user = User(email=DEV_USER_EMAIL, hashed_password=None)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    return user.id
-
-
 # Serves local images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
@@ -479,22 +463,27 @@ async def upload_ingredient_image(file: UploadFile = File(...)):
 
 # get user ingredients from database (PostgreSQL: user_ingredients table)
 @app.get("/api/user-ingredients")
-async def get_user_ingredients(db: Session = Depends(get_db)):
+async def get_user_ingredients(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        user_id = get_dev_user_id(db)
-        ingredients = list_user_ingredients(db, user_id)
+        ingredients = list_user_ingredients(db, current_user.id)
         return {"status": "success", "data": ingredients}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 # add user ingredients to database (PostgreSQL: user_ingredients table)
-@app.post("/api/user-ingredients")
-async def add_user_ingredient(ingredient: UserIngredientCreate, db: Session = Depends(get_db)):
+@app.post("/api/user-ingredients", dependencies=[Depends(verify_same_origin)])
+async def add_user_ingredient(
+    ingredient: UserIngredientCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        user_id = get_dev_user_id(db)
         created = insert_user_ingredient(
             db,
-            user_id=user_id,
+            user_id=current_user.id,
             name=ingredient.name,
             category=ingredient.category,
             image=ingredient.image,
@@ -504,11 +493,14 @@ async def add_user_ingredient(ingredient: UserIngredientCreate, db: Session = De
         return {"status": "error", "message": str(e)}
 
 # delete user ingredients from database (PostgreSQL: user_ingredients table)
-@app.delete("/api/user-ingredients/{ingredient_id}")
-async def remove_user_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
+@app.delete("/api/user-ingredients/{ingredient_id}", dependencies=[Depends(verify_same_origin)])
+async def remove_user_ingredient(
+    ingredient_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        user_id = get_dev_user_id(db)
-        deleted = delete_user_ingredient(db, user_id=user_id, ingredient_id=ingredient_id)
+        deleted = delete_user_ingredient(db, user_id=current_user.id, ingredient_id=ingredient_id)
         if not deleted:
             return {"status": "error", "message": "Ingredient not found"}
         return {"status": "success"}
