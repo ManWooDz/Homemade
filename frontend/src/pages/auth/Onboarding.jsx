@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import Picker from "react-mobile-picker";
 import HeaderLogo from "../../components/HeaderLogo";
 import BackButton from "../../components/BackButton";
@@ -24,12 +25,6 @@ import {
 
 const AGES = Array.from({ length: 66 }, (_, i) => String(15 + i));
 const AGE_ITEM_HEIGHT = 44; // matches the h-11 row rendered for each Picker.Item
-
-// TODO(backend): POST /api/user-preferences once SQLite -> PostgreSQL migration lands.
-// formData is already shaped for that payload.
-function submitProfile(formData) {
-  console.log("[onboarding] collected profile:", formData);
-}
 
 function StepCounter({ step, total }) {
   return (
@@ -64,6 +59,7 @@ function StepShell({ title, hint, error, children }) {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { apiFetch } = useAuth();
   const [step, setStep] = useState(1);
 
   const [pickerValue, setPickerValue] = useState({ age: "25" });
@@ -94,7 +90,7 @@ export default function Onboarding() {
     setStep((s) => s - 1);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setStepError("");
     if (step === 2 && cuisinePreferences.length === 0) {
       setStepError(SELECT_ONE_ERROR);
@@ -132,7 +128,7 @@ export default function Onboarding() {
     }
 
     if (step === 6) {
-      submitProfile({
+      const payload = {
         age: Number(pickerValue.age),
         cuisine_preferences: cuisinePreferences,
         dietary_restrictions: dietaryRestrictions.includes(OTHER_OPTION)
@@ -143,7 +139,19 @@ export default function Onboarding() {
           : equipment,
         cooking_frequency: cookingFrequency,
         cooking_goals: cookingGoals,
-      });
+      };
+      try {
+        await apiFetch("/api/user-preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        // Best-effort: onboarding answers are also editable later from
+        // Profile, so a failed save here must not trap the user in the
+        // wizard — log for debugging, still proceed to /home.
+        console.error("[onboarding] failed to save preferences:", err);
+      }
       navigate("/home", { replace: true });
       return;
     }
