@@ -105,6 +105,35 @@ class AuthEndpointTests(unittest.TestCase):
         res = self.client.post("/api/auth/refresh", headers=self.origin_headers)
         self.assertEqual(res.status_code, 401)
 
+    def test_refresh_with_invalid_cookie_clears_both_cookies_on_401(self):
+        # Regression test for I-1: FastAPI only merges the injected Response
+        # parameter's headers into the final response when the route handler
+        # returns normally. Raising HTTPException makes Starlette build a
+        # fresh response, silently discarding any Set-Cookie already set on
+        # that Response object (e.g. by clear_auth_cookies) — so the old code
+        # called clear_auth_cookies(response) then raised HTTPException, which
+        # never actually cleared the cookies. This test asserts the 401
+        # response itself carries Set-Cookie headers that clear both cookies,
+        # not merely that the status code is 401.
+        self.client.cookies.set("refresh_token", "not-a-real-token")
+        res = self.client.post("/api/auth/refresh", headers=self.origin_headers)
+        self.assertEqual(res.status_code, 401)
+
+        set_cookie_headers = res.headers.get_list("set-cookie")
+        access_clear = next(
+            (h for h in set_cookie_headers if h.startswith("access_token=")), None
+        )
+        refresh_clear = next(
+            (h for h in set_cookie_headers if h.startswith("refresh_token=")), None
+        )
+        self.assertIsNotNone(access_clear, f"no Set-Cookie cleared access_token; got {set_cookie_headers}")
+        self.assertIsNotNone(refresh_clear, f"no Set-Cookie cleared refresh_token; got {set_cookie_headers}")
+        self.assertIn("Path=/api", access_clear)
+        self.assertIn("Path=/api/auth", refresh_clear)
+        # A cleared cookie is expired (Max-Age=0 and/or an epoch Expires date)
+        self.assertTrue("Max-Age=0" in access_clear or "expires=Thu, 01 Jan 1970" in access_clear)
+        self.assertTrue("Max-Age=0" in refresh_clear or "expires=Thu, 01 Jan 1970" in refresh_clear)
+
     def test_logout_revokes_and_me_becomes_401(self):
         self._register_and_login()
         res = self.client.post("/api/auth/logout", headers=self.origin_headers)

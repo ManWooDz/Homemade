@@ -3,6 +3,7 @@ import logging
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -633,8 +634,20 @@ async def refresh(request: Request, response: Response, db: Session = Depends(ge
     raw_refresh = request.cookies.get("refresh_token")
     result = rotate_refresh_token(db, raw_refresh) if raw_refresh else None
     if result is None:
-        clear_auth_cookies(response)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+        # NOTE: must return a fresh JSONResponse here, not raise HTTPException.
+        # FastAPI only merges the injected `response` parameter's headers into
+        # the final response when the handler returns normally — when it raises,
+        # Starlette's exception middleware builds a brand-new response and any
+        # Set-Cookie headers already set on `response` (e.g. by clear_auth_cookies)
+        # are silently discarded. Constructing+returning the response ourselves
+        # is the only way the cleared cookies actually reach the client.
+        error_response = JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Invalid or expired refresh token"},
+        )
+        clear_auth_cookies(error_response)
+        error_response.headers["Cache-Control"] = "no-store"
+        return error_response
 
     new_access, new_refresh = result
     set_auth_cookies(response, new_access, new_refresh)
@@ -650,8 +663,18 @@ async def logout(request: Request, response: Response, db: Session = Depends(get
             revoke_refresh_token(db, raw_refresh)
         except Exception:
             logging.exception("logout: failed to revoke refresh token")
-            clear_auth_cookies(response)
-            raise HTTPException(status_code=500, detail="Logout failed, please try again")
+            db.rollback()
+            # Same reason as /refresh's 401 path above: raising HTTPException
+            # here would discard clear_auth_cookies' Set-Cookie headers because
+            # Starlette builds a fresh response for raised exceptions instead of
+            # merging headers already set on the injected `response` object.
+            error_response = JSONResponse(
+                status_code=500,
+                content={"detail": "Logout failed, please try again"},
+            )
+            clear_auth_cookies(error_response)
+            error_response.headers["Cache-Control"] = "no-store"
+            return error_response
     clear_auth_cookies(response)
     response.headers["Cache-Control"] = "no-store"
     return {"status": "success"}
