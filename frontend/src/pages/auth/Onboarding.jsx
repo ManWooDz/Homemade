@@ -4,132 +4,25 @@ import Picker from "react-mobile-picker";
 import HeaderLogo from "../../components/HeaderLogo";
 import BackButton from "../../components/BackButton";
 import NextButton from "../../components/NextButton";
-
-const OTHER_OPTION = "อื่น ๆ";
-const NO_RESTRICTION = "ไม่มีข้อจำกัด";
+import { OptionChips, OptionList } from "../../components/OptionPicker";
+import {
+  OTHER_OPTION,
+  NO_RESTRICTION,
+  CUISINE_OPTIONS,
+  CUISINE_EMOJI,
+  RESTRICTION_OPTIONS,
+  RESTRICTION_EMOJI,
+  EQUIPMENT_OPTIONS,
+  EQUIPMENT_EMOJI,
+  FREQUENCY_OPTIONS,
+  FREQUENCY_EMOJI,
+  GOAL_OPTIONS,
+  GOAL_EMOJI,
+  toggleInList,
+} from "../../constants/preferenceOptions";
 
 const AGES = Array.from({ length: 66 }, (_, i) => String(15 + i));
 const AGE_ITEM_HEIGHT = 44; // matches the h-11 row rendered for each Picker.Item
-
-const CUISINE_OPTIONS = [
-  "อาหารไทย",
-  "อาหารเอเชีย",
-  "อาหารตะวันตก",
-  "อาหารรสจัด",
-  "อาหารเพื่อสุขภาพ",
-  "อาหาร Fast Food",
-  "ของหวาน",
-  "อาหารทำง่าย ๆ",
-];
-
-const CUISINE_EMOJI = {
-  "อาหารไทย": "🇹🇭",
-  "อาหารเอเชีย": "🍜",
-  "อาหารตะวันตก": "🍝",
-  "อาหารรสจัด": "🌶️",
-  "อาหารเพื่อสุขภาพ": "🥗",
-  "อาหาร Fast Food": "🍔",
-  "ของหวาน": "🍰",
-  "อาหารทำง่าย ๆ": "🍳",
-};
-
-const RESTRICTION_OPTIONS = [
-  NO_RESTRICTION,
-  "แพ้ถั่ว",
-  "แพ้นม / ผลิตภัณฑ์จากนม",
-  "แพ้ไข่",
-  "แพ้อาหารทะเล",
-  "แพ้แป้งสาลี / Gluten",
-  "แพ้ปลา",
-  "ทาน Vegan",
-  "ทานมังสวิรัติ",
-  "ฮาลาล",
-  OTHER_OPTION,
-];
-
-const RESTRICTION_EMOJI = {
-  [NO_RESTRICTION]: "✅",
-  "แพ้ถั่ว": "🥜",
-  "แพ้นม / ผลิตภัณฑ์จากนม": "🥛",
-  "แพ้ไข่": "🥚",
-  "แพ้อาหารทะเล": "🦐",
-  "แพ้แป้งสาลี / Gluten": "🌾",
-  "แพ้ปลา": "🐟",
-  "ทาน Vegan": "🌱",
-  "ทานมังสวิรัติ": "🥦",
-  "ฮาลาล": "☪️",
-  [OTHER_OPTION]: "✏️",
-};
-
-const EQUIPMENT_OPTIONS = [
-  "กระทะ",
-  "หม้อ",
-  "หม้อหุงข้าว",
-  "เตาไฟฟ้า",
-  "เตาแก๊ส",
-  "เตาอบ",
-  "หม้อทอดไร้น้ำมัน",
-  "ไมโครเวฟ",
-  "เครื่องปั่น",
-  OTHER_OPTION,
-];
-
-const EQUIPMENT_EMOJI = {
-  "กระทะ": "🍳",
-  "หม้อ": "🍲",
-  "หม้อหุงข้าว": "🍚",
-  "เตาไฟฟ้า": "🔌",
-  "เตาแก๊ส": "🔥",
-  "เตาอบ": "🥖",
-  "หม้อทอดไร้น้ำมัน": "🍟",
-  "ไมโครเวฟ": "⏱️",
-  "เครื่องปั่น": "🥤",
-  [OTHER_OPTION]: "✏️",
-};
-
-const FREQUENCY_OPTIONS = [
-  "แทบไม่เคย — 0 ครั้ง/สัปดาห์",
-  "เมนู + ทำ — 1–2 ครั้ง/สัปดาห์",
-  "ทำเป็นบางครั้ง — 3–4 ครั้ง/สัปดาห์",
-  "ทำเป็นประจำ — 5–6 ครั้ง/สัปดาห์",
-  "ทำอาหารทุกวัน — 7 ครั้งขึ้นไป/สัปดาห์",
-];
-
-const FREQUENCY_EMOJI = {
-  "แทบไม่เคย — 0 ครั้ง/สัปดาห์": "🚫",
-  "เมนู + ทำ — 1–2 ครั้ง/สัปดาห์": "🙂",
-  "ทำเป็นบางครั้ง — 3–4 ครั้ง/สัปดาห์": "👍",
-  "ทำเป็นประจำ — 5–6 ครั้ง/สัปดาห์": "💪",
-  "ทำอาหารทุกวัน — 7 ครั้งขึ้นไป/สัปดาห์": "🔥",
-};
-
-const GOAL_OPTIONS = [
-  "ประหยัดค่าอาหาร",
-  "ใช้วัตถุดิบที่มีได้คุ้มค่า",
-  "อยากฝึกทำอาหาร",
-  "ทำอาหารเพื่อสุขภาพ",
-  "อยากลองเมนูใหม่ ๆ",
-  "ประหยัดเวลา",
-];
-
-const GOAL_EMOJI = {
-  "ประหยัดค่าอาหาร": "💰",
-  "ใช้วัตถุดิบที่มีได้คุ้มค่า": "♻️",
-  "อยากฝึกทำอาหาร": "👨‍🍳",
-  "ทำอาหารเพื่อสุขภาพ": "🥗",
-  "อยากลองเมนูใหม่ ๆ": "✨",
-  "ประหยัดเวลา": "⏱️",
-};
-
-const toggleInList = (list, option, noneValue) => {
-  if (option === noneValue) {
-    return list.includes(noneValue) ? [] : [noneValue];
-  }
-  if (list.includes(option)) {
-    return list.filter((item) => item !== option);
-  }
-  return [...list.filter((item) => item !== noneValue), option];
-};
 
 // TODO(backend): POST /api/user-preferences once SQLite -> PostgreSQL migration lands.
 // formData is already shaped for that payload.
@@ -142,62 +35,6 @@ function StepCounter({ step, total }) {
     <div className="text-body-medium font-semibold">
       <span className="text-text-brands">{step}</span>
       <span className="text-text-neutral">/{total}</span>
-    </div>
-  );
-}
-
-function OptionChips({ options, selected, multiple, onToggle, emojiMap }) {
-  return (
-    <div className="w-full flex justify-center items-center gap-2 flex-wrap max-w-[358px]">
-      {options.map((option) => {
-        const isSelected = multiple
-          ? selected.includes(option)
-          : selected === option;
-        return (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onToggle(option)}
-            className={`h-11 px-5 rounded-full border flex justify-center items-center text-body-large transition-all cursor-pointer ${
-              isSelected
-                ? "bg-button-primary border-button-primary text-text-white font-normal"
-                : "bg-button-neutral border-border-stroke-btn-tertiary text-text-tertiary font-normal hover:bg-background-tertiary"
-            }`}
-          >
-            {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
-            {option}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function OptionList({ options, selected, multiple, onToggle, emojiMap }) {
-  return (
-    <div className="w-full flex flex-col gap-2.5 max-w-[358px]">
-      {options.map((option) => {
-        const isSelected = multiple
-          ? selected.includes(option)
-          : selected === option;
-        return (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onToggle(option)}
-            className={`w-full h-14 pl-3.5 pr-7 py-2 rounded-2xl flex items-center transition-all cursor-pointer ${
-              isSelected
-                ? "bg-button-secondary border border-border-stroke-brands shadow-[0px_0px_4px_0px_rgba(0,0,0,0.25)] text-text-black"
-                : "bg-background-primary border border-border-stroke-btn-tertiary text-text-tertiary hover:bg-background-tertiary"
-            }`}
-          >
-            <span className="text-body-medium font-normal truncate">
-              {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
-              {option}
-            </span>
-          </button>
-        );
-      })}
     </div>
   );
 }
