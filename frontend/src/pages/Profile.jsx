@@ -144,18 +144,37 @@ export default function Profile({
     (async () => {
       try {
         const res = await apiFetch("/api/user-preferences");
-        if (cancelled || !res.ok) return;
+        if (cancelled) return;
+        if (!res.ok) {
+          setPrefsError("โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่");
+          return;
+        }
         const payload = await res.json();
         if (payload.data) {
           setAge(payload.data.age != null ? String(payload.data.age) : "");
           setCuisinePreferences(payload.data.cuisine_preferences || []);
-          setDietaryRestrictions(payload.data.dietary_restrictions || []);
-          setEquipment(payload.data.equipment || []);
+          const rawRestrictions = payload.data.dietary_restrictions || [];
+          const customRestriction = rawRestrictions.find((r) => !RESTRICTION_OPTIONS.includes(r));
+          setDietaryRestrictions(
+            customRestriction
+              ? [...rawRestrictions.filter((r) => RESTRICTION_OPTIONS.includes(r)), OTHER_OPTION]
+              : rawRestrictions,
+          );
+          setRestrictionOther(customRestriction || "");
+          const rawEquipment = payload.data.equipment || [];
+          const customEquipment = rawEquipment.find((e) => !EQUIPMENT_OPTIONS.includes(e));
+          setEquipment(
+            customEquipment
+              ? [...rawEquipment.filter((e) => EQUIPMENT_OPTIONS.includes(e)), OTHER_OPTION]
+              : rawEquipment,
+          );
+          setEquipmentOther(customEquipment || "");
           setCookingFrequency(payload.data.cooking_frequency || "");
           setCookingGoals(payload.data.cooking_goals || []);
         }
-      } finally {
-        if (!cancelled) setPrefsLoaded(true);
+        setPrefsLoaded(true);
+      } catch {
+        if (!cancelled) setPrefsError("โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่");
       }
     })();
     return () => {
@@ -169,6 +188,7 @@ export default function Profile({
   // see the stale pre-toggle value; the caller passes the freshly computed
   // next value explicitly instead.
   const savePreferences = async (overrides) => {
+    if (!prefsLoaded) return;
     const body = {
       age: age === "" ? null : Number(age),
       cuisine_preferences: cuisinePreferences,

@@ -141,16 +141,20 @@ export default function Onboarding() {
         cooking_goals: cookingGoals,
       };
       try {
-        await apiFetch("/api/user-preferences", {
+        const res = await apiFetch("/api/user-preferences", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+          setStepError("บันทึกข้อมูลไม่สำเร็จ กรุณาแก้ไขที่ Profile ภายหลัง");
+        }
       } catch (err) {
         // Best-effort: onboarding answers are also editable later from
         // Profile, so a failed save here must not trap the user in the
-        // wizard — log for debugging, still proceed to /home.
+        // wizard — log for debugging, surface a message, still proceed to /home.
         console.error("[onboarding] failed to save preferences:", err);
+        setStepError("บันทึกข้อมูลไม่สำเร็จ กรุณาแก้ไขที่ Profile ภายหลัง");
       }
       navigate("/home", { replace: true });
       return;

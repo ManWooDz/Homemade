@@ -25,9 +25,13 @@ export const CUISINE_EMOJI = {
 };
 
 // Each item tagged isAllergy so CreateRecipe/Profile's narrower
-// "อาการแพ้อาหาร" picker (feeds main.py's check_allergy(), which only
-// understands true allergens) can filter out diet-type entries like
-// Vegan/Halal without a separate label-mapping table.
+// "อาการแพ้อาหาร" picker — a field meant for true allergens only, distinct
+// from the broader dietary_restrictions list — can filter out diet-type
+// entries like Vegan/Halal without a separate label-mapping table. (Note:
+// this reaches the LLM prompt via allergies/preferences interpolation in
+// main.py, not via check_allergy()'s rule-based check — that function
+// reads a differently-named request field and never actually receives
+// this data. Pre-existing, unrelated to this file.)
 const RESTRICTION_ITEMS = [
   { label: "แพ้ถั่ว", emoji: "🥜", isAllergy: true },
   { label: "แพ้นม / ผลิตภัณฑ์จากนม", emoji: "🥛", isAllergy: true },
