@@ -103,7 +103,12 @@ export function AuthProvider({ children }) {
         if (!response.ok) {
             return { success: false, error: "Enter a valid email and password" };
         }
-        const payload = await response.json();
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            return { success: false, error: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองอีกครั้ง" };
+        }
         setIsAuthenticated(true);
         setUser(payload.data);
         return { success: true };
@@ -210,9 +215,10 @@ export function AuthProvider({ children }) {
                 const payload = await res.json();
                 setIsAuthenticated(true);
                 setUser(payload.data);
-            } else {
+            } else if (res.status === 401) {
                 clearAuthState();
             }
+            // any other non-ok status: leave auth state as-is, just stop loading
         } catch {
             // Network error during bootstrap — session status unknown;
             // do not falsely claim logged-out, just stop loading.
