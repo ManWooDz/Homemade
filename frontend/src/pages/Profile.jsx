@@ -200,9 +200,19 @@ export default function Profile({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login", { replace: true });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    const result = await logout();
+    setIsLoggingOut(false);
+    if (result.success) {
+      navigate("/login", { replace: true });
+    } else {
+      setLogoutError(result.error);
+    }
   };
 
   if (view === "history") {
@@ -463,12 +473,16 @@ export default function Profile({
           </div>
 
           {/* Logout */}
+          {logoutError && (
+            <p className="text-red-600 text-sm text-center mb-2">{logoutError}</p>
+          )}
           <button
             onClick={handleLogout}
-            className="w-full bg-red-500 text-white py-3.5 rounded-full text-base font-bold shadow-md flex items-center justify-center gap-2 hover:bg-red-600 transition"
+            disabled={isLoggingOut}
+            className="w-full bg-red-500 text-white py-3.5 rounded-full text-base font-bold shadow-md flex items-center justify-center gap-2 hover:bg-red-600 transition disabled:opacity-60"
           >
             <LogOut className="w-5 h-5" />
-            ออกจากระบบ
+            {isLoggingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
           </button>
         </div>
 

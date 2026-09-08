@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/HomeMade_Logo.png";
 import { useAuth } from "../../context/AuthContext";
@@ -7,14 +7,22 @@ const SPLASH_DURATION_MS = 1200;
 
 export default function Loading() {
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, authLoading } = useAuth();
+    const [minDurationElapsed, setMinDurationElapsed] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            navigate(isAuthenticated ? "/home" : "/login", { replace: true });
-        }, SPLASH_DURATION_MS);
+        const timer = setTimeout(() => setMinDurationElapsed(true), SPLASH_DURATION_MS);
         return () => clearTimeout(timer);
-    }, [isAuthenticated, navigate]);
+    }, []);
+
+    useEffect(() => {
+        // Don't navigate until BOTH the minimum splash duration has
+        // elapsed AND the /me bootstrap has resolved — otherwise a slow
+        // refresh-and-retry could send a still-valid session to /login.
+        if (minDurationElapsed && !authLoading) {
+            navigate(isAuthenticated ? "/home" : "/login", { replace: true });
+        }
+    }, [minDurationElapsed, authLoading, isAuthenticated, navigate]);
 
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
