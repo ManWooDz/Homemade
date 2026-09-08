@@ -8,6 +8,7 @@ import { OptionChips, OptionList } from "../../components/OptionPicker";
 import {
   OTHER_OPTION,
   NO_RESTRICTION,
+  EQUIPMENT_NONE,
   CUISINE_OPTIONS,
   CUISINE_EMOJI,
   RESTRICTION_OPTIONS,
@@ -290,7 +291,7 @@ export default function Onboarding() {
                 emojiMap={EQUIPMENT_EMOJI}
                 onToggle={(option) =>
                   setEquipment((prev) => {
-                    const next = toggleInList(prev, option);
+                    const next = toggleInList(prev, option, EQUIPMENT_NONE);
                     if (next.length > 0 && (!next.includes(OTHER_OPTION) || equipmentOther.trim())) {
                       setStepError("");
                     }
