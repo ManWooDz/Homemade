@@ -54,20 +54,23 @@ export default function CreateRecipe({
         if (cancelled || !res.ok) return;
         const payload = await res.json();
         if (!payload.data) return;
-        // Only apply if the user hasn't already touched this pill list —
-        // checked at fetch-resolution time (not effect-setup time), so a
-        // fast click before this resolves is never silently overwritten.
-        if (allergies.length === 0) {
-          const defaults = (payload.data.dietary_restrictions || []).filter((item) =>
-            ALLERGY_OPTIONS.includes(item),
-          );
-          if (defaults.length > 0) setAllergies(defaults);
+        // Only apply if the user hasn't already touched this pill list.
+        // Uses the functional setState form so the emptiness check reads
+        // live state at fetch-resolution time, not the stale `[]` this
+        // effect closure captured at mount — a click that lands while the
+        // GET is still in flight is never silently overwritten.
+        const allergyDefaults = (payload.data.dietary_restrictions || []).filter((item) =>
+          ALLERGY_OPTIONS.includes(item),
+        );
+        if (allergyDefaults.length > 0) {
+          setAllergies((prev) => (prev.length === 0 ? allergyDefaults : prev));
         }
-        if (equipment.length === 0) {
-          const defaults = (payload.data.equipment || []).filter((item) =>
-            EQUIPMENT_OPTIONS.includes(item),
-          );
-          if (defaults.length > 0) setEquipment(defaults);
+
+        const equipmentDefaults = (payload.data.equipment || []).filter((item) =>
+          EQUIPMENT_OPTIONS.includes(item),
+        );
+        if (equipmentDefaults.length > 0) {
+          setEquipment((prev) => (prev.length === 0 ? equipmentDefaults : prev));
         }
       } catch {
         // best-effort default-fill only — never block recipe generation
