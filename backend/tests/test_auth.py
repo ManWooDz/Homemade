@@ -125,7 +125,8 @@ class AuthTests(unittest.TestCase):
 
     def test_missing_jwt_secret_key_fails_fast_on_import(self):
         import importlib
-        original = os.environ.pop("JWT_SECRET_KEY", None)
+        original = os.environ.get("JWT_SECRET_KEY")
+        os.environ["JWT_SECRET_KEY"] = ""
         sys.modules.pop("auth", None)
         try:
             with self.assertRaises(RuntimeError):
