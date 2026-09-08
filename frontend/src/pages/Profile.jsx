@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
@@ -13,46 +13,25 @@ import {
 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { OptionChips, OptionList } from "../components/OptionPicker";
 import { getTagColor } from "../utils/tagColors";
 import { useAuth } from "../context/AuthContext";
-
-const OTHER_OPTION = "อื่นๆ";
-
-const TASTE_OPTIONS = [
-  "ไม่ระบุ",
-  "เผ็ดน้อย",
-  "เผ็ดปานกลาง",
-  "เผ็ดมาก",
-  "รสจัดจ้าน",
-  "รสหวานนำ",
-  "รสเปรี้ยวนำ",
-  "รสกลมกล่อม ไม่จัดจ้าน",
+import {
   OTHER_OPTION,
-];
-const ALLERGY_NONE = "ไม่มี";
-const ALLERGY_OPTIONS = [
-  ALLERGY_NONE,
-  "กุ้ง/อาหารทะเล",
-  "ถั่ว",
-  "นม/ผลิตภัณฑ์จากนม",
-  "ไข่",
-  "แป้งสาลี/กลูเตน",
-  "ถั่วเหลือง",
-  "งา",
-  OTHER_OPTION,
-];
-const EQUIPMENT_NONE = "ไม่มีอุปกรณ์พิเศษ";
-const EQUIPMENT_OPTIONS = [
+  NO_RESTRICTION,
   EQUIPMENT_NONE,
-  "ไมโครเวฟ",
-  "หม้อทอดไร้น้ำมัน",
-  "เตาอบ",
-  "หม้อหุงข้าว",
-  "กระทะ/เตาแก๊สทั่วไป",
-  "หม้อตุ๋น/สโลว์คุก",
-  "เครื่องปั่น",
-  OTHER_OPTION,
-];
+  CUISINE_OPTIONS,
+  CUISINE_EMOJI,
+  RESTRICTION_OPTIONS,
+  RESTRICTION_EMOJI,
+  EQUIPMENT_OPTIONS,
+  EQUIPMENT_EMOJI,
+  FREQUENCY_OPTIONS,
+  FREQUENCY_EMOJI,
+  GOAL_OPTIONS,
+  GOAL_EMOJI,
+  toggleInList,
+} from "../constants/preferenceOptions";
 
 const LANGUAGE_OPTIONS = [
   { code: "th", label: "ไทย" },
@@ -132,40 +111,6 @@ function MenuRow({ icon, label, onClick }) {
   );
 }
 
-function PillGroup({ title, hint, options, selected, onToggle }) {
-  return (
-    <div className="mb-6">
-      <h3 className="text-base font-bold text-black mb-2 flex items-baseline gap-2">
-        {title}
-        {hint && (
-          <span className="text-xs font-normal text-gray-400">{hint}</span>
-        )}
-      </h3>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const isSelected = Array.isArray(selected)
-            ? selected.includes(option)
-            : selected === option;
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onToggle(option)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                isSelected
-                  ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                  : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-              }`}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export default function Profile({
   cookingHistory,
   activeTab,
@@ -176,29 +121,74 @@ export default function Profile({
 
   const [language, setLanguage] = useState("th");
 
-  const [taste, setTaste] = useState("");
-  const [tasteOther, setTasteOther] = useState("");
-  const [allergies, setAllergies] = useState([]);
-  const [allergiesOther, setAllergiesOther] = useState("");
-  const [equipment, setEquipment] = useState([]);
-  const [equipmentOther, setEquipmentOther] = useState("");
-
-  const toggleInList = (list, setList, option, noneValue) => {
-    if (option === noneValue) {
-      setList(list.includes(noneValue) ? [] : [noneValue]);
-      return;
-    }
-    if (list.includes(option)) {
-      setList(list.filter((item) => item !== option));
-    } else {
-      setList([...list.filter((item) => item !== noneValue), option]);
-    }
-  };
-
   const goMain = () => setView("main");
 
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { apiFetch } = useAuth();
+
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [age, setAge] = useState("");
+  const [cuisinePreferences, setCuisinePreferences] = useState([]);
+  const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
+  const [restrictionOther, setRestrictionOther] = useState("");
+  const [equipment, setEquipment] = useState([]);
+  const [equipmentOther, setEquipmentOther] = useState("");
+  const [cookingFrequency, setCookingFrequency] = useState("");
+  const [cookingGoals, setCookingGoals] = useState([]);
+  const [prefsError, setPrefsError] = useState("");
+
+  useEffect(() => {
+    if (view !== "preferences" || prefsLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch("/api/user-preferences");
+        if (cancelled || !res.ok) return;
+        const payload = await res.json();
+        if (payload.data) {
+          setAge(payload.data.age != null ? String(payload.data.age) : "");
+          setCuisinePreferences(payload.data.cuisine_preferences || []);
+          setDietaryRestrictions(payload.data.dietary_restrictions || []);
+          setEquipment(payload.data.equipment || []);
+          setCookingFrequency(payload.data.cooking_frequency || "");
+          setCookingGoals(payload.data.cooking_goals || []);
+        }
+      } finally {
+        if (!cancelled) setPrefsLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [view, prefsLoaded, apiFetch]);
+
+  // Auto-save on every change. `overrides` carries the field that just
+  // changed — React state setters are async, so reading e.g.
+  // `cuisinePreferences` here right after calling its setter would still
+  // see the stale pre-toggle value; the caller passes the freshly computed
+  // next value explicitly instead.
+  const savePreferences = async (overrides) => {
+    const body = {
+      age: age === "" ? null : Number(age),
+      cuisine_preferences: cuisinePreferences,
+      dietary_restrictions: dietaryRestrictions,
+      equipment: equipment,
+      cooking_frequency: cookingFrequency || null,
+      cooking_goals: cookingGoals,
+      ...overrides,
+    };
+    try {
+      const res = await apiFetch("/api/user-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setPrefsError(res.ok ? "" : "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");
+    } catch {
+      setPrefsError("บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");
+    }
+  };
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -319,58 +309,130 @@ export default function Profile({
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
           <Header title="Preferences" onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32">
-            <PillGroup
-              title="รสชาติ"
-              options={TASTE_OPTIONS}
-              selected={taste}
-              onToggle={(option) => setTaste(option)}
+            <h3 className="text-base font-bold text-black mb-2">อายุ</h3>
+            <input
+              type="number"
+              min="1"
+              max="120"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              onBlur={() => savePreferences({ age: age === "" ? null : Number(age) })}
+              placeholder="ระบุอายุ"
+              className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-6 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
             />
-            {taste === OTHER_OPTION && (
+
+            <h3 className="text-base font-bold text-black mb-2">คุณชอบอาหารแบบไหน?</h3>
+            <div className="mb-6">
+              <OptionChips
+                options={CUISINE_OPTIONS}
+                selected={cuisinePreferences}
+                multiple
+                emojiMap={CUISINE_EMOJI}
+                onToggle={(option) => {
+                  const next = toggleInList(cuisinePreferences, option);
+                  setCuisinePreferences(next);
+                  savePreferences({ cuisine_preferences: next });
+                }}
+              />
+            </div>
+
+            <h3 className="text-base font-bold text-black mb-2">อาการแพ้ หรือข้อจำกัดของคุณ</h3>
+            <div className="mb-2">
+              <OptionChips
+                options={RESTRICTION_OPTIONS}
+                selected={dietaryRestrictions}
+                multiple
+                emojiMap={RESTRICTION_EMOJI}
+                onToggle={(option) => {
+                  const next = toggleInList(dietaryRestrictions, option, NO_RESTRICTION);
+                  setDietaryRestrictions(next);
+                  savePreferences({ dietary_restrictions: next });
+                }}
+              />
+            </div>
+            {dietaryRestrictions.includes(OTHER_OPTION) && (
               <input
                 type="text"
-                value={tasteOther}
-                onChange={(e) => setTasteOther(e.target.value)}
-                placeholder="ระบุรสชาติที่ต้องการ"
-                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 -mt-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
+                value={restrictionOther}
+                onChange={(e) => setRestrictionOther(e.target.value)}
+                onBlur={() =>
+                  savePreferences({
+                    dietary_restrictions: [
+                      ...dietaryRestrictions.filter((r) => r !== OTHER_OPTION),
+                      restrictionOther || OTHER_OPTION,
+                    ],
+                  })
+                }
+                placeholder="ระบุข้อจำกัดของคุณ"
+                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-4 mt-2 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
             )}
+            <div className="mb-4" />
 
-            <PillGroup
-              title="อาการแพ้อาหาร"
-              hint="เลือกได้มากกว่า 1 ข้อ"
-              options={ALLERGY_OPTIONS}
-              selected={allergies}
-              onToggle={(option) =>
-                toggleInList(allergies, setAllergies, option, ALLERGY_NONE)
-              }
-            />
-            {allergies.includes(OTHER_OPTION) && (
-              <input
-                type="text"
-                value={allergiesOther}
-                onChange={(e) => setAllergiesOther(e.target.value)}
-                placeholder="ระบุอาการแพ้อาหาร"
-                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 -mt-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
+            <h3 className="text-base font-bold text-black mb-2">อุปกรณ์ที่มี</h3>
+            <div className="mb-2">
+              <OptionChips
+                options={EQUIPMENT_OPTIONS}
+                selected={equipment}
+                multiple
+                emojiMap={EQUIPMENT_EMOJI}
+                onToggle={(option) => {
+                  const next = toggleInList(equipment, option, EQUIPMENT_NONE);
+                  setEquipment(next);
+                  savePreferences({ equipment: next });
+                }}
               />
-            )}
-
-            <PillGroup
-              title="อุปกรณ์ที่มี"
-              hint="เลือกได้มากกว่า 1 ข้อ"
-              options={EQUIPMENT_OPTIONS}
-              selected={equipment}
-              onToggle={(option) =>
-                toggleInList(equipment, setEquipment, option, EQUIPMENT_NONE)
-              }
-            />
+            </div>
             {equipment.includes(OTHER_OPTION) && (
               <input
                 type="text"
                 value={equipmentOther}
                 onChange={(e) => setEquipmentOther(e.target.value)}
+                onBlur={() =>
+                  savePreferences({
+                    equipment: [
+                      ...equipment.filter((e) => e !== OTHER_OPTION),
+                      equipmentOther || OTHER_OPTION,
+                    ],
+                  })
+                }
                 placeholder="ระบุอุปกรณ์ที่มี"
-                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 -mt-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
+                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-4 mt-2 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
+            )}
+            <div className="mb-4" />
+
+            <h3 className="text-base font-bold text-black mb-2">คุณทำอาหารบ่อยแค่ไหน?</h3>
+            <div className="mb-6">
+              <OptionList
+                options={FREQUENCY_OPTIONS}
+                selected={cookingFrequency}
+                multiple={false}
+                emojiMap={FREQUENCY_EMOJI}
+                onToggle={(option) => {
+                  setCookingFrequency(option);
+                  savePreferences({ cooking_frequency: option });
+                }}
+              />
+            </div>
+
+            <h3 className="text-base font-bold text-black mb-2">คุณทำอาหารเพื่ออะไร?</h3>
+            <div className="mb-2">
+              <OptionList
+                options={GOAL_OPTIONS}
+                selected={cookingGoals}
+                multiple
+                emojiMap={GOAL_EMOJI}
+                onToggle={(option) => {
+                  const next = toggleInList(cookingGoals, option);
+                  setCookingGoals(next);
+                  savePreferences({ cooking_goals: next });
+                }}
+              />
+            </div>
+
+            {prefsError && (
+              <p className="text-red-600 text-sm text-center mt-4">{prefsError}</p>
             )}
           </div>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
