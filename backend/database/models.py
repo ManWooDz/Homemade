@@ -15,6 +15,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    JSON,
     String,
     UniqueConstraint,
     func,
@@ -203,3 +204,30 @@ class RefreshToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class UserPreference(Base):
+    """Persisted onboarding-quiz answers, editable later from Profile.
+    See docs/superpowers/specs/2026-09-08-user-preferences-design.md.
+    """
+
+    __tablename__ = "user_preferences"
+
+    # PK is user_id itself, not a surrogate id — genuine 1:1 with users,
+    # not 1:many, so a separate surrogate id + unique(user_id) would be
+    # pure overhead.
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # JSON (dialect-generic), not postgresql.ARRAY like GenerateHistory's
+    # list columns — verified ARRAY fails to compile against the SQLite
+    # engine this test file (and every other backend test) uses, and
+    # nothing ever needs to unnest() into these columns the way
+    # GenerateHistory's personalization queries do.
+    cuisine_preferences: Mapped[list[str]] = mapped_column(JSON, default=list)
+    dietary_restrictions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    equipment: Mapped[list[str]] = mapped_column(JSON, default=list)
+    cooking_frequency: Mapped[str | None] = mapped_column(String, nullable=True)
+    cooking_goals: Mapped[list[str]] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
