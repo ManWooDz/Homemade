@@ -1,4 +1,7 @@
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status
+from datetime import datetime, timedelta, timezone
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
@@ -14,9 +17,22 @@ from google.genai import types
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-from auth import create_access_token, get_current_user, hash_password, verify_password
+from auth import (
+    REFRESH_TOKEN_EXPIRE_DAYS,
+    clear_auth_cookies,
+    create_access_token,
+    create_refresh_token,
+    get_current_user,
+    hash_password,
+    hash_token,
+    revoke_refresh_token,
+    rotate_refresh_token,
+    set_auth_cookies,
+    verify_password,
+)
+from csrf import verify_same_origin
 from database.db import get_db
-from database.models import BaseRecipe, RecipeIngredientImage, User
+from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 
@@ -562,13 +578,12 @@ class RegisterRequest(BaseModel):
     password: str
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
 # register a new user — email/password stored with a bcrypt hash
-@app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/api/auth/register",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_same_origin)],
+)
 async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     email = request.email.strip().lower()
     if "@" not in email or "." not in email.split("@")[-1]:
@@ -587,23 +602,65 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
 
 # login — OAuth2 password flow (form fields: username, password); username holds the email
-@app.post("/api/auth/login", response_model=TokenResponse)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@app.post("/api/auth/login", dependencies=[Depends(verify_same_origin)])
+async def login(
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
     email = form_data.username.strip().lower()
     user = db.query(User).filter_by(email=email).first()
     if user is None or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
+
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    db.add(
+        RefreshToken(
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         )
-    token = create_access_token(user.id)
-    return {"access_token": token, "token_type": "bearer"}
+    )
+    db.commit()
+    set_auth_cookies(response, access_token, refresh_token)
+    response.headers["Cache-Control"] = "no-store"
+    return {"status": "success", "data": {"id": user.id, "email": user.email}}
 
 
-# current authenticated user, resolved from the bearer token
+@app.post("/api/auth/refresh", dependencies=[Depends(verify_same_origin)])
+async def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+    raw_refresh = request.cookies.get("refresh_token")
+    result = rotate_refresh_token(db, raw_refresh) if raw_refresh else None
+    if result is None:
+        clear_auth_cookies(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+    new_access, new_refresh = result
+    set_auth_cookies(response, new_access, new_refresh)
+    response.headers["Cache-Control"] = "no-store"
+    return {"status": "success"}
+
+
+@app.post("/api/auth/logout", dependencies=[Depends(verify_same_origin)])
+async def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    raw_refresh = request.cookies.get("refresh_token")
+    if raw_refresh:
+        try:
+            revoke_refresh_token(db, raw_refresh)
+        except Exception:
+            logging.exception("logout: failed to revoke refresh token")
+            clear_auth_cookies(response)
+            raise HTTPException(status_code=500, detail="Logout failed, please try again")
+    clear_auth_cookies(response)
+    response.headers["Cache-Control"] = "no-store"
+    return {"status": "success"}
+
+
+# current authenticated user, resolved from the access-token cookie
 @app.get("/api/auth/me")
-async def read_current_user(current_user: User = Depends(get_current_user)):
+async def read_current_user(response: Response, current_user: User = Depends(get_current_user)):
+    response.headers["Cache-Control"] = "no-store"
     return {"status": "success", "data": {"id": current_user.id, "email": current_user.email}}
 
 
