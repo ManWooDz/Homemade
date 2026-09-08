@@ -8,4 +8,9 @@ export default defineConfig({
         react(),
         tailwindcss(), // <--- เพิ่มบรรทัดนี้เข้ามา!
     ],
+    server: {
+        proxy: {
+            "/api": "http://127.0.0.1:8000",
+        },
+    },
 });

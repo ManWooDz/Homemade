@@ -25,7 +25,7 @@ export default function UserIngredients({
     const handleDeleteIngredient = async (id) => {
         try {
             const response = await fetch(
-                `http://localhost:8000/api/user-ingredients/${id}`,
+                `/api/user-ingredients/${id}`,
                 {
                     method: "DELETE",
                 },

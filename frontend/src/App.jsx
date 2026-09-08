@@ -73,7 +73,7 @@ function App() {
         const fetchRecipes = async () => {
             try {
                 const response = await fetch(
-                    "http://localhost:8000/api/recipes",
+                    "/api/recipes",
                 );
                 const result = await response.json();
                 if (result.status === "success") {
@@ -94,7 +94,7 @@ function App() {
 
         const fetchUserIngredients = async () => {
             try {
-                const response = await fetch("http://localhost:8000/api/user-ingredients");
+                const response = await fetch("/api/user-ingredients");
                 const result = await response.json();
                 if (result.status === "success") {
                     setUserIngredients(result.data);
@@ -329,7 +329,7 @@ function App() {
                     setGeneratedRecipe(null);
                     setIsGenerating(true);
                     try {
-                        const response = await fetch("http://localhost:8000/api/generate-recipe-text", {
+                        const response = await fetch("/api/generate-recipe-text", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
@@ -445,7 +445,7 @@ function App() {
                     setGeneratedRecipe(null);
                     setIsGenerating(true);
                     try {
-                        const response = await fetch("http://localhost:8000/api/generate-recipe-text", {
+                        const response = await fetch("/api/generate-recipe-text", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({

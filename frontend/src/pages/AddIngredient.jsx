@@ -30,7 +30,7 @@ export default function AddIngredient({
         const fetchFallback = async () => {
             try {
                 const response = await fetch(
-                    "http://localhost:8000/api/ingredient-images",
+                    "/api/ingredient-images",
                 );
                 const result = await response.json();
                 if (result.status === "success") {
@@ -57,7 +57,7 @@ export default function AddIngredient({
             setSearchError("");
             try {
                 const response = await fetch(
-                    `http://localhost:8000/api/ingredient-images/search?q=${encodeURIComponent(query)}`,
+                    `/api/ingredient-images/search?q=${encodeURIComponent(query)}`,
                 );
                 const result = await response.json();
                 if (result.status === "success") {
@@ -85,7 +85,7 @@ export default function AddIngredient({
             const formData = new FormData();
             formData.append("file", file);
             const response = await fetch(
-                "http://localhost:8000/api/ingredient-images/upload",
+                "/api/ingredient-images/upload",
                 { method: "POST", body: formData },
             );
             const result = await response.json();
@@ -107,7 +107,7 @@ export default function AddIngredient({
         setIsSaving(true);
         try {
             const response = await fetch(
-                "http://localhost:8000/api/user-ingredients",
+                "/api/user-ingredients",
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
