@@ -2,7 +2,15 @@ import { ChevronLeft, Plus, Refrigerator } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { useState, useEffect } from "react";
-
+import { useAuth } from "../context/AuthContext";
+import {
+  OTHER_OPTION,
+  NO_RESTRICTION,
+  EQUIPMENT_NONE,
+  ALLERGY_OPTIONS,
+  EQUIPMENT_OPTIONS,
+  toggleInList,
+} from "../constants/preferenceOptions";
 
 export default function CreateRecipe({
   recipe,
@@ -13,8 +21,9 @@ export default function CreateRecipe({
   setActiveTab,
   onGenerate,
 }) {
-  const OTHER_OPTION = "อื่นๆ";
-
+  // Taste has no onboarding/Profile equivalent (user picks fresh every
+  // generation, per explicit decision — see spec) so it stays local here,
+  // not moved to the shared constants module.
   const TASTE_OPTIONS = [
     "ไม่ระบุ",
     "เผ็ดน้อย",
@@ -26,30 +35,6 @@ export default function CreateRecipe({
     "รสกลมกล่อม ไม่จัดจ้าน",
     OTHER_OPTION,
   ];
-  const ALLERGY_NONE = "ไม่มี";
-  const ALLERGY_OPTIONS = [
-    ALLERGY_NONE,
-    "กุ้ง/อาหารทะเล",
-    "ถั่ว",
-    "นม/ผลิตภัณฑ์จากนม",
-    "ไข่",
-    "แป้งสาลี/กลูเตน",
-    "ถั่วเหลือง",
-    "งา",
-    OTHER_OPTION,
-  ];
-  const EQUIPMENT_NONE = "ไม่มีอุปกรณ์พิเศษ";
-  const EQUIPMENT_OPTIONS = [
-    EQUIPMENT_NONE,
-    "ไมโครเวฟ",
-    "หม้อทอดไร้น้ำมัน",
-    "เตาอบ",
-    "หม้อหุงข้าว",
-    "กระทะ/เตาแก๊สทั่วไป",
-    "หม้อตุ๋น/สโลว์คุก",
-    "เครื่องปั่น",
-    OTHER_OPTION,
-  ];
 
   const [taste, setTaste] = useState("");
   const [tasteOther, setTasteOther] = useState("");
@@ -59,19 +44,40 @@ export default function CreateRecipe({
   const [equipmentOther, setEquipmentOther] = useState("");
   const [extra, setExtra] = useState("");
 
-  // multi-select toggle where selecting `noneValue` clears every other
-  // selection, and selecting anything else clears `noneValue`
-  const toggleInList = (list, setList, option, noneValue) => {
-    if (option === noneValue) {
-      setList(list.includes(noneValue) ? [] : [noneValue]);
-      return;
-    }
-    if (list.includes(option)) {
-      setList(list.filter((item) => item !== option));
-    } else {
-      setList([...list.filter((item) => item !== noneValue), option]);
-    }
-  };
+  const { apiFetch } = useAuth();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch("/api/user-preferences");
+        if (cancelled || !res.ok) return;
+        const payload = await res.json();
+        if (!payload.data) return;
+        // Only apply if the user hasn't already touched this pill list —
+        // checked at fetch-resolution time (not effect-setup time), so a
+        // fast click before this resolves is never silently overwritten.
+        if (allergies.length === 0) {
+          const defaults = (payload.data.dietary_restrictions || []).filter((item) =>
+            ALLERGY_OPTIONS.includes(item),
+          );
+          if (defaults.length > 0) setAllergies(defaults);
+        }
+        if (equipment.length === 0) {
+          const defaults = (payload.data.equipment || []).filter((item) =>
+            EQUIPMENT_OPTIONS.includes(item),
+          );
+          if (defaults.length > 0) setEquipment(defaults);
+        }
+      } catch {
+        // best-effort default-fill only — never block recipe generation
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resolveOther = (value, otherText) =>
     value === OTHER_OPTION ? otherText.trim() || OTHER_OPTION : value;
@@ -305,7 +311,7 @@ export default function CreateRecipe({
                   key={option}
                   type="button"
                   onClick={() =>
-                    toggleInList(allergies, setAllergies, option, ALLERGY_NONE)
+                    setAllergies(toggleInList(allergies, option, NO_RESTRICTION))
                   }
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
                     allergies.includes(option)
@@ -339,12 +345,7 @@ export default function CreateRecipe({
                   key={option}
                   type="button"
                   onClick={() =>
-                    toggleInList(
-                      equipment,
-                      setEquipment,
-                      option,
-                      EQUIPMENT_NONE,
-                    )
+                    setEquipment(toggleInList(equipment, option, EQUIPMENT_NONE))
                   }
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
                     equipment.includes(option)
