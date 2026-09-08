@@ -65,6 +65,11 @@ class UserIngredientsEndpointTests(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 401)
 
+    def test_delete_is_401_without_login(self):
+        client = TestClient(app)
+        res = client.delete("/api/user-ingredients/1", headers=self.origin_headers)
+        self.assertEqual(res.status_code, 401)
+
     def test_authenticated_crud_cycle_works(self):
         client = TestClient(app)
         self._register_and_login(client, "cruduser@example.com")
