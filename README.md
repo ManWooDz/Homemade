@@ -54,6 +54,7 @@
     alembic upgrade head
     python database/seed_postgres.py
     ```
+    > ⚠️ **ทำแค่ครั้งแรกเท่านั้น** (ตอน clone ใหม่ / container เป็น volume เปล่า) ข้อมูลจะถูกเก็บถาวรใน Docker volume (`pgdata`) แล้ว รันครั้งต่อไปแค่ `docker compose up -d` พอ **ไม่ต้อง** รัน `alembic upgrade head` / `seed_postgres.py` ซ้ำ (ยกเว้นมี migration ใหม่ที่ยังไม่ apply หรือลบ volume ทิ้งด้วย `docker compose down -v`)
 5.  **รันเซิร์ฟเวอร์**
     ```bash
     uvicorn main:app --reload
