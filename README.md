@@ -45,11 +45,13 @@
     JWT_SECRET_KEY=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
     ```
 4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
-    ต้องมี Docker รันอยู่ก่อน แล้วสั่ง (รันจาก root โปรเจกต์):
+    ต้องติดตั้ง [Docker Desktop](https://www.docker.com/products/docker-desktop/) ก่อน แล้วเปิดโปรแกรมทิ้งไว้ (ต้องเห็นสถานะ "Running")
+
+    เปิด Terminal/CMD ที่ **root โปรเจกต์** (โฟลเดอร์ `homemade/` ที่มีไฟล์ `docker-compose.yml`, **ไม่ใช่** ใน `backend/`) แล้วสั่ง:
     ```bash
     docker compose up -d
     ```
-    จากนั้นสร้างตาราง + seed ข้อมูลตัวอย่าง (รันจาก `backend/`):
+    จากนั้นย้ายไป Terminal/CMD ที่โฟลเดอร์ `backend/` (venv ต้อง activate อยู่) สร้างตาราง + seed ข้อมูลตัวอย่าง:
     ```bash
     alembic upgrade head
     python database/seed_postgres.py
