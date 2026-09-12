@@ -7,12 +7,6 @@ import {
 
 const AuthContext = createContext(null);
 
-const MOCK_DELAY_MS = 600;
-
-function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 // Never lets the caller's await reject — login/register/logout must
 // always resolve to a {success, error?} shape (Login.jsx/Register.jsx
 // have no try/finally around their `await`, so a rejected promise would
@@ -31,7 +25,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [pendingResetEmail, setPendingResetEmail] = useState(null);
-    const [otpVerified, setOtpVerified] = useState(false);
+    const [resetTicket, setResetTicket] = useState(null);
 
     const refreshInFlightRef = useRef(null);
 
@@ -154,33 +148,69 @@ export function AuthProvider({ children }) {
     );
 
     const requestOtp = useCallback(async (email) => {
-        await delay(MOCK_DELAY_MS);
         if (!isValidEmail(email)) {
             return { success: false, error: "Enter a valid email" };
         }
-        setPendingResetEmail(email.trim());
-        setOtpVerified(false);
+        const trimmedEmail = email.trim();
+        const { response, networkError } = await safeFetch("/api/auth/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: trimmedEmail }),
+        });
+        if (networkError || !response.ok) {
+            return { success: false, error: "ส่งคำขอไม่สำเร็จ กรุณาลองอีกครั้ง" };
+        }
+        setPendingResetEmail(trimmedEmail);
+        setResetTicket(null);
         return { success: true };
     }, []);
 
     const resendOtp = useCallback(async () => {
-        await delay(MOCK_DELAY_MS);
-        return { success: true };
-    }, []);
-
-    const verifyOtp = useCallback(async (code) => {
-        await delay(MOCK_DELAY_MS);
-        if (!code || code.length !== 6) {
-            return { success: false, error: "Enter all 6 digits" };
+        if (!pendingResetEmail) {
+            return { success: false, error: "Session expired — start over" };
         }
-        setOtpVerified(true);
+        const { response, networkError } = await safeFetch("/api/auth/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: pendingResetEmail }),
+        });
+        if (networkError || !response.ok) {
+            return { success: false, error: "ส่งรหัสใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง" };
+        }
         return { success: true };
-    }, []);
+    }, [pendingResetEmail]);
+
+    const verifyOtp = useCallback(
+        async (code) => {
+            if (!code || code.length !== 6) {
+                return { success: false, error: "Enter all 6 digits" };
+            }
+            if (!pendingResetEmail) {
+                return { success: false, error: "Session expired — start over" };
+            }
+            const { response, networkError } = await safeFetch("/api/auth/verify-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: pendingResetEmail, code }),
+            });
+            if (networkError || !response.ok) {
+                return { success: false, error: "รหัสไม่ถูกต้องหรือหมดอายุ" };
+            }
+            let payload;
+            try {
+                payload = await response.json();
+            } catch {
+                return { success: false, error: "เกิดข้อผิดพลาด กรุณาลองอีกครั้ง" };
+            }
+            setResetTicket(payload.data.reset_ticket);
+            return { success: true };
+        },
+        [pendingResetEmail]
+    );
 
     const resetPassword = useCallback(
         async (newPassword, confirmPassword) => {
-            await delay(MOCK_DELAY_MS);
-            if (!otpVerified) {
+            if (!resetTicket) {
                 return { success: false, error: "Verify your code first" };
             }
             if (!isValidPassword(newPassword)) {
@@ -189,11 +219,19 @@ export function AuthProvider({ children }) {
             if (!passwordsMatch(newPassword, confirmPassword)) {
                 return { success: false, error: "Passwords do not match" };
             }
+            const { response, networkError } = await safeFetch("/api/auth/reset-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reset_ticket: resetTicket, new_password: newPassword }),
+            });
+            if (networkError || !response.ok) {
+                return { success: false, error: "เปลี่ยนรหัสผ่านไม่สำเร็จ ลิงก์อาจหมดอายุ" };
+            }
             setPendingResetEmail(null);
-            setOtpVerified(false);
+            setResetTicket(null);
             return { success: true };
         },
-        [otpVerified]
+        [resetTicket]
     );
 
     const logout = useCallback(async () => {
@@ -236,7 +274,7 @@ export function AuthProvider({ children }) {
         authLoading,
         user,
         pendingResetEmail,
-        otpVerified,
+        resetTicket,
         login,
         register,
         requestOtp,

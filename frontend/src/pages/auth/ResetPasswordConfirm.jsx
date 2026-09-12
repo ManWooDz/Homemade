@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function ResetPasswordConfirm() {
     const navigate = useNavigate();
-    const { otpVerified, resetPassword } = useAuth();
+    const { resetTicket, resetPassword } = useAuth();
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
@@ -15,10 +15,10 @@ export default function ResetPasswordConfirm() {
     // resetPassword() clears otpVerified as part of its own success cleanup, which would
     // otherwise race this guard's redirect against the page's own post-submit navigate().
     // Check the flag once at mount instead of reacting to it.
-    const otpVerifiedAtMount = useRef(otpVerified);
+    const resetTicketAtMount = useRef(resetTicket);
 
     useEffect(() => {
-        if (!otpVerifiedAtMount.current) {
+        if (!resetTicketAtMount.current) {
             navigate("/reset-password", { replace: true });
         }
     }, [navigate]);

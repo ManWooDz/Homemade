@@ -5,7 +5,7 @@ import BackButton from "../../components/BackButton";
 import { useAuth } from "../../context/AuthContext";
 
 const OTP_LENGTH = 6;
-const RESEND_COOLDOWN_SECONDS = 30;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function OtpVerify() {
     const navigate = useNavigate();
