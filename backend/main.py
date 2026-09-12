@@ -628,6 +628,32 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
 
+class VerifyOtpRequest(BaseModel):
+    email: str
+    code: str
+
+
+def _generic_verify_otp_error() -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"status": "error", "message": "Invalid or expired code"},
+    )
+
+
+@app.post("/api/auth/verify-otp", dependencies=[Depends(verify_same_origin)])
+async def verify_otp(request: VerifyOtpRequest, db: Session = Depends(get_db)):
+    email = request.email.strip().lower()
+    user = db.query(User).filter_by(email=email).first()
+    if user is None:
+        return _generic_verify_otp_error()
+
+    ticket = otp.attempt_verify_otp(db, user.id, request.code)
+    if ticket is None:
+        return _generic_verify_otp_error()
+
+    return {"status": "success", "data": {"reset_ticket": ticket}}
+
+
 # login — OAuth2 password flow (form fields: username, password); username holds the email
 @app.post("/api/auth/login", dependencies=[Depends(verify_same_origin)])
 async def login(

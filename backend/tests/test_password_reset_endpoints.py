@@ -167,6 +167,104 @@ class PasswordResetEndpointTests(unittest.TestCase):
         rows = db.query(PasswordResetOtp).all()
         self.assertEqual(len(rows), 0)
 
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_verify_otp_succeeds_with_correct_code_and_returns_ticket(self, _mock):
+        client = TestClient(app)
+        self._register(client, "vo1@example.com")
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "vo1@example.com"},
+            headers=self.origin_headers,
+        )
+
+        res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "vo1@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()["data"]["reset_ticket"])
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_verify_otp_fails_with_wrong_code(self, _mock):
+        client = TestClient(app)
+        self._register(client, "vo2@example.com")
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "vo2@example.com"},
+            headers=self.origin_headers,
+        )
+
+        res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "vo2@example.com", "code": "000000"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()["status"], "error")
+
+    def test_verify_otp_fails_for_unknown_email(self):
+        client = TestClient(app)
+        res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "nobody@example.com", "code": "123456"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 400)
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_verify_otp_cannot_be_reused_after_success(self, _mock):
+        client = TestClient(app)
+        self._register(client, "vo3@example.com")
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "vo3@example.com"},
+            headers=self.origin_headers,
+        )
+
+        first = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "vo3@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(first.status_code, 200)
+
+        second = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "vo3@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(second.status_code, 400)
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_fifth_wrong_attempt_locks_out_even_the_correct_code(self, _mock):
+        client = TestClient(app)
+        self._register(client, "vo4@example.com")
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "vo4@example.com"},
+            headers=self.origin_headers,
+        )
+
+        for _ in range(5):
+            client.post(
+                "/api/auth/verify-otp",
+                json={"email": "vo4@example.com", "code": "000000"},
+                headers=self.origin_headers,
+            )
+
+        res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "vo4@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 400)
+
+    def test_verify_otp_without_trusted_origin_is_403(self):
+        client = TestClient(app)
+        res = client.post("/api/auth/verify-otp", json={"email": "x@example.com", "code": "123456"})
+        self.assertEqual(res.status_code, 403)
+
 
 if __name__ == "__main__":
     unittest.main()
