@@ -12,7 +12,7 @@ export default function ResetPasswordConfirm() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // resetPassword() clears otpVerified as part of its own success cleanup, which would
+    // resetPassword() clears resetTicket as part of its own success cleanup, which would
     // otherwise race this guard's redirect against the page's own post-submit navigate().
     // Check the flag once at mount instead of reacting to it.
     const resetTicketAtMount = useRef(resetTicket);
