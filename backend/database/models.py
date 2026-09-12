@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     String,
@@ -204,6 +205,37 @@ class RefreshToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PasswordResetOtp(Base):
+    """One-time-password rows for the forgot-password flow. code_hash is
+    HMAC-SHA256(OTP_HMAC_SECRET, code) — not plain SHA-256 — because the
+    OTP keyspace (1,000,000 values) is small enough to brute-force offline
+    from a leaked hash. ticket_hash is plain SHA-256 of a high-entropy
+    token, set once verify-otp succeeds. See
+    docs/superpowers/specs/2026-09-12-auth-phase3-otp-reset-design.md.
+    """
+
+    __tablename__ = "password_reset_otps"
+    __table_args__ = (
+        Index(
+            "ix_password_reset_otps_active_lookup",
+            "user_id",
+            "consumed_at",
+            "expires_at",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ticket_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    ticket_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ticket_consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class UserPreference(Base):
