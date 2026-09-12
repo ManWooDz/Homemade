@@ -8,6 +8,11 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import case, update
+from sqlalchemy.orm import Session
+
+from database.models import PasswordResetOtp
+
 OTP_HMAC_SECRET = os.getenv("OTP_HMAC_SECRET")
 
 if not OTP_HMAC_SECRET or len(OTP_HMAC_SECRET.encode("utf-8")) < 32:
@@ -44,3 +49,134 @@ def hash_reset_ticket(ticket: str) -> str:
     """Plain SHA-256 — safe here because the ticket is a high-entropy
     token, not a 6-digit code."""
     return hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+
+
+def get_active_otp_created_within(db: Session, user_id: int, seconds: int) -> PasswordResetOtp | None:
+    """Read-only. Used for the resend cooldown check."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=seconds)
+    return (
+        db.query(PasswordResetOtp)
+        .filter(
+            PasswordResetOtp.user_id == user_id,
+            PasswordResetOtp.consumed_at.is_(None),
+            PasswordResetOtp.expires_at > now,
+            PasswordResetOtp.created_at > cutoff,
+        )
+        .first()
+    )
+
+
+def create_otp_for_user(db: Session, user_id: int) -> tuple[PasswordResetOtp, str]:
+    """Invalidates any other active OTP for user_id (only one OTP is ever
+    valid at a time), inserts a new row, and flushes — does NOT commit.
+    The forgot-password endpoint commits only after send_otp_email
+    succeeds, so a delivery failure can be rolled back without leaving a
+    row that falsely enforces the resend cooldown."""
+    now = datetime.now(timezone.utc)
+    db.execute(
+        update(PasswordResetOtp)
+        .where(
+            PasswordResetOtp.user_id == user_id,
+            PasswordResetOtp.consumed_at.is_(None),
+            PasswordResetOtp.expires_at > now,
+        )
+        .values(expires_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    code = generate_otp_code()
+    row = PasswordResetOtp(
+        user_id=user_id,
+        code_hash=hash_otp_code(code),
+        expires_at=now + timedelta(minutes=OTP_EXPIRY_MINUTES),
+    )
+    db.add(row)
+    db.flush()
+    return row, code
+
+
+def attempt_verify_otp(db: Session, user_id: int, code: str) -> str | None:
+    """Self-contained: commits internally on both the success and failure
+    paths (mirrors auth.rotate_refresh_token — no cross-cutting
+    transaction requirement forces this open, unlike consume_reset_ticket
+    below). The two-step atomic-UPDATE approach (attempt the success
+    UPDATE first, only issue the attempt-increment UPDATE if it affected
+    no row) is what makes this race-safe under concurrent requests rather
+    than a read-then-write check."""
+    now = datetime.now(timezone.utc)
+    row = (
+        db.query(PasswordResetOtp)
+        .filter(
+            PasswordResetOtp.user_id == user_id,
+            PasswordResetOtp.consumed_at.is_(None),
+            PasswordResetOtp.expires_at > now,
+        )
+        .first()
+    )
+    if row is None:
+        return None
+
+    ticket = generate_reset_ticket()
+    result = db.execute(
+        update(PasswordResetOtp)
+        .where(
+            PasswordResetOtp.id == row.id,
+            PasswordResetOtp.consumed_at.is_(None),
+            PasswordResetOtp.expires_at > now,
+            PasswordResetOtp.attempts < MAX_ATTEMPTS,
+            PasswordResetOtp.code_hash == hash_otp_code(code),
+        )
+        .values(
+            consumed_at=now,
+            ticket_hash=hash_reset_ticket(ticket),
+            ticket_expires_at=now + timedelta(minutes=TICKET_EXPIRY_MINUTES),
+        )
+        .returning(PasswordResetOtp.user_id)
+        .execution_options(synchronize_session=False)
+    )
+    if result.first() is not None:
+        db.commit()
+        return ticket
+
+    db.execute(
+        update(PasswordResetOtp)
+        .where(
+            PasswordResetOtp.id == row.id,
+            PasswordResetOtp.consumed_at.is_(None),
+            PasswordResetOtp.expires_at > now,
+            PasswordResetOtp.attempts < MAX_ATTEMPTS,
+        )
+        .values(
+            attempts=PasswordResetOtp.attempts + 1,
+            expires_at=case(
+                (PasswordResetOtp.attempts + 1 >= MAX_ATTEMPTS, now),
+                else_=PasswordResetOtp.expires_at,
+            ),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    return None
+
+
+def consume_reset_ticket(db: Session, ticket: str) -> int | None:
+    """Does NOT commit — the reset-password endpoint must commit this
+    together with the password update and refresh-token revocation so all
+    three writes succeed or roll back as one transaction."""
+    now = datetime.now(timezone.utc)
+    result = db.execute(
+        update(PasswordResetOtp)
+        .where(
+            PasswordResetOtp.ticket_hash == hash_reset_ticket(ticket),
+            PasswordResetOtp.ticket_consumed_at.is_(None),
+            PasswordResetOtp.ticket_expires_at > now,
+        )
+        .values(ticket_consumed_at=now)
+        .returning(PasswordResetOtp.user_id)
+        .execution_options(synchronize_session=False)
+    )
+    row = result.first()
+    if row is None:
+        db.rollback()
+        return None
+    return row[0]
