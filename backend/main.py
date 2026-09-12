@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
