@@ -33,7 +33,9 @@ from auth import (
 )
 from csrf import verify_same_origin
 from database.db import get_db
-from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
+from database.models import BaseRecipe, PasswordResetOtp, RecipeIngredientImage, RefreshToken, User, UserPreference
+from email_sender import send_otp_email
+import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 
@@ -592,6 +594,38 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return {"status": "success", "data": {"id": user.id, "email": user.email}}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+_GENERIC_FORGOT_PASSWORD_RESPONSE = {
+    "status": "success",
+    "message": "If that email exists, a code has been sent.",
+}
+
+
+@app.post("/api/auth/forgot-password", dependencies=[Depends(verify_same_origin)])
+async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email = request.email.strip().lower()
+    user = db.query(User).filter_by(email=email).first()
+    if user is None:
+        return _GENERIC_FORGOT_PASSWORD_RESPONSE
+
+    if otp.get_active_otp_created_within(db, user.id, otp.RESEND_COOLDOWN_SECONDS) is not None:
+        return _GENERIC_FORGOT_PASSWORD_RESPONSE
+
+    _row, code = otp.create_otp_for_user(db, user.id)
+    try:
+        send_otp_email(email, code)
+    except Exception:
+        db.rollback()
+        logging.exception("forgot-password: OTP delivery failed for user_id=%s", user.id)
+        return _GENERIC_FORGOT_PASSWORD_RESPONSE
+
+    db.commit()
+    return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
 
 # login — OAuth2 password flow (form fields: username, password); username holds the email
