@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 import uvicorn
 import json
@@ -652,6 +653,46 @@ async def verify_otp(request: VerifyOtpRequest, db: Session = Depends(get_db)):
         return _generic_verify_otp_error()
 
     return {"status": "success", "data": {"reset_ticket": ticket}}
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_ticket: str
+    new_password: str
+
+
+@app.post("/api/auth/reset-password", dependencies=[Depends(verify_same_origin)])
+async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    # NOTE: JSONResponse with {"status": "error", ...}, not raise HTTPException —
+    # same generic-error response shape convention verify_otp uses above, so
+    # error bodies stay consistent across the password-reset flow.
+    if len(request.new_password) < 8:
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "Password must be at least 8 characters"},
+        )
+
+    user_id = otp.consume_reset_ticket(db, request.reset_ticket)
+    if user_id is None:
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "Invalid or expired reset link"},
+        )
+
+    # otp.consume_reset_ticket deliberately does not commit (it only flushes
+    # its UPDATE, or rolls back and returns None on failure) — the ticket
+    # consumption, password update, and refresh-token revocation below must
+    # all commit together in one transaction so a failure partway through
+    # never leaves a burned ticket with the old password still active, or a
+    # changed password with old sessions still valid.
+    user = db.get(User, user_id)
+    user.hashed_password = hash_password(request.new_password)
+    db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=datetime.now(timezone.utc))
+    )
+    db.commit()
+    return {"status": "success"}
 
 
 # login — OAuth2 password flow (form fields: username, password); username holds the email

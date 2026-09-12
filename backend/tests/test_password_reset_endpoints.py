@@ -265,6 +265,125 @@ class PasswordResetEndpointTests(unittest.TestCase):
         res = client.post("/api/auth/verify-otp", json={"email": "x@example.com", "code": "123456"})
         self.assertEqual(res.status_code, 403)
 
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_reset_password_succeeds_and_new_password_works(self, _mock):
+        client = TestClient(app)
+        self._register(client, "rp1@example.com")
+        client.post("/api/auth/forgot-password", json={"email": "rp1@example.com"}, headers=self.origin_headers)
+        verify_res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "rp1@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        ticket = verify_res.json()["data"]["reset_ticket"]
+
+        res = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": ticket, "new_password": "newpassword123"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 200)
+
+        login_res = client.post(
+            "/api/auth/login",
+            data={"username": "rp1@example.com", "password": "newpassword123"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(login_res.status_code, 200)
+
+    def test_reset_password_fails_with_invalid_ticket(self):
+        client = TestClient(app)
+        res = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": "not-a-real-ticket", "new_password": "newpassword123"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 400)
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_reset_password_ticket_is_single_use(self, _mock):
+        client = TestClient(app)
+        self._register(client, "rp2@example.com")
+        client.post("/api/auth/forgot-password", json={"email": "rp2@example.com"}, headers=self.origin_headers)
+        verify_res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "rp2@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        ticket = verify_res.json()["data"]["reset_ticket"]
+
+        first = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": ticket, "new_password": "newpassword123"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(first.status_code, 200)
+
+        second = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": ticket, "new_password": "anotherpassword456"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(second.status_code, 400)
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_reset_password_enforces_length_policy(self, _mock):
+        client = TestClient(app)
+        self._register(client, "rp3@example.com")
+        client.post("/api/auth/forgot-password", json={"email": "rp3@example.com"}, headers=self.origin_headers)
+        verify_res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "rp3@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        ticket = verify_res.json()["data"]["reset_ticket"]
+
+        res = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": ticket, "new_password": "short"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(res.status_code, 400)
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_reset_password_revokes_all_refresh_tokens(self, _mock):
+        client = TestClient(app)
+        self._register(client, "rp4@example.com")
+        login_res = client.post(
+            "/api/auth/login",
+            data={"username": "rp4@example.com", "password": "hunter22"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(login_res.status_code, 200)
+
+        client.post("/api/auth/forgot-password", json={"email": "rp4@example.com"}, headers=self.origin_headers)
+        verify_res = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "rp4@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        ticket = verify_res.json()["data"]["reset_ticket"]
+
+        client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": ticket, "new_password": "newpassword123"},
+            headers=self.origin_headers,
+        )
+
+        db = self.Session()
+        user_id = db.query(User).filter_by(email="rp4@example.com").one().id
+        tokens = db.query(RefreshToken).filter_by(user_id=user_id).all()
+        self.assertTrue(tokens)
+        self.assertTrue(all(t.revoked_at is not None for t in tokens))
+
+    def test_reset_password_without_trusted_origin_is_403(self):
+        client = TestClient(app)
+        res = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": "x", "new_password": "newpassword123"},
+        )
+        self.assertEqual(res.status_code, 403)
+
 
 if __name__ == "__main__":
     unittest.main()
