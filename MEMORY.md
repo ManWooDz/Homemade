@@ -42,3 +42,8 @@
 - what: Tried to preview a generated local HTML visual through the in-app browser using a `file://` URL.
 - root cause: Browser URL policy blocks local file navigation.
 - correct: Use the inline visualization artifact or a directly rendered local image; do not attempt browser-policy workarounds or alternate indirect navigation.
+
+**`backend/venv`'s leftover ultralytics install shadows the local `tests` package (2026-09-12):**
+- what: `python -m unittest tests.test_password_reset_endpoints` (and even `tests.test_otp_db`, an existing passing module) raised `ModuleNotFoundError: No module named 'tests.test_password_reset_endpoints'` when run from `backend/`, even though the file exists at `backend/tests/test_password_reset_endpoints.py`.
+- root cause: `backend/venv/Lib/site-packages/tests/__init__.py` belongs to the `ultralytics` (YOLO) package — the same dead YOLO dependency noted in the earlier "YOLO ถูกตัดออกจาก scope แล้ว" entry above. `backend/tests/` has no `__init__.py`, so it's only a PEP 420 namespace-package portion; Python's import machinery keeps scanning `sys.path` after finding a namespace portion and a later regular package (this one, in site-packages) wins the `tests` name outright, shadowing the local directory.
+- correct: never run `python -m unittest tests.<module_name>` from `backend/` — use `python -m unittest discover -s tests -v` (optionally with `-k <Filter>` to narrow to one module/class) instead; `discover` imports test modules by file path under `start_dir`, not by dotted package name, so it is unaffected by the shadowing. Do not "fix" this by adding `backend/tests/__init__.py` or uninstalling `ultralytics` without asking the user first — that's an environment/layout change outside a single task's scope.
