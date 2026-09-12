@@ -60,7 +60,12 @@ export default function OtpVerify() {
 
     const handleResend = async () => {
         if (cooldown > 0) return;
-        await resendOtp();
+        setError("");
+        const result = await resendOtp();
+        if (!result.success) {
+            setError(result.error);
+            return;
+        }
         setCooldown(RESEND_COOLDOWN_SECONDS);
         setDigits(Array(OTP_LENGTH).fill(""));
         inputRefs.current[0]?.focus();

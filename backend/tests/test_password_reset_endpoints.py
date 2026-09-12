@@ -265,6 +265,114 @@ class PasswordResetEndpointTests(unittest.TestCase):
         res = client.post("/api/auth/verify-otp", json={"email": "x@example.com", "code": "123456"})
         self.assertEqual(res.status_code, 403)
 
+    def test_attempt_cap_bypass_via_resend_is_blocked(self):
+        # Regression for the critical finding from the final whole-branch
+        # review: attempt_verify_otp's 5th-wrong-attempt path invalidates
+        # the OTP row by setting expires_at = now, which used to make the
+        # row invisible to the resend-cooldown lookup (it filtered on
+        # consumed_at IS NULL AND expires_at > now). That meant: request an
+        # OTP -> burn all 5 guesses -> immediately resend -> a brand new
+        # OTP with attempts reset to 0 and no cooldown, defeating the
+        # brute-force cap entirely. The fix (otp.get_recent_otp_request)
+        # keys the cooldown purely off created_at, so this second
+        # forgot-password call must be blocked and NOT create a new row.
+        client = TestClient(app)
+        self._register(client, "capbypass@example.com")
+
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "capbypass@example.com"},
+            headers=self.origin_headers,
+        )
+
+        for _ in range(5):
+            client.post(
+                "/api/auth/verify-otp",
+                json={"email": "capbypass@example.com", "code": "000000"},
+                headers=self.origin_headers,
+            )
+
+        db = self.Session()
+        rows_before = db.query(PasswordResetOtp).all()
+        self.assertEqual(len(rows_before), 1)
+        self.assertEqual(rows_before[0].attempts, 5)
+
+        # Immediate resend right after burning all 5 attempts — must be
+        # blocked by the cooldown, not silently issue a fresh OTP.
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "capbypass@example.com"},
+            headers=self.origin_headers,
+        )
+
+        db2 = self.Session()
+        rows_after = db2.query(PasswordResetOtp).all()
+        self.assertEqual(
+            len(rows_after),
+            1,
+            "resend after exhausting the attempt cap must NOT create a second "
+            "OTP row — the cooldown must still apply",
+        )
+
+    @mock.patch("otp.generate_otp_code", return_value="424242")
+    def test_reset_ticket_resolves_only_to_its_own_user_not_another(self, _mock):
+        # "Cross-user ticket rejection": a reset ticket issued to user A must
+        # only ever resolve to user A's account, never affect user B, even
+        # though both requested an OTP around the same time with the (mocked)
+        # same code value.
+        client = TestClient(app)
+        self._register(client, "cross-a@example.com", password="passwordA1")
+        self._register(client, "cross-b@example.com", password="passwordB1")
+
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "cross-a@example.com"},
+            headers=self.origin_headers,
+        )
+        client.post(
+            "/api/auth/forgot-password",
+            json={"email": "cross-b@example.com"},
+            headers=self.origin_headers,
+        )
+
+        verify_a = client.post(
+            "/api/auth/verify-otp",
+            json={"email": "cross-a@example.com", "code": "424242"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(verify_a.status_code, 200)
+        ticket_a = verify_a.json()["data"]["reset_ticket"]
+
+        reset_res = client.post(
+            "/api/auth/reset-password",
+            json={"reset_ticket": ticket_a, "new_password": "newpasswordA2"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(reset_res.status_code, 200)
+
+        # User A's new password works.
+        login_a = client.post(
+            "/api/auth/login",
+            data={"username": "cross-a@example.com", "password": "newpasswordA2"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(login_a.status_code, 200)
+
+        # User B's password must be completely unaffected by A's ticket.
+        login_b_old = client.post(
+            "/api/auth/login",
+            data={"username": "cross-b@example.com", "password": "passwordB1"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(login_b_old.status_code, 200)
+
+        login_b_with_as_password = client.post(
+            "/api/auth/login",
+            data={"username": "cross-b@example.com", "password": "newpasswordA2"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(login_b_with_as_password.status_code, 401)
+
     @mock.patch("otp.generate_otp_code", return_value="424242")
     def test_reset_password_succeeds_and_new_password_works(self, _mock):
         client = TestClient(app)

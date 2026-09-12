@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import unittest
@@ -31,6 +32,9 @@ class OtpCryptoTests(unittest.TestCase):
         self.assertEqual(h1, h2)
         self.assertNotEqual(h1, h3)
         self.assertEqual(len(h1), 64)  # sha256 hex digest length
+        # Proves the HMAC key actually changes the output vs. plain,
+        # unkeyed SHA-256 of the same code.
+        self.assertNotEqual(otp.hash_otp_code("123456"), hashlib.sha256(b"123456").hexdigest())
 
     def test_generate_reset_ticket_is_high_entropy_and_unique(self):
         t1 = otp.generate_reset_ticket()

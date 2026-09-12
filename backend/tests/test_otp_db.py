@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -61,16 +60,56 @@ class OtpDbTests(unittest.TestCase):
         )
         self.assertNotEqual(first_id, second_row.id)
 
-    def test_get_active_otp_created_within_respects_window(self):
+    def test_get_recent_otp_request_respects_window(self):
         row, _ = otp.create_otp_for_user(self.db, self.user_id)
         self.db.commit()
 
-        found = otp.get_active_otp_created_within(self.db, self.user_id, seconds=60)
+        found = otp.get_recent_otp_request(self.db, self.user_id, seconds=60)
         self.assertIsNotNone(found)
         self.assertEqual(found.id, row.id)
 
-        not_found = otp.get_active_otp_created_within(self.db, self.user_id, seconds=0)
+        not_found = otp.get_recent_otp_request(self.db, self.user_id, seconds=0)
         self.assertIsNone(not_found)
+
+    def test_get_recent_otp_request_still_blocks_after_attempt_cap_invalidation(self):
+        # Regression for the attempt-cap-bypass-via-resend bug: a row
+        # invalidated by the 5-attempt cap (expires_at forced to now) must
+        # still be visible to the cooldown check — it only ignores
+        # consumed_at/expires_at, not created_at.
+        row, code = otp.create_otp_for_user(self.db, self.user_id)
+        self.db.commit()
+        wrong = "000000" if code != "000000" else "111111"
+
+        for _ in range(5):
+            otp.attempt_verify_otp(self.db, self.user_id, wrong)
+
+        refreshed = self.db.get(PasswordResetOtp, row.id)
+        self.assertEqual(refreshed.attempts, 5)
+
+        found = otp.get_recent_otp_request(self.db, self.user_id, seconds=60)
+        self.assertIsNotNone(found)
+        self.assertEqual(found.id, row.id)
+
+    def test_consume_reset_ticket_fails_when_ticket_expired(self):
+        _, code = otp.create_otp_for_user(self.db, self.user_id)
+        self.db.commit()
+        ticket = otp.attempt_verify_otp(self.db, self.user_id, code)
+        self.assertIsNotNone(ticket)
+
+        # Backdate ticket_expires_at directly via the test's DB session to
+        # simulate an expired reset ticket.
+        row = self.db.query(PasswordResetOtp).filter_by(user_id=self.user_id).one()
+        row.ticket_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        self.db.commit()
+
+        result = otp.consume_reset_ticket(self.db, ticket)
+        self.assertIsNone(result)
+
+    # "concurrent-verify race safety" (real multi-threaded contention on
+    # attempt_verify_otp) is deliberately NOT covered here — genuinely hard
+    # to exercise reliably under SQLite+StaticPool (single shared connection
+    # serializes writes, so a real race can't be forced the way it could
+    # against Postgres). Deferred, not silently missing.
 
     def test_attempt_verify_otp_succeeds_with_correct_code(self):
         row, code = otp.create_otp_for_user(self.db, self.user_id)

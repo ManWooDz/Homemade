@@ -43,6 +43,7 @@
     GEMINI_API_KEY=ใส่_API_KEY_ของคุณที่นี่
     DATABASE_URL=postgresql+psycopg://homemade:homemade_dev_only@localhost:5432/homemade
     JWT_SECRET_KEY=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
+    OTP_HMAC_SECRET=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
     ```
 4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
     ต้องติดตั้ง [Docker Desktop](https://www.docker.com/products/docker-desktop/) ก่อน แล้วเปิดโปรแกรมทิ้งไว้ (ต้องเห็นสถานะ "Running")

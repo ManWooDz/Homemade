@@ -34,7 +34,7 @@ from auth import (
 )
 from csrf import verify_same_origin
 from database.db import get_db
-from database.models import BaseRecipe, PasswordResetOtp, RecipeIngredientImage, RefreshToken, User, UserPreference
+from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
 from email_sender import send_otp_email
 import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
@@ -614,7 +614,7 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     if user is None:
         return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
-    if otp.get_active_otp_created_within(db, user.id, otp.RESEND_COOLDOWN_SECONDS) is not None:
+    if otp.get_recent_otp_request(db, user.id, otp.RESEND_COOLDOWN_SECONDS) is not None:
         return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
     _row, code = otp.create_otp_for_user(db, user.id)

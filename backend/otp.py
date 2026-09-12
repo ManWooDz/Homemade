@@ -8,10 +8,13 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from dotenv import load_dotenv
 from sqlalchemy import case, update
 from sqlalchemy.orm import Session
 
 from database.models import PasswordResetOtp
+
+load_dotenv()
 
 OTP_HMAC_SECRET = os.getenv("OTP_HMAC_SECRET")
 
@@ -51,16 +54,16 @@ def hash_reset_ticket(ticket: str) -> str:
     return hashlib.sha256(ticket.encode("utf-8")).hexdigest()
 
 
-def get_active_otp_created_within(db: Session, user_id: int, seconds: int) -> PasswordResetOtp | None:
-    """Read-only. Used for the resend cooldown check."""
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(seconds=seconds)
+def get_recent_otp_request(db: Session, user_id: int, seconds: int) -> PasswordResetOtp | None:
+    """Resend cooldown. Deliberately ignores consumed_at/expires_at: a row
+    invalidated by the 5-attempt cap must STILL enforce the cooldown, or the
+    cap is bypassable by re-requesting immediately after burning 5 guesses
+    (see docs/superpowers/specs/2026-09-12-auth-phase3-otp-reset-design.md)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=seconds)
     return (
         db.query(PasswordResetOtp)
         .filter(
             PasswordResetOtp.user_id == user_id,
-            PasswordResetOtp.consumed_at.is_(None),
-            PasswordResetOtp.expires_at > now,
             PasswordResetOtp.created_at > cutoff,
         )
         .first()
