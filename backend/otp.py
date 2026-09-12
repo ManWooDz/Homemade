@@ -74,6 +74,24 @@ def create_otp_for_user(db: Session, user_id: int) -> tuple[PasswordResetOtp, st
     succeeds, so a delivery failure can be rolled back without leaving a
     row that falsely enforces the resend cooldown."""
     now = datetime.now(timezone.utc)
+    # synchronize_session=False: without it, SQLAlchemy's default
+    # synchronize_session="evaluate" re-evaluates this UPDATE's WHERE
+    # clause in pure Python against any matching row already loaded into
+    # the session's identity map. SQLite round-trips DateTime(timezone=True)
+    # columns as naive datetimes, while `now` here is
+    # datetime.now(timezone.utc) — aware — so that Python-side re-evaluation
+    # raises "TypeError: can't compare offset-naive and offset-aware
+    # datetimes" whenever a matching row is already resident in the
+    # session (e.g. a prior db.query(...).first() in the same request).
+    # This flag only disables that auxiliary in-memory attribute re-sync;
+    # none of the DB-backed functions in this file rely on it (they read
+    # results via .returning() or an explicit re-fetch/db.get() instead).
+    # The atomic-safety guarantee is unaffected — it comes entirely from
+    # the SQL WHERE clause (and .returning() where used), not from this
+    # option. Do not remove this without re-testing against the SQLite
+    # in-memory test suite (backend/tests/test_otp_db.py) — see the same
+    # note at each of the other three .execution_options(synchronize_session=False)
+    # call sites in this file.
     db.execute(
         update(PasswordResetOtp)
         .where(
@@ -117,6 +135,10 @@ def attempt_verify_otp(db: Session, user_id: int, code: str) -> str | None:
         return None
 
     ticket = generate_reset_ticket()
+    # synchronize_session=False: this row was just loaded above via
+    # db.query(...).first(), so it IS in the identity map — see the
+    # naive/aware datetime note in create_otp_for_user for why this
+    # matters here and must not be dropped.
     result = db.execute(
         update(PasswordResetOtp)
         .where(
@@ -138,6 +160,8 @@ def attempt_verify_otp(db: Session, user_id: int, code: str) -> str | None:
         db.commit()
         return ticket
 
+    # synchronize_session=False: same reason as above — see
+    # create_otp_for_user's note.
     db.execute(
         update(PasswordResetOtp)
         .where(
@@ -164,6 +188,12 @@ def consume_reset_ticket(db: Session, ticket: str) -> int | None:
     together with the password update and refresh-token revocation so all
     three writes succeed or roll back as one transaction."""
     now = datetime.now(timezone.utc)
+    # synchronize_session=False: no row is pre-loaded here, so this
+    # particular call site wouldn't hit the naive/aware TypeError today —
+    # kept for consistency with the other three update() calls in this
+    # file and to stay safe if a future caller pre-loads the row before
+    # calling this function. See create_otp_for_user's note for the full
+    # explanation.
     result = db.execute(
         update(PasswordResetOtp)
         .where(
