@@ -24,10 +24,11 @@
 - root cause: สองตัวนี้เป็น Node.js-only library ต้องรันบน Node runtime แต่ backend จริงคือ FastAPI (Python)
 - correct: ก่อนแนะนำ library ต้องเช็คก่อนว่ามัน compatible กับ runtime/ภาษาของ backend จริง ไม่ใช่แนะนำเพราะ "เป็นที่นิยม" เฉยๆ — สำหรับ FastAPI ใช้ passlib+python-jose+OAuth2PasswordBearer (เขียนเอง) หรือ fastapi-users เท่านั้น
 
-**Blind-retry ไม่ใช่ critic-feedback loop (2026-07):**
+**Blind-retry ไม่ใช่ critic-feedback loop (2026-07) — RESOLVED 2026-07, ดู spec.md:232-238:**
 - what: โค้ดเดิมใน main.py (`generate_recipe_text`) มี retry loop สูงสุด 3 รอบ แต่เรียก `call_agentic_llm()` ด้วย argument ชุดเดิมทุกรอบ ไม่ส่งเหตุผลที่ fail กลับไป
 - root cause: retry ถูกเข้าใจผิดว่าเท่ากับ "agentic self-correction" ทั้งที่มันคือการสุ่มใหม่เฉยๆ
-- correct: critic-feedback loop ต้องส่ง `result["reason"]` จาก validation ที่ fail กลับเข้า prompt ของรอบถัดไปเสมอ (ดู spec.md → Current State สำหรับโค้ดที่ต้องแก้)
+- correct: critic-feedback loop ต้องส่ง `result["reason"]` จาก validation ที่ fail กลับเข้า prompt ของรอบถัดไปเสมอ
+- **แก้แล้วจริง (commit `0949f304`, 2026-07):** `call_agentic_llm()` รับ `feedback=None` param, retry loop ส่ง `result["reason"]` เข้าไปจริงแล้ว — **อย่าเสนอ "แก้ blind-retry" อีกเป็นงานใหม่** สิ่งที่ยังขาดคือ **evaluation** ของ mechanism นี้ (blind-retry vs feedback-loop เทียบ retry count/success rate จริง) ยังไม่เคยทำ ไม่ใช่ตัวโค้ด — เจอ session 2026-09-13/14 ตอน design local-LLM-generator ว่า memory entry นี้ค้างข้อมูลเก่าไว้ ทำให้เกือบวางแผนซ้ำงานที่ทำไปแล้ว
 
 **YOLO ถูกตัดออกจาก scope แล้ว (2026-07):**
 - what: มีไฟล์ `backend/model/yolo11n_food.pt` อยู่ในโปรเจกต์ และเคยถูกเสนอให้ใช้แทน barcode scanner
