@@ -8,7 +8,7 @@
   {
     "case_id": "shrimp_allergy_should_avoid_shrimp_and_shrimp_paste",
     "ingredients": [{"id": 2, "name": "หมูสับ"}, {"id": 3, "name": "กะปิ"}],
-    "user_prefs": {"allergy": "กุ้ง", "taste": "", "equipment": "", "extra": ""},
+    "user_prefs": {"allergy": "แพ้กุ้ง", "taste": "", "equipment": "", "extra": ""},
     "base_recipe": {"name": "Nam Prik Kapi", "servings": 2}
   },
   {

@@ -23,7 +23,14 @@ def check_ingredient_hallucination(recipe: dict, ingredients: list) -> dict:
     """Flags adjusted_ingredients entries that don't reference any of the
     user's actual ingredients or an allowed pantry staple. Substring match
     (not exact), since adjusted_ingredients entries include quantities,
-    e.g. 'หมูสับ 200 กรัม' for the ingredient 'หมูสับ'."""
+    e.g. 'หมูสับ 200 กรัม' for the ingredient 'หมูสับ'.
+
+    Known limitation: because matching is substring-based, a short known
+    ingredient/staple name that is itself a substring of a longer, different
+    ingredient's name produces a false negative — e.g. 'ไก่' (chicken meat)
+    is a substring of 'ไข่ไก่' (chicken egg), so a hallucinated 'ไข่ไก่' will
+    NOT be flagged when the user only has 'ไก่'. Do not over-trust this
+    metric for such near-miss cases."""
     allowed = list(ingredients) + _PANTRY_STAPLES
     unknown = []
     for item in recipe.get("adjusted_ingredients", []) if isinstance(recipe, dict) else []:

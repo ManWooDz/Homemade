@@ -1,11 +1,21 @@
 # backend/eval/run_benchmark.py
 """Manual benchmark entry point — not run by the automated test suite.
 
-Requires a real GEMINI_API_KEY (for the Gemini baseline) and/or a running
-vLLM server reachable at LOCAL_LLM_BASE_URL (for the Qwen candidates) to
-produce real numbers; with neither configured, every generator call
-returns an {"error": ...} dict and every case is scored as invalid, which
-is expected and not a bug in this script.
+Behavior depends entirely on the credentials/services actually configured
+in the environment this is run from — this script does NOT sandbox or
+mock either candidate:
+
+- If a real GEMINI_API_KEY is configured (e.g. in backend/.env), running
+  this script makes a REAL, BILLED API call to Gemini for the
+  gemini_baseline candidate. That is intentional for a real benchmark run,
+  but it means running this is not automatically "safe" — do not run it
+  casually in an environment where GEMINI_API_KEY is a live key.
+- If a vLLM server is reachable at LOCAL_LLM_BASE_URL, the Qwen candidates
+  produce real numbers against it.
+- Only for whichever of the two is NOT configured does that generator's
+  calls return an {"error": ...} dict (every case for it then scores as
+  invalid) — this is a per-candidate fallback, not a blanket "safe no-op"
+  guarantee for the whole script.
 
 Usage (from backend/, with .env configured):
     python -m eval.run_benchmark
@@ -49,6 +59,13 @@ def run_case(generator, case):
 
 def run_benchmark():
     cases = load_cases()
+    # NOTE — prompt asymmetry: GeminiGenerator always calls build_recipe_prompt()
+    # with include_example=False, while LocalLLMGenerator (both Qwen candidates)
+    # always uses include_example=True (see generators/local_generator.py) —
+    # a deliberate few-shot boost aimed at smaller local models, not a bug.
+    # This means gemini_baseline vs. either qwen_* row below varies BOTH model
+    # and prompt at once, so it is not a clean model-only comparison. Only
+    # qwen_4b vs. qwen_7b_9b is prompt-matched (both include_example=True).
     candidates = {
         "gemini_baseline": GeminiGenerator(),
         "qwen_4b": LocalLLMGenerator(model="qwen2.5-4b-instruct"),
