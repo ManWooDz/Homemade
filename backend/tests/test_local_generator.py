@@ -1,5 +1,6 @@
 # backend/tests/test_local_generator.py
 import json
+import os
 import unittest
 from unittest.mock import Mock, patch
 
@@ -41,9 +42,18 @@ class LocalLLMGeneratorTests(unittest.TestCase):
         sent_messages = mock_post.call_args.kwargs["json"]["messages"]
         self.assertIn("Invalid diet tags", sent_messages[0]["content"])
 
+    @patch.dict(os.environ, {"LOCAL_LLM_BASE_URL": "", "LOCAL_LLM_MODEL": ""})
     def test_generate_returns_error_dict_when_base_url_missing(self):
+        # Hermetic on purpose (Task 3's lesson): explicitly clear the env
+        # vars the constructor falls back to AND patch requests.post so this
+        # test can never make a real network call, regardless of whatever
+        # LOCAL_LLM_BASE_URL/LOCAL_LLM_MODEL happen to be set to in whatever
+        # environment runs this suite.
         gen = LocalLLMGenerator(base_url=None, model="qwen2.5-7b-instruct")
-        result = gen.generate(["egg"], {}, {"name": "base"})
+        with patch("generators.local_generator.requests.post") as mock_post:
+            result = gen.generate(["egg"], {}, {"name": "base"})
+
+        mock_post.assert_not_called()
         self.assertIn("error", result)
 
     def test_generate_returns_error_dict_on_request_exception(self):
