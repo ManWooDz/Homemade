@@ -44,6 +44,8 @@
     DATABASE_URL=postgresql+psycopg://homemade:homemade_dev_only@localhost:5432/homemade
     JWT_SECRET_KEY=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
     OTP_HMAC_SECRET=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
+    LOCAL_LLM_BASE_URL=http://localhost:8001 (ไม่บังคับ — ใส่เมื่อรัน vLLM server สำหรับ LocalLLMGenerator เท่านั้น, ดู docs/superpowers/specs/2026-09-13-local-llm-generator-design.md)
+    LOCAL_LLM_MODEL=qwen2.5-7b-instruct (ไม่บังคับ — ชื่อ model ที่ vLLM serve อยู่, สลับ 4B/7B-9B ได้โดยไม่ต้องแก้โค้ด)
     ```
 4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
     ต้องติดตั้ง [Docker Desktop](https://www.docker.com/products/docker-desktop/) ก่อน แล้วเปิดโปรแกรมทิ้งไว้ (ต้องเห็นสถานะ "Running")

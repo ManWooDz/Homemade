@@ -1,0 +1,25 @@
+[
+  {
+    "case_id": "low_protein_basic",
+    "ingredients": [{"id": 1, "name": "ไข่ไก่"}],
+    "user_prefs": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Egg Fried Rice", "servings": 1}
+  },
+  {
+    "case_id": "shrimp_allergy_should_avoid_shrimp_and_shrimp_paste",
+    "ingredients": [{"id": 2, "name": "หมูสับ"}, {"id": 3, "name": "กะปิ"}],
+    "user_prefs": {"allergy": "แพ้กุ้ง", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Nam Prik Kapi", "servings": 2}
+  },
+  {
+    "case_id": "many_ingredients_high_protein",
+    "ingredients": [
+      {"id": 4, "name": "อกไก่"},
+      {"id": 5, "name": "ไข่ไก่"},
+      {"id": 6, "name": "ข้าว"},
+      {"id": 7, "name": "บรอกโคลี"}
+    ],
+    "user_prefs": {"allergy": "", "taste": "high_protein", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Chicken Rice Bowl", "servings": 2}
+  }
+]
