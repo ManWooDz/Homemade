@@ -84,7 +84,11 @@ BAD_FLAVOR_PAIRS = [
 
 ALLERGEN_MAP = {
     "shrimp":    {"triggers": ["shrimp", "prawn", "กุ้ง"],
-                  "blocks":   ["shrimp", "prawn", "กุ้ง"]},
+                  # "กะปิ" (shrimp paste) added as an interim single-entry
+                  # patch (2026-09-19) -- a real derived-ingredient block is
+                  # the Allergen Validation Knowledge Graph layer (spec.md),
+                  # not yet built. Do not treat this line as that KG.
+                  "blocks":   ["shrimp", "prawn", "กุ้ง", "กะปิ"]},
     "peanut":    {"triggers": ["peanut", "peanuts", "ถั่วลิสง", "ถั่ว"],
                   "blocks":   ["peanut", "peanuts", "ถั่วลิสง", "เนยถั่ว"]},
     "milk":      {"triggers": ["milk", "dairy", "cream", "butter", "cheese", "นม", "เนย", "ครีม"],
