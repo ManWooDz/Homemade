@@ -30,6 +30,14 @@ class LocalLLMGenerator(RecipeGenerator):
                     "model": self._model,
                     "messages": [{"role": "user", "content": prompt}],
                     "response_format": {"type": "json_object"},
+                    # Qwen3.5 is a hybrid thinking/non-thinking model — without this,
+                    # the answer goes into a separate "reasoning" field first and
+                    # "content" stays null until reasoning finishes (often never,
+                    # within a reasonable token budget). Verified empirically
+                    # (2026-09-18) against a live vLLM server before this benchmark
+                    # was ever run for real: content was null in every test until
+                    # this flag was added.
+                    "chat_template_kwargs": {"enable_thinking": False},
                 },
                 timeout=120,
             )
