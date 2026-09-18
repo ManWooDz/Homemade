@@ -37,12 +37,17 @@ def load_cases():
 
 def run_case(generator, case):
     ingredients_name_only = [i["name"] for i in case["ingredients"]]
+    input_snapshot = {
+        "ingredients": ingredients_name_only,
+        "user_prefs": case["user_prefs"],
+        "base_recipe": case["base_recipe"],
+    }
     start = time.monotonic()
     recipe = generator.generate(ingredients_name_only, case["user_prefs"], case["base_recipe"])
     latency = time.monotonic() - start
 
     if isinstance(recipe, dict) and "error" in recipe:
-        return {"case_id": case["case_id"], "valid": False, "hallucinated": True, "latency_seconds": latency, "reason": recipe["error"], "recipe": recipe}
+        return {"case_id": case["case_id"], "valid": False, "hallucinated": True, "latency_seconds": latency, "reason": recipe["error"], "recipe": recipe, "input": input_snapshot}
 
     schema_result = check_schema_and_constraints(recipe, ingredients_name_only, case["user_prefs"])
     hallucination_result = check_ingredient_hallucination(recipe, ingredients_name_only)
@@ -55,6 +60,7 @@ def run_case(generator, case):
         "unknown_ingredients": hallucination_result["unknown_ingredients"],
         "latency_seconds": latency,
         "recipe": recipe,
+        "input": input_snapshot,
     }
 
 
