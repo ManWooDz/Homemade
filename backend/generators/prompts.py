@@ -30,11 +30,25 @@ def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, 
     GeminiGenerator and LocalLLMGenerator so the two implementations are
     prompted identically except for this example block."""
     example_section = ""
+    language_rule_section = ""
     if include_example:
         example_json = json.dumps(FEW_SHOT_EXAMPLE_RECIPE, ensure_ascii=False, indent=2)
         example_section = f"""
         ตัวอย่างที่ถูกต้อง (โครงสร้าง JSON ที่ต้องเลียนแบบ ไม่ใช่คำตอบจริงสำหรับ request นี้):
         {example_json}
+        """
+        # Local-model-only rule (gated behind include_example, same as the
+        # few-shot example above) — never added to GeminiGenerator's prompt,
+        # to keep it content-matched with main.py's production prompt.
+        # Added 2026-09-18 after a real benchmark run showed Qwen3.5-4B/9B
+        # repeatedly leaking non-Thai, non-English script (Greek, Chinese)
+        # into fields the schema already requires to be Thai — this is not
+        # about banning English (recipe_name/diet_tags are already required
+        # in English by the schema below; English is fine where the schema
+        # already calls for it) but about garbage scripts with no reason to
+        # appear at all.
+        language_rule_section = """
+        7. ภาษา (Language): เนื้อหาในฟิลด์ adjusted_ingredients, instructions และ safety_warning ต้องเป็นภาษาไทยเท่านั้น อนุญาตคำภาษาอังกฤษเฉพาะกรณีจำเป็นจริง (เช่น ชื่อยี่ห้อ หรือหน่วยที่ไม่มีคำไทยตรง) ห้ามมีอักษรจากภาษาอื่นที่ไม่ใช่ไทยหรืออังกฤษปนอยู่โดยเด็ดขาด (เช่น กรีก จีน เกาหลี ซีริลลิก)
         """
 
     feedback_section = ""
@@ -67,6 +81,7 @@ def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, 
         4. ขั้นตอนสมเหตุสมผล (Logical Workflow): ลำดับขั้นตอนการทำอาหารต้องถูกต้องตามหลักฟิสิกส์การทำอาหาร (เช่น ต้องเจียวกระเทียมกับน้ำมันก่อนใส่น้ำ, ทอดต้องใช้น้ำมัน, รวนเนื้อสัตว์ก่อนใส่ผักที่สุกง่าย)
         5. ความเข้ากันของรสชาติ (Flavor Pairing): หากวัตถุดิบที่มีจับคู่กันแล้วรสชาติจะแย่มาก (เช่น นม + น้ำปลา) ให้เลือกตัดวัตถุดิบบางอย่างออกอย่างสมเหตุสมผล ดีกว่าฝืนผสมกัน
         6. ห้ามมโนวัตถุดิบ (No Hallucination): ใช้วัตถุดิบเฉพาะที่มีใน {ingredients} และสามารถเสริมด้วยเครื่องปรุงพื้นฐานสามัญประจำบ้าน (เกลือ, พริกไทย, น้ำมัน, น้ำปลา, ซีอิ๊ว, น้ำตาล, น้ำเปล่า) ได้เท่านั้น ห้ามคิดค้นวัตถุดิบขึ้นมาเอง
+        {language_rule_section}
 
         คำสั่ง:
         - ปรับปรุงขั้นตอนและคำนวณโภชนาการใหม่ (Calories, Protein, Carbs, Fat) ให้ใกล้เคียงความเป็นจริงที่สุด
