@@ -68,8 +68,11 @@ def run_benchmark():
     # qwen_4b vs. qwen_7b_9b is prompt-matched (both include_example=True).
     candidates = {
         "gemini_baseline": GeminiGenerator(),
-        "qwen_4b": LocalLLMGenerator(model="qwen2.5-4b-instruct"),
-        "qwen_7b_9b": LocalLLMGenerator(model="qwen2.5-7b-instruct"),
+        # Verified real model IDs (2026-09-18) — Qwen2.5 has no 4B or 9B size;
+        # Qwen3.5 does, and Qwen3.5-9B is documented as fitting a single 24GB
+        # GPU, matching this project's chosen benchmark GPU tier.
+        "qwen_4b": LocalLLMGenerator(model="qwen3.5-4b"),
+        "qwen_7b_9b": LocalLLMGenerator(model="qwen3.5-9b"),
     }
 
     report = {}
