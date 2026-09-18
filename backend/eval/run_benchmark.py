@@ -42,7 +42,7 @@ def run_case(generator, case):
     latency = time.monotonic() - start
 
     if isinstance(recipe, dict) and "error" in recipe:
-        return {"case_id": case["case_id"], "valid": False, "hallucinated": True, "latency_seconds": latency, "reason": recipe["error"]}
+        return {"case_id": case["case_id"], "valid": False, "hallucinated": True, "latency_seconds": latency, "reason": recipe["error"], "recipe": recipe}
 
     schema_result = check_schema_and_constraints(recipe, ingredients_name_only, case["user_prefs"])
     hallucination_result = check_ingredient_hallucination(recipe, ingredients_name_only)
@@ -54,6 +54,7 @@ def run_case(generator, case):
         "hallucinated": hallucination_result["hallucinated"],
         "unknown_ingredients": hallucination_result["unknown_ingredients"],
         "latency_seconds": latency,
+        "recipe": recipe,
     }
 
 
