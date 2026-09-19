@@ -260,12 +260,19 @@ def validate_recipe(recipe, user_ingredients, user_prefs):
             "reason": msg
         }
 
+    # check_allergy runs right after check_ingredients, ahead of the
+    # quality checks (flavor/logic/nutrition) -- this pipeline is
+    # fail-fast (stops at the first failing stage), so a safety check
+    # must not be ordered behind a quality check: otherwise a recipe
+    # that fails an earlier quality check never has its allergy content
+    # evaluated at all, silently hiding a real violation. Found via the
+    # local-LLM-generator benchmark (2026-09-20), see spec.md.
     checks = [
         check_ingredients,
+        check_allergy,
         check_flavor,
         check_logic,
         check_nutrition,
-        check_allergy,
         check_core
     ]
 
