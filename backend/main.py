@@ -101,7 +101,14 @@ ALLERGEN_MAP = {
                   "blocks":   ["crab", "lobster", "clam", "oyster", "ปู", "หอย", "กั้ง"]},
     "fish":      {"triggers": ["fish", "ปลา"],
                   "blocks":   ["fish", "ปลา"]},
-    "soy":       {"triggers": ["soy", "ถั่วเหลือง", "เต้าหู้", "ถั่ว"],
+    # "ถั่ว" (generic Thai word, ambiguous between peanut/soy/other legumes)
+    # deliberately excluded here -- kept only under "peanut" below, since
+    # colloquial "แพ้ถั่ว" with no further qualifier most commonly means
+    # peanut allergy. Previously listed here too, causing a false-positive
+    # over-block: a soy-unrelated recipe containing "ซีอิ๊ว" (soy sauce) got
+    # blocked for a user who only said "แพ้ถั่ว" (peanut allergy) -- found
+    # and verified 2026-09-19 via the expanded eval fixtures.
+    "soy":       {"triggers": ["soy", "ถั่วเหลือง", "เต้าหู้"],
                   "blocks":   ["soy sauce", "soy", "tofu", "เต้าหู้", "ถั่วเหลือง", "ซีอิ๊ว", "ซอสถั่วเหลือง"]},
     "nut":       {"triggers": ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์"],
                   "blocks":   ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์"]},
