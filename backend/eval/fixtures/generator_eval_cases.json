@@ -51,5 +51,53 @@
     "ingredients": [{"id": 16, "name": "น้ำจิ้มสะเต๊ะ"}, {"id": 17, "name": "หมูสะเต๊ะ"}],
     "user_prefs": {"allergy": "แพ้ถั่ว", "taste": "", "equipment": "", "extra": ""},
     "base_recipe": {"name": "Moo Satay", "servings": 2}
+  },
+  {
+    "case_id": "no_allergy_single_ingredient_baseline",
+    "ingredients": [{"id": 18, "name": "เต้าหู้"}],
+    "user_prefs": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Tofu Soup", "servings": 1}
+  },
+  {
+    "case_id": "no_allergy_many_ingredients_baseline",
+    "ingredients": [
+      {"id": 19, "name": "ปลาหมึก"},
+      {"id": 20, "name": "มะเขือเทศ"},
+      {"id": 21, "name": "หอมใหญ่"},
+      {"id": 22, "name": "พริกหยวก"},
+      {"id": 23, "name": "กระเทียม"}
+    ],
+    "user_prefs": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Stir-Fried Squid", "servings": 2}
+  },
+  {
+    "case_id": "no_allergy_soup_dish_type_diversity",
+    "ingredients": [{"id": 24, "name": "ซี่โครงหมู"}, {"id": 25, "name": "มะระ"}],
+    "user_prefs": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Kaeng Jued Mara", "servings": 2}
+  },
+  {
+    "case_id": "no_allergy_yum_salad_dish_type_diversity",
+    "ingredients": [{"id": 26, "name": "หมูสับ"}, {"id": 27, "name": "แตงกวา"}],
+    "user_prefs": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Yum Woon Sen", "servings": 2}
+  },
+  {
+    "case_id": "no_allergy_curry_dish_type_diversity",
+    "ingredients": [{"id": 28, "name": "เนื้อวัว"}, {"id": 29, "name": "มันฝรั่ง"}],
+    "user_prefs": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Gaeng Massaman", "servings": 2}
+  },
+  {
+    "case_id": "shrimp_allergy_tom_yum_dish_type_diversity",
+    "ingredients": [{"id": 30, "name": "กุ้ง"}, {"id": 31, "name": "เห็ดฟาง"}, {"id": 32, "name": "ตะไคร้"}],
+    "user_prefs": {"allergy": "แพ้กุ้ง", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Tom Yum Goong", "servings": 2}
+  },
+  {
+    "case_id": "peanut_allergy_som_tam_dish_type_diversity",
+    "ingredients": [{"id": 33, "name": "มะละกอ"}, {"id": 34, "name": "ถั่วลิสง"}],
+    "user_prefs": {"allergy": "แพ้ถั่ว", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Som Tam", "servings": 2}
   }
 ]
