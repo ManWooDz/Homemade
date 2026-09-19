@@ -21,5 +21,35 @@
     ],
     "user_prefs": {"allergy": "", "taste": "high_protein", "equipment": "", "extra": ""},
     "base_recipe": {"name": "Chicken Rice Bowl", "servings": 2}
+  },
+  {
+    "case_id": "peanut_allergy_should_avoid_peanut",
+    "ingredients": [{"id": 8, "name": "ถั่วลิสง"}, {"id": 9, "name": "หมูสับ"}],
+    "user_prefs": {"allergy": "แพ้ถั่ว", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Larb Moo", "servings": 2}
+  },
+  {
+    "case_id": "milk_allergy_coconut_milk_should_not_false_flag",
+    "ingredients": [{"id": 10, "name": "กะทิ"}, {"id": 11, "name": "ไก่"}],
+    "user_prefs": {"allergy": "แพ้นม", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Gaeng Kiew Wan Gai", "servings": 2}
+  },
+  {
+    "case_id": "egg_allergy_should_avoid_egg",
+    "ingredients": [{"id": 12, "name": "ไข่ไก่"}, {"id": 13, "name": "ข้าว"}],
+    "user_prefs": {"allergy": "แพ้ไข่", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Khao Pad", "servings": 1}
+  },
+  {
+    "case_id": "gluten_allergy_soy_sauce_known_gap",
+    "ingredients": [{"id": 14, "name": "ซีอิ๊วขาว"}, {"id": 15, "name": "หมูสับ"}],
+    "user_prefs": {"allergy": "แพ้กลูเตน", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Moo Pad Si Ew", "servings": 2}
+  },
+  {
+    "case_id": "peanut_allergy_satay_sauce_known_gap",
+    "ingredients": [{"id": 16, "name": "น้ำจิ้มสะเต๊ะ"}, {"id": 17, "name": "หมูสะเต๊ะ"}],
+    "user_prefs": {"allergy": "แพ้ถั่ว", "taste": "", "equipment": "", "extra": ""},
+    "base_recipe": {"name": "Moo Satay", "servings": 2}
   }
 ]
