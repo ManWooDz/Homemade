@@ -177,7 +177,18 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
   - The known-gap cases behaved exactly as predicted for both local models: `gluten_allergy_soy_sauce_known_gap` and `peanut_allergy_satay_sauce_known_gap` both passed `check_allergy()` undetected for Gemini and 9B (4B's gluten case separately failed on an unrelated `"Invalid instructions"` schema issue, not an allergy miss) — consistent, reproducible evidence for the planned Allergen Validation Knowledge Graph's motivation, not one-off noise.
   - Also newly visible at n=8: 4B's output quality degrades much more on recipe types outside the original 3 fixtures' base dishes (Larb Moo, Gaeng Kiew Wan Gai, Moo Satay) — noticeably more garbled English/nonsense-word leakage (`"Febru่"`, `"society"`, `"DLL"`, `"Portsmouth"`) than seen on the narrow set, even with the guided-JSON schema fix still in place (it constrains script, not word validity — consistent with the already-logged malformed-word finding).
   - Pod deleted immediately after both runs, confirmed via `list-pods` (empty). Total additional spend: ~$0.49 (under 1 GPU-hour).
-  - **Still not done:** a clean re-run of the 8-case benchmark with both fixes (`กะปิ`, `ถั่ว`/soy) already in place — the run above was made *before* the soy fix, so its numbers include that one known false positive uncorrected. Numbers above should be read as "what surfaced the bugs," not as the final corrected picture.
+- **Retest with the `ถั่ว`/soy fix in place (2026-09-19, fresh L4 pod `fhayrru97yp0d2`, `$0.49/hr`) — done specifically to get a corrected number set, not to hunt for new findings.**
+
+  | Candidate | Before fix | After fix |
+  |---|---|---|
+  | Gemini (run paired w/ 4B) | 0.625 / 0.0 halluc | **0.875** / 0.0 halluc |
+  | Gemini (run paired w/ 9B) | 0.875 / 0.125 | **0.875** / 0.0 halluc |
+  | Qwen3.5-4B | 0.625 / 0.75, 15.0s | 0.5 / 0.75, 17.0s |
+  | Qwen3.5-9B (fp8) | 0.375 / 0.75, 21.3s | **0.375** / 0.75, 18.1s (unchanged) |
+
+  Read per-case, not just the aggregate: **Gemini improved cleanly on both runs** (the soy false positive on its peanut case is gone, verified by reading `reason` — both peanut cases now `null`/pass). **9B's numbers are identical before/after** — expected, since 9B's own peanut-case failure (`"พบ 'ถั่วลิสง' ในสูตร"`) was always a *real* violation (the model actually included peanuts), not the soy bug; its milk case still fails on the deliberately-unfixed negation false positive, exactly as predicted. **4B dropped further (0.625 → 0.5)** — not a regression from the fix, traced to two new-this-run `"Stir-fry without oil"` failures (an unrelated instruction-following issue, same failure text seen once before in the pre-fix run's Gemini/9B blocks) — a reminder that n=8 is still small enough for run-to-run variance in what specifically fails, even though the *fixed* bugs behaved exactly as expected. The known-gap cases (gluten, peanut-satay) passed undetected again on both models, in both runs — 4 for 4, reinforcing that this is a consistent pattern, not noise.
+  - Pod deleted after, confirmed via `list-pods` (empty). Total additional spend: ~$0.49.
+  - **This is now the current, corrected 8-case baseline.** Any future comparison (further fixes, fine-tuning evidence, latency-acceptance decision) should read from this retest, not the earlier pre-fix numbers above.
 
 **Auth Phase 3 — real backend-verified OTP password reset, replacing the fully-mocked flow (2026-09-12, worktree `auth-phase3-otp-reset` branch `worktree-auth-phase3-otp-reset`, 8-task SDD plan, all tasks done, 1 final-review fix wave) — product envelope (Auth), ไม่ใช่ contribution หลักที่ต้องมี evaluation:**
 - Spec: `docs/superpowers/specs/2026-09-12-auth-phase3-otp-reset-design.md` (local/ignored — `docs/` is gitignored, not present in this worktree checkout, only in the main checkout); Plan: `docs/superpowers/plans/2026-09-12-auth-phase3-otp-reset.md`; ledger: `.superpowers/sdd/2026-09-12-auth-phase3-otp-reset/progress.md`
