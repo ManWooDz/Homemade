@@ -13,3 +13,5 @@ alembic
 pgvector
 bcrypt
 python-jose[cryptography]
+pandas
+openpyxl
