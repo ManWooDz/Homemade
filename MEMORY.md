@@ -102,7 +102,17 @@
 - root cause / finding: added 5 fixture cases with `"allergy": ""` (zero allergy pressure) specifically to isolate this. Result: **both 4B and 9B hallucinated in 4 of 5 of these no-allergy cases — an identical rate to the allergy-bearing cases.** This rules out "allergy-avoidance substitution" as the primary driver — the model simply doesn't reliably follow the prompt's "use only the given ingredients + the 7 named staples" rule, regardless of whether an allergy is in play.
 - correct: when evaluating or trying to fix local-generator ingredient hallucination, treat it as a general instruction-following reliability gap, not an allergy-specific behavior. This is the class of failure the local-only prompt rule 9 (allergy enforcement, added 2026-09-19) partially addressed for allergy cases specifically — but the no-allergy evidence shows the underlying problem is broader than what that rule targets. If pursuing fine-tuning, this is the most defensible narrow target (reduce hallucination via stricter ingredient-list adherence), separate from the allergy-specific question.
 
-**A generated ingredient string can substring-match-fail against an allowed staple due to Thai Unicode normalization, not a real hallucination (2026-09-19):**
+**A generated ingredient string can substring-match-fail against an allowed staple due to Thai combining-mark ordering, not a real hallucination (2026-09-19) — root cause and fix corrected 2026-09-21:**
 - what: `check_ingredient_hallucination` flagged `"นํ้าเปล่าเล็กน้อย"` as an unknown ingredient even though `น้ำเปล่า` (plain water) is explicitly in `_PANTRY_STAPLES`.
-- root cause (likely, not fully confirmed): Thai "น้ำ" can be represented in Unicode as either a precomposed sequence or a visually-identical sequence using different combining marks (mai tho / nikhahit ordering) — `นํ้า` vs `น้ำ` can look identical when rendered but not compare equal byte-for-byte or via a plain `in` substring check, which is what `check_ingredient_hallucination` uses.
-- correct: not fixed yet — flagged here rather than guessed at. If this recurs, the fix is Unicode-normalizing (`unicodedata.normalize("NFC", ...)`) both the model's output and the allowlist before the substring check, not expanding the allowlist with more spelling variants by hand.
+- **root cause, confirmed (2026-09-21, verified directly with Python before trusting it — the original "likely NFC issue" guess below was wrong, not just imprecise):** plain `unicodedata.normalize("NFC", ...)` does **not** unify these two strings — tested directly, still not equal/substring-matching after NFC alone. Thai `ำ` (SARA AM, U+0E33) has **no canonical decomposition mapping** in the Unicode Character Database, so NFC never merges it with the visually-identical `ํ` (NIKHAHIT, U+0E4D) + `า` (SARA AA, U+0E32) sequence. A second issue compounds it: some sources order the tone mark (`้` MAI THO, U+0E49) *after* the nikhahit (`นํ้า` = น+nikhahit+mai-tho+sara-aa) instead of the standard order (`น้ำ` = น+mai-tho+sara-am).
+- **correct, verified working:** decompose SARA AM manually and canonicalize tone-mark order before comparing:
+  ```python
+  import re, unicodedata
+  _THAI_TONE_MARKS = "่้๊๋"
+  def _normalize_thai(s: str) -> str:
+      s = unicodedata.normalize("NFC", s)
+      s = s.replace("ำ", "ํา")
+      s = re.sub(f"ํ([{_THAI_TONE_MARKS}])", r"\1ํ", s)
+      return s
+  ```
+  Confirmed directly: both test strings share an identical normalized prefix and the substring check passes after this. **Do not reach for plain `unicodedata.normalize("NFC", ...)` alone for Thai vowel/tone-mark equivalence — verify empirically, the same way this entry's original guess was caught wrong before it shipped.** Applied in `backend/eval/metrics.py` as part of the local-LLM-finetune plan (`docs/superpowers/plans/2026-09-21-local-llm-finetune.md`).
