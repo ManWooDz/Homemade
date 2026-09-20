@@ -1,3 +1,4 @@
+import re
 import sys
 from pathlib import Path
 
@@ -29,28 +30,100 @@ def is_non_essential(ingredient_line: str, position: int, total: int) -> bool:
     return is_seasoning and relative_position >= 0.5
 
 
-def _drop_instruction_clauses_mentioning(instruction_text: str, dropped_names: list[str]) -> list[str]:
-    """Splits instructions into sentences on Thai/ASCII sentence-ish
-    boundaries and drops any sentence that names a dropped ingredient --
-    deterministic string match, same technique check_ingredient_hallucination
-    uses (design spec §4.2), never an LLM rewrite.
+# Clause-boundary points for `_drop_instruction_clauses_mentioning`. The
+# draft's original pattern -- (?<=[.!?])\s+|(?<=กัน)\s+|(?<=สุก)\s+ -- was
+# verified empirically against real recipes from the actual
+# pythainlp/thai_food_v1.0 dataset (not just the brief's single synthetic
+# test string) and found unsafe: of an 8-recipe sample that had a
+# non-essential ingredient to drop, only 3 had >=2 boundary matches;
+# the other 5 fell through to the draft's `instruction_text.split(" ")`
+# fallback, which shreds real instruction text into individual words,
+# bare digits ("6", "3", "10") and stray punctuation-only tokens ("ๆ")
+# as standalone "clauses" -- e.g. dish "ข้าวเม่าทอด" -> 21 fragments
+# including "โขลก", "ด้วยครกให้", "ๆ". That fallback is a real data
+# corruption bug that this project's own MEMORY.md's lesson about
+# exact-substring/heuristic checks applies to directly: passing the
+# brief's one test case was not evidence the heuristic was safe.
+#
+# Root cause: the source dataset's instruction_text is mostly
+# punctuation-free running Thai prose (only 10/146 real recipes contain
+# any '.', and only 3/146 use numbered steps -- confirmed by loading the
+# real dataset xlsx, not assumed), so period/exclaim/question-mark
+# boundaries rarely fire, and "กัน"/"สุก" alone are too sparse. Fix:
+# broaden the connector-word boundary set to a handful of common Thai
+# clause-sequencing words this dataset's prose actually uses to chain
+# cooking actions ("แล้ว" = "then/having done X", "จากนั้น" = "after
+# that", "จึง" = "so/then") -- and, critically, remove the word-level
+# split fallback entirely. If no connector boundary is found at all, the
+# whole instruction_text is treated as one clause and either kept or
+# dropped in full -- coarser than ideal, but it never breaks Thai words
+# apart, which is the one thing a training target absolutely cannot do.
+_CLAUSE_SPLIT_PATTERN = re.compile(
+    r"(?<=[.!?])\s+|(?<=กัน)\s+|(?<=สุก)\s+|(?<=แล้ว)\s+|(?<=จากนั้น)\s+|(?<=จึง)\s+"
+)
 
-    Used as originally drafted -- verified empirically (not assumed) against
-    the real test instruction text ("...จนสุก ปรุงรสด้วยน้ำปลา ใส่ใบกะเพรา
-    ผัดให้เข้ากัน"): the (?<=สุก)\\s+ boundary splits it into
-    ["...จนสุก", "ปรุงรสด้วยน้ำปลา ใส่ใบกะเพราผัดให้เข้ากัน"], and the
-    second clause -- which mentions the dropped ingredient -- is dropped
-    whole. No regex change was needed for this dataset's phrasing; this
-    remains a known-narrow heuristic (few Thai clause boundaries covered)
-    that may need broadening once run against more of the real dataset at
-    scale, per the brief's own caveat."""
-    import re
+# A small minority of real recipes (3/146 in the dataset) use an explicit
+# "1. ... 2. ... 3. ..." numbered-step convention (the brief itself
+# anticipated this as worth special-casing "where present"). Without
+# special-casing, _CLAUSE_SPLIT_PATTERN's generic (?<=[.!?])\s+ boundary
+# also fires on the step markers themselves (since the marker's period IS
+# a "." followed by whitespace), producing a useless orphan "1." fragment
+# as its own standalone clause and leaving "2."/"3." glued onto the tail
+# of the preceding step's text instead of starting the next one --
+# confirmed against the real numbered-step recipes in the dataset. Not a
+# leak/safety issue (no ingredient names in a bare step-number token) but
+# real to fix: numbered steps are already natural clause units, so this
+# splits on them first and strips the marker before applying the generic
+# connector pattern within each step.
+_NUMBERED_STEP_SPLIT = re.compile(r"(?=\d+\.\s)")
+_LEADING_STEP_NUMBER = re.compile(r"^\d+\.\s*")
 
-    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+|(?<=กัน)\s+|(?<=สุก)\s+", instruction_text) if s.strip()]
-    if len(sentences) <= 1:
-        sentences = [s.strip() for s in instruction_text.split(" ") if s.strip()]
-    kept = [s for s in sentences if not any(name in s for name in dropped_names)]
-    return kept if kept else [instruction_text]
+
+def _split_into_clauses(instruction_text: str) -> list[str]:
+    """Splits instruction_text into clause units, numbered-step-aware (see
+    comment above _NUMBERED_STEP_SPLIT)."""
+    steps = [s.strip() for s in _NUMBERED_STEP_SPLIT.split(instruction_text) if s.strip()]
+    if len(steps) < 2:
+        return [s.strip() for s in _CLAUSE_SPLIT_PATTERN.split(instruction_text) if s.strip()]
+    parts = []
+    for step in steps:
+        step = _LEADING_STEP_NUMBER.sub("", step).strip()
+        if step:
+            parts.extend(p.strip() for p in _CLAUSE_SPLIT_PATTERN.split(step) if p.strip())
+    return parts
+
+
+def _drop_instruction_clauses_mentioning(instruction_text: str, dropped_names: list[str]) -> list[str] | None:
+    """Splits instructions into clauses on Thai/ASCII clause-ish boundaries
+    (see `_CLAUSE_SPLIT_PATTERN` above for why this set was chosen) and
+    drops any clause that names a dropped ingredient -- deterministic
+    string match, same technique check_ingredient_hallucination uses
+    (design spec §4.2), never an LLM rewrite.
+
+    Returns None (caller then masks target_instructions from the loss,
+    same as Tier B) when clause-splitting genuinely cannot avoid leaking a
+    dropped ingredient's name -- verified against the real
+    pythainlp/thai_food_v1.0 dataset (146 recipes, 217 would-be Tier A
+    examples) that this is not a rare edge case: many real instruction
+    texts never hit any connector boundary at all (74/217 cases -- the
+    whole instruction is one undifferentiated clause), and about half of
+    those (46/217, ~21% of all Tier A examples) genuinely name the dropped
+    ingredient somewhere in that one clause. Silently keeping the whole
+    unsplit clause (the earlier `kept if kept else [instruction_text]`
+    behavior) would have shipped training data that tells the model
+    "don't include ingredient X" right next to instructions that mention
+    X -- worse than no instruction supervision for that example. Full
+    supervision is only returned when it's actually leak-free; a coarse
+    but valid ingredients-only Tier A example (mirroring Tier B's
+    None-instructions contract) is preferred over a leaking one."""
+    parts = _split_into_clauses(instruction_text)
+    kept = [s for s in parts if not any(name in s for name in dropped_names)]
+    if not kept:
+        return None
+    joined = " ".join(kept)
+    if any(name in joined for name in dropped_names):
+        return None
+    return kept
 
 
 def build_tier_a_examples(recipe: Recipe) -> list[dict]:
