@@ -16,6 +16,9 @@ SEASONING_KEYWORDS = [
     "ผงชูรส", "มะนาว", "น้ำส้มสายชู", "กะปิ",
 ]
 
+# Mirrors the pantry-staple allowlist in generators/prompts.py's prompt text
+# and eval/metrics.py's _PANTRY_STAPLES — kept in sync manually since it's a
+# fixed, rarely-changing list. This is a third manually-synced copy.
 _STAPLES = ["เกลือ", "พริกไทย", "น้ำมัน", "น้ำปลา", "ซีอิ๊ว", "น้ำตาล", "น้ำเปล่า"]
 
 

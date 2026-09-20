@@ -17,14 +17,22 @@ from .exclusion import find_excluded_recipes
 from .recipe_source import load_recipes
 
 
-def assemble(xlsx_path: str, fixtures_path: str, seed: int = 0) -> list[dict]:
+def assemble(xlsx_path: str, fixtures_path: str, seed: int = 0) -> tuple[list[dict], list[str]]:
+    """Assembles training examples from recipes and fixtures.
+
+    Returns:
+        tuple of (examples list, excluded_dish_names list).
+    """
     with open(fixtures_path, encoding="utf-8") as f:
         fixtures = json.load(f)
     fixture_names = [c["base_recipe"]["name"] for c in fixtures]
 
     recipes = load_recipes(xlsx_path)
-    excluded = {r.dish_name for r in find_excluded_recipes(recipes, fixture_names)}
-    pool = [r for r in recipes if r.dish_name not in excluded]
+    excluded_recipes = find_excluded_recipes(recipes, fixture_names)
+    excluded_set = {r.dish_name for r in excluded_recipes}
+    # Preserve order (source-document order) for reproducible evidence logging.
+    excluded_names = [r.dish_name for r in excluded_recipes]
+    pool = [r for r in recipes if r.dish_name not in excluded_set]
 
     tier_a, tier_b = [], []
     for recipe in pool:
@@ -43,7 +51,17 @@ def assemble(xlsx_path: str, fixtures_path: str, seed: int = 0) -> list[dict]:
 
     combined = tier_a + tier_b
     rng.shuffle(combined)
-    return combined
+
+    # De-duplicate by full example dict (all fields), keeping first occurrence.
+    seen = set()
+    deduped = []
+    for example in combined:
+        key = json.dumps(example, sort_keys=True, ensure_ascii=False)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(example)
+
+    return deduped, excluded_names
 
 
 def main():
@@ -54,7 +72,12 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    examples = assemble(args.xlsx, args.fixtures, seed=args.seed)
+    examples, excluded_names = assemble(args.xlsx, args.fixtures, seed=args.seed)
+
+    if not examples:
+        print("no examples generated, check --xlsx/--fixtures paths")
+        return
+
     tier_a_count = sum(1 for e in examples if e["tier"] == "A")
     tier_b_count = sum(1 for e in examples if e["tier"] == "B")
 
@@ -62,6 +85,9 @@ def main():
         for example in examples:
             f.write(json.dumps(example, ensure_ascii=False) + "\n")
 
+    print(f"excluded {len(excluded_names)} eval-fixture near-duplicates:")
+    for name in excluded_names:
+        print(f"  - {name}")
     print(f"wrote {len(examples)} examples to {args.out}")
     print(f"tier A: {tier_a_count} ({tier_a_count/len(examples):.1%})")
     print(f"tier B: {tier_b_count} ({tier_b_count/len(examples):.1%})")
