@@ -20,7 +20,9 @@ def parse_ingredient_block(raw) -> list[str]:
     for line in raw.split("\n"):
         line = line.strip()
         if line.startswith("-"):
-            lines.append(line.lstrip("-").strip())
+            item = line.lstrip("-").strip()
+            if item:  # only append non-empty items (drop bare "- " lines)
+                lines.append(item)
     return lines
 
 
@@ -54,15 +56,24 @@ def load_recipes(xlsx_path: str) -> list[Recipe]:
 
 
 def _extract_ingredient_section_from_text(text) -> str:
+    """Extracts the ingredient section from markdown-formatted recipe text
+    (text after "## เครื่องปรุง" header). If the header is present, extracts
+    everything after it until the next section header or end of text."""
     if not isinstance(text, str):
         return ""
-    if "## เครื่องปรุง" not in text or "## วิธีทำ" not in text:
+    if "## เครื่องปรุง" not in text:
         return ""
-    section = text.split("## เครื่องปรุง", 1)[1].split("## วิธีทำ", 1)[0]
+    section = text.split("## เครื่องปรุง", 1)[1]
+    # if there's a next section header (e.g. "## วิธีทำ"), extract up to it
+    if "## วิธีทำ" in section:
+        section = section.split("## วิธีทำ", 1)[0]
     return section.strip()
 
 
 def _extract_instruction_section_from_text(text) -> str:
+    """Extracts the instruction section from markdown-formatted recipe text
+    (text after "## วิธีทำ" header). If the header is present, extracts
+    everything after it."""
     if not isinstance(text, str):
         return ""
     if "## วิธีทำ" not in text:
