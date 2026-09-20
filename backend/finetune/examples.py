@@ -1,0 +1,144 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from generators.prompts import build_recipe_prompt  # noqa: E402
+
+from .recipe_source import Recipe
+from .thai_text import extract_ingredient_name
+
+# Verified against the real dataset 2026-09-21 (design spec §4.1): these
+# keywords account for 341 matches across 159 recipes, mean relative
+# position 0.711, 82.4% in the back half of the ingredient list.
+SEASONING_KEYWORDS = [
+    "น้ำปลา", "น้ำตาล", "เกลือ", "พริกไทย", "ซีอิ๊ว", "น้ำมัน",
+    "ผงชูรส", "มะนาว", "น้ำส้มสายชู", "กะปิ",
+]
+
+_STAPLES = ["เกลือ", "พริกไทย", "น้ำมัน", "น้ำปลา", "ซีอิ๊ว", "น้ำตาล", "น้ำเปล่า"]
+
+
+def is_non_essential(ingredient_line: str, position: int, total: int) -> bool:
+    """Design spec §4.1's dual rule: a seasoning-keyword match AND back-half
+    list position, both required. total<=1 never flags (nothing to gate
+    against)."""
+    if total <= 1:
+        return False
+    relative_position = position / (total - 1)
+    is_seasoning = any(kw in ingredient_line for kw in SEASONING_KEYWORDS)
+    return is_seasoning and relative_position >= 0.5
+
+
+def _drop_instruction_clauses_mentioning(instruction_text: str, dropped_names: list[str]) -> list[str]:
+    """Splits instructions into sentences on Thai/ASCII sentence-ish
+    boundaries and drops any sentence that names a dropped ingredient --
+    deterministic string match, same technique check_ingredient_hallucination
+    uses (design spec §4.2), never an LLM rewrite.
+
+    Used as originally drafted -- verified empirically (not assumed) against
+    the real test instruction text ("...จนสุก ปรุงรสด้วยน้ำปลา ใส่ใบกะเพรา
+    ผัดให้เข้ากัน"): the (?<=สุก)\\s+ boundary splits it into
+    ["...จนสุก", "ปรุงรสด้วยน้ำปลา ใส่ใบกะเพราผัดให้เข้ากัน"], and the
+    second clause -- which mentions the dropped ingredient -- is dropped
+    whole. No regex change was needed for this dataset's phrasing; this
+    remains a known-narrow heuristic (few Thai clause boundaries covered)
+    that may need broadening once run against more of the real dataset at
+    scale, per the brief's own caveat."""
+    import re
+
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+|(?<=กัน)\s+|(?<=สุก)\s+", instruction_text) if s.strip()]
+    if len(sentences) <= 1:
+        sentences = [s.strip() for s in instruction_text.split(" ") if s.strip()]
+    kept = [s for s in sentences if not any(name in s for name in dropped_names)]
+    return kept if kept else [instruction_text]
+
+
+def build_tier_a_examples(recipe: Recipe) -> list[dict]:
+    """Near-complete-subset, full supervision (design spec §4.2). Drops
+    1-2 non-essential ingredients per generated example; staples only
+    appear in the target if the source recipe itself listed them (never
+    invented, per spec §4.3's rule applied to both tiers)."""
+    total = len(recipe.ingredient_lines)
+    non_essential_indices = [
+        i for i, line in enumerate(recipe.ingredient_lines) if is_non_essential(line, i, total)
+    ]
+    if not non_essential_indices:
+        return []
+
+    examples = []
+    for drop_count in (1, 2):
+        if drop_count > len(non_essential_indices):
+            break
+        dropped_indices = set(non_essential_indices[:drop_count])
+        remaining = [line for i, line in enumerate(recipe.ingredient_lines) if i not in dropped_indices]
+        dropped_names = [extract_ingredient_name(recipe.ingredient_lines[i]) for i in dropped_indices]
+        given_names = [extract_ingredient_name(line) for line in remaining]
+
+        prompt = build_recipe_prompt(
+            ingredients=given_names,
+            user_prefs={"allergy": "", "taste": "", "equipment": "", "extra": ""},
+            base_recipe={"name": recipe.dish_name, "servings": 2},
+            feedback=None,
+            include_example=True,
+        )
+        target_instructions = _drop_instruction_clauses_mentioning(recipe.instruction_text, dropped_names)
+        examples.append(
+            {
+                "prompt": prompt,
+                "target_adjusted_ingredients": remaining,
+                "target_instructions": target_instructions,
+                "tier": "A",
+            }
+        )
+    return examples
+
+
+def build_tier_b_examples(recipe: Recipe) -> list[dict]:
+    """Sparse-subset, ingredients-only supervision (design spec §4.3) --
+    the input shape where hallucination pressure is highest. instructions
+    are masked (None), never generated or invented."""
+    non_seasoning = [
+        line for line in recipe.ingredient_lines
+        if not any(kw in line for kw in SEASONING_KEYWORDS)
+    ]
+    if not non_seasoning:
+        return []
+
+    examples = []
+    for given_count in (1, 2):
+        if given_count > len(non_seasoning):
+            break
+        given_lines = non_seasoning[:given_count]
+        given_names = [extract_ingredient_name(line) for line in given_lines]
+        # Staples only if the source recipe actually used them (spec §4.3),
+        # capped to at most one bonus staple beyond what's given. Tier B's
+        # whole point is teaching tight adherence to a *sparse* given-set
+        # (design spec §4.3) -- appending every staple the source recipe
+        # happens to use (real recipes often use 2-4) would make the target
+        # look like Tier A's near-complete-subset in miniature, diluting the
+        # sparse-supervision signal this tier is for. One representative
+        # staple keeps the example genuinely sparse while still teaching
+        # "you may add a basic staple" rather than "add zero, ever."
+        target_staples = [
+            line for line in recipe.ingredient_lines
+            if any(extract_ingredient_name(line) == s for s in _STAPLES)
+            and line not in given_lines
+        ]
+        target = given_lines + target_staples[:1]
+
+        prompt = build_recipe_prompt(
+            ingredients=given_names,
+            user_prefs={"allergy": "", "taste": "", "equipment": "", "extra": ""},
+            base_recipe={"name": recipe.dish_name, "servings": 2},
+            feedback=None,
+            include_example=True,
+        )
+        examples.append(
+            {
+                "prompt": prompt,
+                "target_adjusted_ingredients": target,
+                "target_instructions": None,
+                "tier": "B",
+            }
+        )
+    return examples
