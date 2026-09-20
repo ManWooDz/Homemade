@@ -1,4 +1,22 @@
+import re
+import unicodedata
+
 from main import validate_recipe
+
+_THAI_TONE_MARKS = "่้๊๋"  # mai ek/tho/tri/chattawa
+
+
+def _normalize_thai(s: str) -> str:
+    """Canonicalizes Thai text for substring comparison. Plain
+    unicodedata.normalize("NFC", ...) does NOT unify these forms -- Thai
+    SARA AM (ำ, U+0E33) has no canonical decomposition mapping in the
+    Unicode Character Database, so NFC never merges it with the
+    visually-identical NIKHAHIT+SARA AA sequence some text sources emit.
+    Verified directly (2026-09-21) before trusting this; see MEMORY.md."""
+    s = unicodedata.normalize("NFC", s)
+    s = s.replace("ำ", "ํา")  # SARA AM -> NIKHAHIT + SARA AA
+    s = re.sub(f"ํ([{_THAI_TONE_MARKS}])", r"\1ํ", s)  # tone mark before nikhahit
+    return s
 
 # Mirrors the pantry-staple allowlist in generators/prompts.py's prompt
 # text (main.py's call_agentic_llm() prompt, rule 6) — kept in sync
@@ -34,7 +52,8 @@ def check_ingredient_hallucination(recipe: dict, ingredients: list) -> dict:
     allowed = list(ingredients) + _PANTRY_STAPLES
     unknown = []
     for item in recipe.get("adjusted_ingredients", []) if isinstance(recipe, dict) else []:
-        if not any(known in item for known in allowed):
+        normalized_item = _normalize_thai(item)
+        if not any(_normalize_thai(known) in normalized_item for known in allowed):
             unknown.append(item)
     return {"hallucinated": len(unknown) > 0, "unknown_ingredients": unknown}
 

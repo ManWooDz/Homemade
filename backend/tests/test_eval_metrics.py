@@ -47,6 +47,16 @@ class CheckIngredientHallucinationTests(unittest.TestCase):
         result = check_ingredient_hallucination(recipe, [])
         self.assertFalse(result["hallucinated"])
 
+    def test_water_staple_matches_despite_combining_mark_order_difference(self):
+        # "นํ้าเปล่าเล็กน้อย" (nikhahit+mai-tho+sara-aa order) is the same
+        # word as the staple "น้ำเปล่า" (mai-tho+sara-am) -- verified
+        # 2026-09-21 that plain unicodedata.normalize("NFC", ...) does NOT
+        # unify these (Thai SARA AM has no NFC decomposition mapping).
+        recipe = dict(VALID_RECIPE, adjusted_ingredients=["นํ้าเปล่าเล็กน้อย 1 ถ้วย"])
+        result = check_ingredient_hallucination(recipe, [])
+        self.assertFalse(result["hallucinated"])
+        self.assertEqual(result["unknown_ingredients"], [])
+
 
 class SummarizeRunTests(unittest.TestCase):
     def test_summarize_computes_rates_and_latency(self):
