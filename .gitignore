@@ -16,6 +16,7 @@ __pycache__/
 *.pyd
 pip-log.txt
 backend/images/test_model
+backend/finetune_dataset.jsonl
 
 # (Optional) ถ้าไฟล์โมเดล YOLO ใหญ่เกินไป
 # backend/*.pt 
