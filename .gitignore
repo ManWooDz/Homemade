@@ -19,6 +19,7 @@ backend/images/test_model
 backend/finetune_dataset.jsonl
 backend/finetune_benchmark_result.json
 backend/direct_finetune_benchmark_result.json
+backend/critic_loop_gemini_result.json
 
 # (Optional) ถ้าไฟล์โมเดล YOLO ใหญ่เกินไป
 # backend/*.pt 
