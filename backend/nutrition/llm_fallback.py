@@ -1,0 +1,47 @@
+"""Batched per-ingredient LLM composition estimate for names not found in
+INMU/USDA. Mirrors generators/gemini_generator.py's structure. Estimates
+ONLY per-100g composition -- never the whole recipe's totals -- and its
+output is NEVER written back into ingredient_nutrition."""
+import json
+import os
+
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+from nutrition.lookup import MacroValues
+
+load_dotenv()
+
+_MODEL_NAME = "gemini-3.1-flash-lite-preview"
+
+
+class NutritionLLMEstimator:
+    def __init__(self, api_key: str | None = None):
+        self._api_key = api_key if api_key is not None else os.getenv("GEMINI_API_KEY")
+        self._client = genai.Client(api_key=self._api_key) if self._api_key else None
+
+    def estimate(self, names: list[str]) -> list[MacroValues]:
+        if not names:
+            return []
+        if not self._client:
+            return [MacroValues(None, None, None, None) for _ in names]
+
+        try:
+            prompt = (
+                "ประมาณค่าโภชนาการต่อวัตถุดิบ 100 กรัม ของวัตถุดิบต่อไปนี้แต่ละชนิด "
+                "ตอบเป็น JSON array เรียงตามลำดับที่ให้มาเท่านั้น ห้ามมีข้อความอื่นปน: "
+                f"{json.dumps(names, ensure_ascii=False)}\n"
+                'รูปแบบ: [{"calories": ตัวเลข, "protein_g": ตัวเลข, "carbs_g": ตัวเลข, "fat_g": ตัวเลข}, ...]'
+            )
+            response = self._client.models.generate_content(
+                model=_MODEL_NAME, contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json"),
+            )
+            raw = json.loads(response.text)
+            return [
+                MacroValues(calories=item.get("calories"), protein_g=item.get("protein_g"), carbs_g=item.get("carbs_g"), fat_g=item.get("fat_g"))
+                for item in raw
+            ]
+        except Exception:
+            return [MacroValues(None, None, None, None) for _ in names]
