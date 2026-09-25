@@ -68,9 +68,9 @@ class BaseRecipe(Base):
     tags: Mapped[list] = mapped_column(JSONB, default=list)
     ingredients: Mapped[list] = mapped_column(JSONB, default=list)
     nutrition: Mapped[dict] = mapped_column(JSONB, default=dict)
-    instructions: Mapped[list] = mapped_column(JSONB, default=list)
     servings: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ingredient_quantities: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    instructions: Mapped[list] = mapped_column(JSONB, default=list)
 
 
 class IngredientNutrition(Base):
