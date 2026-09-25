@@ -10,6 +10,13 @@ from main import (
     generate_recipe_text,
     validate_recipe,
 )
+from nutrition.calculator import NutritionResult
+
+_STUB_NUTRITION_RESULT = NutritionResult(
+    nutrition={"basis": "per_serving", "calories": 1.0, "protein_g": 1.0, "carbs_g": 1.0, "fat_g": 1.0},
+    partially_estimated=False,
+    partially_estimated_reasons=[],
+)
 
 
 VALID_RECIPE = {
@@ -37,6 +44,11 @@ VALID_RECIPE = {
 
 
 class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        patcher = patch("main.compute_recipe_nutrition", return_value=_STUB_NUTRITION_RESULT)
+        self.mock_compute_nutrition = patcher.start()
+        self.addCleanup(patcher.stop)
+
     @staticmethod
     def make_request():
         return GenerateRecipeTextRequest(
@@ -226,6 +238,34 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
             "หากประมาณค่าโภชนาการเป็นค่ารวมทั้งสูตร ต้องหารด้วย servings ก่อนตอบ",
             prompt,
         )
+
+    async def test_final_output_nutrition_is_replaced_by_computed_value(self):
+        with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
+            response = await generate_recipe_text(self.make_request())
+
+        self.assertEqual(response["data"]["nutrition"], _STUB_NUTRITION_RESULT.nutrition)
+        self.assertEqual(response["data"]["llm_estimated_nutrition"], VALID_RECIPE["nutrition"])
+        self.assertEqual(response["data"]["nutrition_partially_estimated"], False)
+        self.mock_compute_nutrition.assert_called_once()
+
+    async def test_engine_failure_keeps_llm_guess_and_flags_instead_of_erroring(self):
+        self.mock_compute_nutrition.side_effect = RuntimeError("db exploded")
+        with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
+            response = await generate_recipe_text(self.make_request())
+
+        self.assertEqual(response["status"], "success")
+        self.assertEqual(response["data"]["nutrition"], VALID_RECIPE["nutrition"])
+        self.assertEqual(response["data"]["nutrition_partially_estimated"], True)
+
+    async def test_shared_valid_recipe_fixture_is_not_mutated(self):
+        # (rev 3) Regression test: test_handler_sends_presence_names_
+        # without_quantity (elsewhere in this file) passes VALID_RECIPE
+        # itself, not a copy, as call_agentic_llm's return value -- proves
+        # main.py doesn't mutate it in place.
+        original_nutrition = deepcopy(VALID_RECIPE["nutrition"])
+        with patch("main.call_agentic_llm", side_effect=[VALID_RECIPE]):
+            await generate_recipe_text(self.make_request())
+        self.assertEqual(VALID_RECIPE["nutrition"], original_nutrition)
 
 
 if __name__ == "__main__":

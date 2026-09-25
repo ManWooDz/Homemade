@@ -35,8 +35,10 @@ from auth import (
     verify_password,
 )
 from csrf import verify_same_origin
-from database.db import get_db
+from database.db import get_db, SessionLocal
 from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
+from nutrition.calculator import compute_recipe_nutrition
+from nutrition.llm_fallback import NutritionLLMEstimator
 from email_sender import send_otp_email
 import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
@@ -579,9 +581,48 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
         elif isinstance(final_output, dict) and "error" in final_output:
              return {"status": "error", "message": final_output["error"]}
 
-        # Pretty JSON Output
+        # (rev 3) final_output may be a caller-owned object in some code
+        # paths -- copy before mutating so this never corrupts shared state.
+        final_output = dict(final_output)
+
+        # Nutrition Engine: runs exactly once, on the already-approved
+        # recipe -- never inside the retry loop above. Its own try/except
+        # is separate from this function's outer one, so an engine bug
+        # falls back to the LLM's own guess instead of discarding a
+        # recipe that already passed validation.
+        llm_estimated_nutrition = final_output.get("nutrition")
+        try:
+            db = SessionLocal()
+            try:
+                nutrition_result = compute_recipe_nutrition(
+                    db=db,
+                    adjusted_ingredients=final_output.get("adjusted_ingredients", []),
+                    instructions=final_output.get("instructions", []),
+                    servings=final_output.get("servings", 1),
+                    llm_estimator=NutritionLLMEstimator(),
+                )
+            finally:
+                db.close()
+
+            final_output["nutrition"] = nutrition_result.nutrition
+            final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
+            final_output["nutrition_partially_estimated"] = nutrition_result.partially_estimated
+            if nutrition_result.partially_estimated:
+                print(f"[Nutrition Engine] partially estimated: {nutrition_result.partially_estimated_reasons}")
+
+            # Sanity bound on the COMPUTED result -- log and flag only,
+            # never retried (a computation bug is not the LLM's mistake
+            # to fix, see design spec).
+            computed_calories = nutrition_result.nutrition.get("calories", 0)
+            if computed_calories < 0 or computed_calories > 3000:
+                print(f"[Nutrition Engine] sanity check failed on computed result: {nutrition_result.nutrition}")
+        except Exception as e:
+            print(f"[Nutrition Engine] failed, keeping LLM's original guess: {e}")
+            final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
+            final_output["nutrition_partially_estimated"] = True
+
         print(f"[4] Final Output: {json.dumps(final_output, ensure_ascii=False, indent=2)}")
-        
+
         return {
             "status": "success",
             "data": final_output
