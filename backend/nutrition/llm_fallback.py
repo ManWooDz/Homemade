@@ -39,6 +39,8 @@ class NutritionLLMEstimator:
                 config=types.GenerateContentConfig(response_mime_type="application/json"),
             )
             raw = json.loads(response.text)
+            if not isinstance(raw, list) or len(raw) != len(names):
+                return [MacroValues(None, None, None, None) for _ in names]
             return [
                 MacroValues(calories=item.get("calories"), protein_g=item.get("protein_g"), carbs_g=item.get("carbs_g"), fat_g=item.get("fat_g"))
                 for item in raw
