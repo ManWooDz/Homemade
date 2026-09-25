@@ -25,20 +25,17 @@ class NutritionMatch:
 
 
 def match_ingredient(db, name: str) -> NutritionMatch | None:
-    normalized_input = normalize_alias(name)
+    normalized = normalize_alias(name)
+    alias_row = db.query(IngredientNutritionAlias).filter(IngredientNutritionAlias.alias == normalized).first()
+    if not alias_row:
+        return None
 
-    # Fetch all aliases and normalize both sides for comparison
-    # (aliases in DB may not be pre-normalized)
-    alias_rows = db.query(IngredientNutritionAlias).all()
-    for alias_row in alias_rows:
-        if normalize_alias(alias_row.alias) == normalized_input:
-            row = db.get(IngredientNutrition, alias_row.ingredient_nutrition_id)
-            if not row:
-                return None
+    row = db.get(IngredientNutrition, alias_row.ingredient_nutrition_id)
+    if not row:
+        return None
 
-            return NutritionMatch(
-                ingredient_nutrition_id=row.id,
-                macros=MacroValues(calories=row.calories, protein_g=row.protein_g, carbs_g=row.carbs_g, fat_g=row.fat_g),
-                source=row.source, source_ref=row.source_ref, derivation=row.derivation, portion_grams=row.portion_grams,
-            )
-    return None
+    return NutritionMatch(
+        ingredient_nutrition_id=row.id,
+        macros=MacroValues(calories=row.calories, protein_g=row.protein_g, carbs_g=row.carbs_g, fat_g=row.fat_g),
+        source=row.source, source_ref=row.source_ref, derivation=row.derivation, portion_grams=row.portion_grams,
+    )

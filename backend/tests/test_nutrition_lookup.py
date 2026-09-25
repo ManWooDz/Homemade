@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from database.models import Base, IngredientNutrition, IngredientNutritionAlias
 from nutrition.lookup import match_ingredient
+from nutrition.text import normalize_alias
 
 
 class MatchIngredientTests(unittest.TestCase):
@@ -39,7 +40,7 @@ class MatchIngredientTests(unittest.TestCase):
         water = IngredientNutrition(ingredient_name="น้ำเปล่า", unit_basis="100g", calories=0.0, protein_g=0.0, carbs_g=0.0, fat_g=0.0, source="INMU")
         self.db.add(water)
         self.db.flush()
-        self.db.add(IngredientNutritionAlias(alias="น้ำเปล่า", ingredient_nutrition_id=water.id))
+        self.db.add(IngredientNutritionAlias(alias=normalize_alias("น้ำเปล่า"), ingredient_nutrition_id=water.id))
         self.db.commit()
         result = match_ingredient(self.db, "นํ้าเปล่า")
         self.assertIsNotNone(result)
