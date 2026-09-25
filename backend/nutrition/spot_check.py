@@ -33,7 +33,19 @@ Captures two things from the 2026-09-26 spot-check (see spec.md's
 
 Usage:
     python nutrition/spot_check.py                  # candidate selection only (no network)
-    python nutrition/spot_check.py --check-inmu      # also runs the live INMU comparison
+    python nutrition/spot_check.py --check-inmu      # prints a reminder of what's needed to
+                                                      # re-run the live INMU comparison -- it does
+                                                      # NOT run it automatically (see note below)
+
+Known limitation: the 15 English_Name values used for the actual
+2026-09-26 live-INMU comparison are not stored anywhere in this repo (only
+`get_candidates()`'s query/sampling logic is committed) -- `English_Name`
+isn't a column on `IngredientNutrition`, only present in the source CSV
+row that `seed_inmu.import_csv()` reads once and doesn't persist. A future
+re-run of `check_against_inmu()` needs to re-derive each candidate's
+English_Name from the CSV by `source_ref`/`Food_Code` first (`--check-inmu`
+does not do this for you); this script is not fully self-contained/one-
+command-reproducible for the live-comparison half.
 """
 import argparse
 import json
@@ -186,7 +198,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--csv", default=_DEFAULT_CSV_PATH)
     parser.add_argument("--check-inmu", action="store_true",
-                         help="also query INMU's live site for each candidate (requires network, English_Name lookup only -- see module docstring)")
+                         help="does NOT auto-run the live comparison -- prints what's still needed "
+                              "to do so (English_Name isn't persisted/committed anywhere); see module "
+                              "docstring's 'Known limitation' note")
     args = parser.parse_args()
 
     candidates = get_candidates(args.csv)
