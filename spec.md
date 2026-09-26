@@ -434,6 +434,16 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 **ค้างอยู่ (ยังไม่ทำ):** บีบ Gantt chart ใน `docs/project-proposal.md` จาก ~12 เดือนเหลือ ~9 เดือนจริง (รู้ว่า scope พอ/เต็มสำหรับ 9 เดือนแล้ว ไม่ต้องเพิ่มอะไรอีก — ทีมเคยสร้าง prototype เดิมเสร็จใน 1-2 สัปดาห์ แต่ความเร็วนั้น**ไม่ transfer**ไปงาน evaluation/research ที่เหลือ เพราะ bottleneck ต่างกัน)
 
+**Rating popup → draggable feedback sheet + cooking-history detail view (2026-09-25, frontend only, ไม่แก้ `/backend/`) — product envelope, ไม่ใช่ core contribution ที่ต้องมี KPI:**
+- โจทย์: rating popup เดิม (แค่ดาว 1-5 + submit/skip) เพิ่ม feedback tags (Delicious/Great/Tasty/Not Bad/Meh, single-select, English ตาม mockup) + textarea (placeholder "เช่น เผ็ด", maxLength 240, counter แบบ remaining/240) + รูปเมนู + title/subtitle ที่เปลี่ยนข้อความตามดาวที่เลือก
+- เปลี่ยน layout จาก centered modal (มี `bg-black/40` backdrop + ปุ่ม X) เป็น **draggable bottom sheet ไม่มี backdrop** — ใช้ pattern เดียวกับ bottom sheet เนื้อหาสูตรที่มีอยู่แล้วในหน้านี้เป๊ะ (`motion.div drag="y"`, `top:"45%" height:"90%"`, `dragConstraints={{top:-200,bottom:0}}`) ลากขึ้น/ลงเพื่อ expand/collapse เนื้อหา ปุ่ม X ตัดออก เหลือปุ่ม "ข้าม" เป็นทางออกเดียว
+- `submitRating()` ใน `frontend/src/pages/CookingPage.jsx` ยังไม่ส่งไป backend (ไม่มี rating-storage endpoint) — เก็บ stars/tag/feedback รวมกับ `cookingHistory` state ใน `App.jsx` ผ่าน callback `onRateRecipe`/`rateRecipe()` แทน (client-side only, หายเมื่อ refresh หน้า — เหมือน `cookingHistory` เดิมที่ไม่เคย persist อยู่แล้ว)
+- ผูก history entry กับ recipe ที่ generate ผ่าน `_historyId` (เก็บบน `generatedRecipe` ชั่วคราว, เทียบกับ `id` ของ history entry ตอน rate) — ไม่มี id จาก backend จริงเพราะ history ไม่เคยผ่าน DB
+- **ต่องานเพิ่ม (ในเซสชันเดียวกัน):** history entries เปลี่ยนจากเก็บแค่ `{id, recipe_name, image, diet_tags}` เป็นเก็บ `{...result.data, id, image}` เต็ม (nutrition/ingredients/instructions/servings/usage_time/safety_warning ครบ) เพื่อให้กดดู detail ย้อนหลังได้ — เพิ่มหน้าใหม่ `frontend/src/pages/HistoryDetail.jsx` (read-only, ไม่มีปุ่มเสร็จสิ้น/rating modal ซ้ำ, โชว์ rating ที่เคยให้ไว้เป็น banner ด้านบน) เปิดจากการกด card ใน `Profile.jsx` history list (`onOpenHistoryItem`)
+- **Refactor เพื่อลด duplication:** ดึง JSX เนื้อหาสูตร (nutrition cards/ingredients/instructions ~200 บรรทัด) ออกจาก `CookingPage.jsx` เป็น `frontend/src/components/RecipeContent.jsx` (`recipe` prop + `onDone` optional — ไม่ส่ง `onDone` = ซ่อนปุ่ม "เสร็จสิ้น" สำหรับ read-only view) ใช้ร่วมกันทั้ง `CookingPage.jsx` (2 ที่, ปุ่มเสร็จสิ้นโชว์) และ `HistoryDetail.jsx` (ไม่โชว์ปุ่ม)
+- หลักฐาน: `npx vite build` ผ่าน (exit 0) ทั้งก่อน/หลัง refactor; ทดสอบ visual จริงผ่าน Playwright (ติดตั้งชั่วคราวแล้ว uninstall — ขอ confirm ก่อนลงตามกฎ) + ผ่าน temp route `/dev-preview` ใน `main.jsx` (bypass `ProtectedRoute` เพื่อดูได้โดยไม่ต้อง login จริง เพราะไม่มี backend/session รันอยู่ตอนทดสอบ) — revert route + mock data ทั้งหมดกลับสภาพเดิมแล้วก่อน build สุดท้าย ยืนยันด้วย `git diff`/`git status`
+- **ยังไม่ทำ (out of scope งานนี้):** ส่ง rating ไป backend จริง (ต้องมี rating-storage endpoint ก่อน — ของเดิมก็ไม่มีอยู่แล้ว), persist `cookingHistory` ข้าม refresh/ข้าม session (ต้องมี DB table ผูก user — เป็นงานแยกที่ต้องขอ confirm แก้ `/backend/`)
+
 ## Data Contracts
 
 **`POST /api/generate-recipe-text`** (active contract):

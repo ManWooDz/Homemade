@@ -20,6 +20,7 @@ import CustomCookingPage from "./pages/CustomCookingPage";
 import AddIngredient from "./pages/AddIngredient";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import HistoryDetail from "./pages/HistoryDetail";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
 import { getTagColor } from "./utils/tagColors";
 import { useAuth } from "./context/AuthContext";
@@ -33,6 +34,7 @@ function App() {
     const [userIngredients, setUserIngredients] = useState([]);
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
+    const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
     const [cookingHistory, setCookingHistory] = useState([]);
 
     const [recipes, setRecipes] = useState([]);
@@ -54,6 +56,14 @@ function App() {
 
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    const rateRecipe = (historyId, rating) => {
+        setCookingHistory((prev) =>
+            prev.map((item) =>
+                item.id === historyId ? { ...item, ...rating } : item
+            )
+        );
+    };
     const [cookingSource, setCookingSource] = useState("create-recipe"); // "create-recipe" | "custom-cooking"
 
     useEffect(() => {
@@ -344,13 +354,13 @@ function App() {
                         });
                         const result = await response.json();
                         if (result.status === "success") {
-                            setGeneratedRecipe(result.data);
+                            const historyId = Date.now();
+                            setGeneratedRecipe({ ...result.data, _historyId: historyId });
                             setCookingHistory((prev) => [
                                 {
-                                    id: Date.now(),
-                                    recipe_name: result.data.recipe_name,
+                                    ...result.data,
+                                    id: historyId,
                                     image: selectedRecipe?.image || null,
-                                    diet_tags: result.data.diet_tags,
                                 },
                                 ...prev,
                             ]);
@@ -377,6 +387,7 @@ function App() {
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView(cookingSource)}
                 isCustom={cookingSource === "custom-cooking"}
+                onRateRecipe={rateRecipe}
             />
         );
     }
@@ -458,13 +469,13 @@ function App() {
                         });
                         const result = await response.json();
                         if (result.status === "success") {
-                            setGeneratedRecipe(result.data);
+                            const historyId = Date.now();
+                            setGeneratedRecipe({ ...result.data, _historyId: historyId });
                             setCookingHistory((prev) => [
                                 {
-                                    id: Date.now(),
-                                    recipe_name: result.data.recipe_name,
+                                    ...result.data,
+                                    id: historyId,
                                     image: null,
-                                    diet_tags: result.data.diet_tags,
                                 },
                                 ...prev,
                             ]);
@@ -491,6 +502,21 @@ function App() {
                     setCurrentView("home");
                     setActiveTab("home");
                 }}
+                onOpenHistoryItem={(item) => {
+                    setSelectedHistoryItem(item);
+                    setCurrentView("history-detail");
+                }}
+            />
+        );
+    }
+
+    if (currentView === "history-detail") {
+        return (
+            <HistoryDetail
+                item={selectedHistoryItem}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => setCurrentView("profile")}
             />
         );
     }

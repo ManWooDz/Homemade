@@ -10,6 +10,7 @@ import {
   LogOut,
   Mail,
   ChefHat,
+  Star,
 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -116,6 +117,7 @@ export default function Profile({
   activeTab,
   setActiveTab,
   onBack,
+  onOpenHistoryItem,
 }) {
   const [view, setView] = useState("main"); // main | history | language | preferences | helps
 
@@ -241,7 +243,8 @@ export default function Profile({
                 {cookingHistory.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3 shadow-sm"
+                    onClick={() => onOpenHistoryItem?.(item)}
+                    className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3 shadow-sm cursor-pointer active:bg-gray-100"
                   >
                     <div className="w-16 h-16 rounded-full overflow-hidden bg-white shrink-0">
                       <img
@@ -267,6 +270,25 @@ export default function Profile({
                               {tag}
                             </span>
                           ))}
+                        </div>
+                      )}
+                      {item.stars > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`w-3.5 h-3.5 ${
+                                n <= item.stars
+                                  ? "text-orange-400 fill-orange-400"
+                                  : "text-gray-200"
+                              }`}
+                            />
+                          ))}
+                          {item.tag && (
+                            <span className="text-[11px] text-gray-400 ml-1">
+                              {item.tag}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>

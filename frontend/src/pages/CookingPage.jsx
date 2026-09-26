@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { ChevronLeft, Flame, AlertTriangle, ChefHat, Clock, Star, X } from "lucide-react";
+import { ChevronLeft, ChefHat, Star } from "lucide-react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
-import { getTagColor } from "../utils/tagColors";
+import RecipeContent from "../components/RecipeContent";
 
 export default function CookingPage({
   recipe,
@@ -13,24 +13,59 @@ export default function CookingPage({
   activeTab,
   setActiveTab,
   isCustom,
+  onRateRecipe,
 }) {
   console.log("CookingPage");
 
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [feedbackText, setFeedbackText] = useState("");
+
+  const FEEDBACK_TAGS = ["Delicious", "Great", "Tasty", "Not Bad", "Meh"];
+  const FEEDBACK_MAX_LEN = 240;
+  const RATING_MESSAGES = {
+    1: "Not good at all",
+    2: "Could be better",
+    3: "It's okay",
+    4: "Really good, I like it!",
+    5: "Amazing, love it!",
+  };
+
+  const ratingSheetY = useMotionValue(0);
+
+  const expandRatingSheet = () => {
+    animate(ratingSheetY, -200, { type: "spring", stiffness: 300, damping: 30 });
+  };
+
+  const collapseRatingSheet = () => {
+    animate(ratingSheetY, 0, { type: "spring", stiffness: 300, damping: 30 });
+  };
 
   const finishCooking = () => {
+    setSelectedRating(0);
+    setHoverRating(0);
+    setSelectedTag(null);
+    setFeedbackText("");
+    ratingSheetY.set(0);
     setShowRatingModal(true);
   };
 
   const submitRating = () => {
-    // TODO: send { recipe_name: generatedRecipe.recipe_name, stars: selectedRating }
-    // to backend once a rating-storage endpoint exists.
+    // TODO: also send { recipe_name, stars, tag, feedback } to backend once a
+    // rating-storage endpoint exists. For now it's merged into cookingHistory
+    // (client-side only, lost on refresh) via onRateRecipe.
+    const rating = {
+      stars: selectedRating,
+      tag: selectedTag,
+      feedback: feedbackText,
+    };
     console.log("[RATING]", {
       recipe_name: generatedRecipe?.recipe_name,
-      stars: selectedRating,
+      ...rating,
     });
+    onRateRecipe?.(generatedRecipe?._historyId, rating);
     setShowRatingModal(false);
     setActiveTab("home");
   };
@@ -129,239 +164,65 @@ export default function CookingPage({
     );
   }
 
-  // Success Screen
-  const renderRecipeContent = () => (
-    <>
-      <h2 className="text-[26px] font-bold text-black mb-2 leading-tight">
-        {generatedRecipe.recipe_name}
-      </h2>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-gray-500">
-          สำหรับ {generatedRecipe.servings} ที่
-        </p>
-        <div className="flex items-center gap-1.5">
-          <Clock className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-500 text-sm">
-            {generatedRecipe.usage_time || "error"}
-          </span>
-        </div>
-      </div>
-
-      {/* Diet Tags */}
-      {generatedRecipe.diet_tags && generatedRecipe.diet_tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6 mt-3">
-          {generatedRecipe.diet_tags.map((tag, idx) => (
-            <span
-              key={idx}
-              className={`${getTagColor(tag)} px-3 py-1 rounded-full text-[12px] font-medium`}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Safety Warning */}
-      {generatedRecipe.safety_warning &&
-        generatedRecipe.safety_warning !== "ระวังความร้อนขณะประกอบอาหาร" && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 text-red-700 shadow-sm items-start">
-            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-            <span className="text-sm font-medium leading-relaxed">
-              {generatedRecipe.safety_warning}
-            </span>
-          </div>
-        )}
-
-      {/* Nutrition Section */}
-      {generatedRecipe.nutrition && (
-        <div className="mb-6">
-          <h3 className="text-xl font-medium text-black mb-4">
-            {generatedRecipe.nutrition.basis === "per_serving"
-              ? "โภชนาการต่อ 1 ที่ (คาดการณ์)"
-              : "โภชนาการที่คาดการณ์"}
-          </h3>
-          <div className="flex flex-col gap-3">
-            <div className="bg-[#FFF6F2] rounded-3xl p-5 flex justify-between items-center shadow-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-4xl font-semibold text-[#EF5A3A] leading-none">
-                  {generatedRecipe.nutrition.calories}
-                </span>
-                <span className="text-lg text-gray-500 font-medium">
-                  {generatedRecipe.nutrition.basis === "per_serving"
-                    ? "แคลอรี่ต่อ 1 ที่"
-                    : "แคลอรี่"}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#e4fbec] rounded-3xl p-4 flex flex-col justify-center items-center shadow-sm h-25">
-                <span className="text-2xl font-bold text-black leading-none mb-1">
-                  {generatedRecipe.nutrition.carbs_g}g
-                </span>
-                <span className="text-[12px] font-medium text-[#767676]">
-                  คาร์บ
-                </span>
-              </div>
-              <div className="bg-[#eaf3ff] rounded-3xl p-4 flex flex-col justify-center items-center shadow-sm h-25">
-                <span className="text-2xl font-bold text-black leading-none mb-1">
-                  {generatedRecipe.nutrition.protein_g}g
-                </span>
-                <span className="text-[12px] font-medium text-[#767676]">
-                  โปรตีน
-                </span>
-              </div>
-              <div className="bg-[#fffad8] rounded-3xl p-4 flex flex-col justify-center items-center shadow-sm h-25">
-                <span className="text-2xl font-bold text-black leading-none mb-1">
-                  {generatedRecipe.nutrition.fat_g}g
-                </span>
-                <span className="text-[12px] font-medium text-[#767676]">
-                  ไขมัน
-                </span>
-              </div>
-            </div>
-
-            {/* Extra nutrients */}
-            <div className="bg-white rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-              {[
-                {
-                  label: "น้ำตาล",
-                  key: "sugar_g",
-                  unit: "g",
-                  max: 50,
-                  color: "#FF5C8A",
-                },
-                {
-                  label: "โซเดียม",
-                  key: "sodium_mg",
-                  unit: "mg",
-                  max: 2300,
-                  color: "#8B5CF6",
-                },
-                {
-                  label: "ใยอาหาร",
-                  key: "fiber_g",
-                  unit: "g",
-                  max: 30,
-                  color: "#22C55E",
-                },
-                {
-                  label: "วิตามินซี",
-                  key: "vitamin_c_mg",
-                  unit: "mg",
-                  max: 90,
-                  color: "#F59E0B",
-                },
-              ]
-                .filter(
-                  (n) =>
-                    generatedRecipe.nutrition[n.key] !== undefined &&
-                    generatedRecipe.nutrition[n.key] !== null,
-                )
-                .map((n) => {
-                  const value = generatedRecipe.nutrition[n.key];
-                  const pct = Math.max(0, Math.min(100, (value / n.max) * 100));
-                  return (
-                    <div key={n.key} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-[#767676] w-20 shrink-0">
-                        {n.label}
-                      </span>
-                      <div className="flex-1 h-2 bg-black/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${pct}%`, backgroundColor: n.color }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-semibold text-black w-16 text-right shrink-0">
-                        {value}
-                        {n.unit}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ingredients */}
-      <div className="mb-6">
-        <h3 className="text-xl font-medium text-black mb-4">
-          วัตถุดิบที่ปรับแก้แล้ว
-        </h3>
-        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          ตรวจสอบวัตถุดิบและปริมาณจริงก่อนเริ่มทำอาหาร
-        </div>
-        <ul className="flex flex-col gap-2">
-          {generatedRecipe.adjusted_ingredients?.map((ing, idx) => (
-            <li
-              key={idx}
-              className="bg-gray-50 flex items-center gap-3 p-3 rounded-xl border border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
-            >
-              <div className="w-2 h-2 rounded-full bg-[#EF5A3A]"></div>
-              <span className="text-gray-700 text-[15px]">{ing}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Instructions */}
-      <div className="mb-6">
-        <h3 className="text-xl font-medium text-black mb-4 flex items-center gap-2">
-          <Flame className="w-5 h-5 text-[#EF5A3A]" />
-          วิธีทำ
-        </h3>
-        <div className="flex flex-col gap-4">
-          {generatedRecipe.instructions?.map((step, idx) => {
-            const cleanedStep = step.replace(/^\d+\.\s*/, "");
-            return (
-              <div key={idx} className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-orange-100 text-[#EF5A3A] font-bold flex items-center justify-center shrink-0">
-                  {idx + 1}
-                </div>
-                <p className="text-gray-700 leading-relaxed pt-1 flex-1">
-                  {cleanedStep}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Done Button */}
-      <button
-        onClick={finishCooking}
-        className="bg-[#EF5A3A] text-white px-5 py-4.5 rounded-full text-lg font-bold shadow-md mt-6 w-full mb-8 hover:bg-orange-600 transition"
-      >
-        เสร็จสิ้น
-      </button>
-    </>
-  );
-
   const renderRatingModal = () =>
     showRatingModal && (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 relative">
-          <button
-            onClick={skipRating}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-5 h-5" />
-          </button>
+      <motion.div
+        className="absolute left-0 right-0 mx-auto w-full max-w-107.5 bg-white rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] z-50"
+        drag="y"
+        dragConstraints={{ top: -200, bottom: 0 }}
+        dragElastic={0.05}
+        onDragEnd={() => {
+          if (ratingSheetY.get() < -100) {
+            expandRatingSheet();
+          } else {
+            collapseRatingSheet();
+          }
+        }}
+        style={{ top: "45%", height: "90%", y: ratingSheetY }}
+      >
+        <div className="w-full flex justify-center pt-4 pb-2">
+          <div className="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+        </div>
 
-          <h3 className="text-xl font-bold text-black text-center mb-2">
-            ให้คะแนนเมนูนี้
-          </h3>
-          <p className="text-sm text-gray-500 text-center mb-6">
-            {generatedRecipe?.recipe_name}
-          </p>
+        <div className="px-6 h-full overflow-y-auto pb-6 scrollbar-hide">
+          <div className="w-24 h-24 rounded-full overflow-hidden shadow-sm mx-auto mb-4">
+            <img
+              src={recipe?.image || "backend/images/No-image-available.png"}
+              alt={generatedRecipe?.recipe_name}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
-          <div className="flex items-center justify-center gap-2 mb-8">
+          {selectedRating === 0 ? (
+            <>
+              <h3 className="text-xl font-bold text-[#EF5A3A] text-center mb-1">
+                How do you like it?
+              </h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Rate your meal with this recipe?
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500 text-center mb-1">
+                How do you like it?
+              </p>
+              <h3 className="text-xl font-bold text-[#EF5A3A] text-center mb-6">
+                {RATING_MESSAGES[selectedRating]}
+              </h3>
+            </>
+          )}
+
+          <div className="flex items-center justify-center gap-2 mb-6">
             {[1, 2, 3, 4, 5].map((n) => {
               const filled = n <= (hoverRating || selectedRating);
               return (
                 <button
                   key={n}
-                  onClick={() => setSelectedRating(n)}
+                  onClick={() => {
+                    setSelectedRating(n);
+                    expandRatingSheet();
+                  }}
                   onMouseEnter={() => setHoverRating(n)}
                   onMouseLeave={() => setHoverRating(0)}
                   className="p-1"
@@ -378,6 +239,42 @@ export default function CookingPage({
             })}
           </div>
 
+          {selectedRating > 0 && (
+            <>
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                {FEEDBACK_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTag(tag)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                      selectedTag === tag
+                        ? "bg-[#EF5A3A] text-white border-[#EF5A3A]"
+                        : "bg-white text-gray-700 border-gray-300"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm text-[#EF5A3A] font-medium">
+                  Tell us more about your meals ...
+                </span>
+                <span className="text-xs text-gray-400">
+                  {FEEDBACK_MAX_LEN - feedbackText.length}/{FEEDBACK_MAX_LEN}
+                </span>
+              </div>
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                maxLength={FEEDBACK_MAX_LEN}
+                placeholder="เช่น เผ็ด"
+                className="w-full h-24 border border-gray-300 rounded-2xl p-3 text-sm text-gray-700 resize-none mb-6 focus:outline-none focus:border-[#EF5A3A]"
+              />
+            </>
+          )}
+
           <button
             onClick={submitRating}
             disabled={selectedRating === 0}
@@ -392,7 +289,7 @@ export default function CookingPage({
             ข้าม
           </button>
         </div>
-      </div>
+      </motion.div>
     );
 
   return (
@@ -412,7 +309,7 @@ export default function CookingPage({
         {isCustom ? (
           // Custom Flow layout (no image, normal div)
           <div className="flex-1 overflow-y-auto px-6 pb-24 scrollbar-hide">
-            {renderRecipeContent()}
+            <RecipeContent recipe={generatedRecipe} onDone={finishCooking} />
           </div>
         ) : (
           // Normal Flow layout (image + draggable bottom sheet)
@@ -447,7 +344,7 @@ export default function CookingPage({
                 onTouchMove={handleTouchMove}
                 className="px-6 h-full overflow-y-auto pb-50 scrollbar-hide"
               >
-                {renderRecipeContent()}
+                <RecipeContent recipe={generatedRecipe} onDone={finishCooking} />
               </div>
             </motion.div>
           </>
