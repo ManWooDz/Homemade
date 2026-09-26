@@ -68,6 +68,8 @@ class BaseRecipe(Base):
     tags: Mapped[list] = mapped_column(JSONB, default=list)
     ingredients: Mapped[list] = mapped_column(JSONB, default=list)
     nutrition: Mapped[dict] = mapped_column(JSONB, default=dict)
+    servings: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ingredient_quantities: Mapped[list | None] = mapped_column(JSON, nullable=True)
     instructions: Mapped[list] = mapped_column(JSONB, default=list)
 
 
@@ -86,7 +88,28 @@ class IngredientNutrition(Base):
     fat_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     # "INMU" or "USDA" fallback (spec.md:32) — lets the demo show which source answered
     source: Mapped[str | None] = mapped_column(String, nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String, nullable=True)
+    portion_grams: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    derivation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class IngredientNutritionAlias(Base):
+    """Maps many name strings to one ingredient_nutrition row. Needed
+    because real INMU Thai_Name values are full comma-descriptor strings
+    (e.g. "กุ้งก้ามกราม, สด") that a recipe's "กุ้ง" would never
+    exact-match -- lookup.py matches against this table only."""
+
+    __tablename__ = "ingredient_nutrition_aliases"
+    __table_args__ = (
+        UniqueConstraint("alias", name="uq_ingredient_nutrition_aliases_alias"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    alias: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    ingredient_nutrition_id: Mapped[int] = mapped_column(
+        ForeignKey("ingredient_nutrition.id"), nullable=False
+    )
 
 
 class RecipeIngredientImage(Base):
