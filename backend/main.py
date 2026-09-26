@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from auth import (
     REFRESH_TOKEN_EXPIRE_DAYS,
@@ -430,6 +430,7 @@ class UserIngredientCreate(BaseModel):
     name: str
     category: str = "Other"
     image: str = "http://localhost:8000/images/No-image-available.png"
+    expiry_date: Optional[date] = None
 
 # get ingredient images from folder images/ingredients
 @app.get("/api/ingredient-images")
@@ -566,6 +567,7 @@ async def add_user_ingredient(
             name=ingredient.name,
             category=ingredient.category,
             image=ingredient.image,
+            expiry_date=ingredient.expiry_date,
         )
         return {"status": "success", "data": created}
     except Exception as e:

@@ -150,6 +150,28 @@ class UserIngredientsEndpointTests(unittest.TestCase):
         names = [row["name"] for row in still_there]
         self.assertIn("shrimp", names)
 
+    def test_post_with_expiry_date_stores_and_returns_it(self):
+        client = TestClient(app)
+        self._register_and_login(client, "expiryuser@example.com")
+        create_res = client.post(
+            "/api/user-ingredients",
+            json={"name": "milk", "category": "Other", "expiry_date": "2099-01-01"},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(create_res.status_code, 200)
+        self.assertEqual(create_res.json()["data"]["expiry_date"], "2099-01-01")
+
+    def test_post_with_explicit_null_expiry_date_succeeds(self):
+        client = TestClient(app)
+        self._register_and_login(client, "nullexpiryuser@example.com")
+        create_res = client.post(
+            "/api/user-ingredients",
+            json={"name": "rice", "category": "Other", "expiry_date": None},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(create_res.status_code, 200)
+        self.assertIsNone(create_res.json()["data"]["expiry_date"])
+
     def test_post_without_trusted_origin_is_403(self):
         client = TestClient(app)
         self._register_and_login(client, "csrfuser@example.com")

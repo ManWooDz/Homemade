@@ -3,6 +3,7 @@ import { ChevronLeft, Trash2, Plus, PenLine, ScanLine } from "lucide-react";
 import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { expiryBadgeLabel } from "../utils/expiry";
 import { useAuth } from "../context/AuthContext";
 
 export default function UserIngredients({
@@ -135,6 +136,11 @@ export default function UserIngredients({
                                             <span className="font-semibold text-gray-800 text-lg leading-tight">
                                                 {ing.name}
                                             </span>
+                                            {expiryBadgeLabel(ing.expiry_date) && (
+                                                <span className="text-xs font-medium text-red-500 mt-0.5">
+                                                    {expiryBadgeLabel(ing.expiry_date)}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <button

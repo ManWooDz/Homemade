@@ -24,10 +24,14 @@ export function toPresenceIngredients(items = []) {
   });
 }
 
-export function toUserIngredientCreate({ name, category, image }) {
+export function toUserIngredientCreate({ name, category, image, expiryDate }) {
   return {
     name: cleanIngredientName(name),
     category: category || "Other",
     image,
+    // An empty string from <input type="date"> must become null, not "" —
+    // Pydantic's `date` type 422s on "", and apiFetch doesn't throw on
+    // non-2xx, so that would otherwise fail the save silently.
+    expiry_date: expiryDate || null,
   };
 }

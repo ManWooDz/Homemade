@@ -3,6 +3,7 @@ import { ChevronLeft, Plus, Search, Upload, Loader2 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { toUserIngredientCreate } from "../utils/ingredientPayload";
+import { sortByExpiry } from "../utils/expiry";
 import { useAuth } from "../context/AuthContext";
 
 export default function AddIngredient({
@@ -22,9 +23,17 @@ export default function AddIngredient({
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState("");
     const [fallbackImage, setFallbackImage] = useState("");
-    const [selectedImage, setSelectedImage] = useState(prefill?.image || "");
+    // Never start blank — an empty src is a real (pre-existing) latent bug:
+    // saving before the fallback-image fetch below resolves would send
+    // image: "" to the backend, which the browser then warns about when
+    // later rendering <img src="">. Seed with the same static fallback path
+    // the backend itself defaults to (UserIngredientCreate.image).
+    const [selectedImage, setSelectedImage] = useState(
+        prefill?.image || "http://localhost:8000/images/No-image-available.png",
+    );
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [expiryDate, setExpiryDate] = useState("");
     const fileInputRef = useRef(null);
 
     const categories = ["Meat & poultry", "Vegetables", "Fruits", "Other"];
@@ -120,13 +129,18 @@ export default function AddIngredient({
                             name,
                             category,
                             image: selectedImage,
+                            expiryDate,
                         }),
                     ),
                 },
             );
             const result = await response.json();
             if (result.status === "success") {
-                setUserIngredients([...userIngredients, result.data]);
+                // sorted here too — the list only gets re-fetched (and thus
+                // re-sorted server-side) on page load, not on every append
+                setUserIngredients(
+                    sortByExpiry([...userIngredients, result.data]),
+                );
                 onBack(); // Return to previous screen (My Fridge)
             } else {
                 console.error("Failed to add ingredient", result.message);
@@ -305,6 +319,19 @@ export default function AddIngredient({
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Expiry Date (optional) */}
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                วันหมดอายุ (โดยประมาณ, ไม่บังคับ)
+                            </h3>
+                            <input
+                                type="date"
+                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
+                                value={expiryDate}
+                                onChange={(e) => setExpiryDate(e.target.value)}
+                            />
                         </div>
                     </div>
 

@@ -67,7 +67,7 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
     3. แปลงผล query เป็น text summary สั้นๆ ("มักชอบเมนูรสจัด ผัด/แกง, มักใส่ไข่ในเมนูผัด") → ฉีดเข้า prompt ตำแหน่งเดียวกับ "Preferences (+History)"
   - **ตัดออกจาก scope:** สัญญาณ "วัตถุดิบที่มักมีใน fridge เสมอ" — ต้องมี audit log การ add/remove วัตถุดิบข้ามเวลาซึ่งยังไม่ได้วางแผน (query fridge ปัจจุบันบอก pattern อดีตไม่ได้) เพิ่มทีหลังได้ถ้ามีเวลา ไม่ใช่ MVP
   - **คำที่ต้องใช้ตอนเขียนเล่ม/สอบ:** เรียก "rating-weighted aggregation heuristic" หรือ "rule-based taste profile summarizer" — **ห้ามเรียกว่า "AI เรียนรู้ preference"** เพราะไม่มี model train จริง เป็นแค่ SQL aggregation
-- Expiry Tracking + ranking (**demonstrated only** — ไม่เคลม "ลด food waste X%")
+- Expiry Tracking + ranking (**demonstrated only** — ไม่เคลม "ลด food waste X%") — **implemented 2026-09-27**: optional `expiry_date` field ใน Add Ingredient (`AddIngredient.jsx`, label "วันหมดอายุ (โดยประมาณ, ไม่บังคับ)"), backend sort ใกล้หมดอายุก่อน (`ORDER BY expiry_date ASC NULLS LAST, id ASC` ใน `list_user_ingredients()`) ที่ propagate ไปทุกหน้าที่ใช้ `userIngredients` อัตโนมัติ + visual badge ("หมดอายุใน N วัน"/"หมดอายุวันนี้"/"หมดอายุแล้ว") ใน My Fridge และ ingredient picker ทั้งสองที่ (Custom Cooking, Create Recipe) — **ไม่มี auto-select/force ใช้ของใกล้หมดอายุ** ตัดสินใจแล้วว่าแค่เรียง+badge พอ ไม่ auto-check ให้ (ดู contract ด้านล่างสำหรับรายละเอียด backend), verify แล้วจริงด้วย Playwright จริง (Bangkok timezone, ผ่านทั้งก่อน-reload และหลัง-reload, 10/10 checks)
 - PostgreSQL migration + schema ใหม่ (users, ingredient_nutrition, generate_history, favorites, ratings, user_ingredients+expiry_date) — แผนเตรียมการละเอียดดูที่ [docs/postgres-migration-prep.md](docs/postgres-migration-prep.md)
   - **2026-09-07 progress:** step 1 (verify embedding dimension) เสร็จแล้ว — ดูรายละเอียดที่ RAG section ด้านบน. step 2 (install packages) เสร็จแล้ว — เพิ่ม `sqlalchemy>=2.0`, `psycopg[binary]`, `alembic`, `pgvector`, `passlib[bcrypt]`, `python-jose[cryptography]` เข้า `backend/requirements.txt` และ install จริงใน `backend/venv` แล้ว (verify ผ่าน `import` สำเร็จ) — **ยังไม่ได้แก้โค้ด main.py/fridge_repository.py**. step 3 (docker-compose local Postgres) — สร้างไฟล์ `docker-compose.yml` แล้ว (`pgvector/pgvector:pg16`, db=`homemade`, port 5432) **แต่ verify รันจริงไม่ได้** เพราะเครื่อง dev นี้ไม่มี `docker` ติดตั้ง — ผู้ใช้ต้องรัน `docker compose up -d` เองแล้วเช็ค `docker compose ps` ว่า healthy
   - **step 4 เสร็จ (2026-09-07):** `backend/database/models.py` — SQLAlchemy 2.0 model 9 ตาราง (`users`, `user_ingredients`+`expiry_date`, `base_recipes`, `ingredient_nutrition`, `ingredient_nodes`, `allergen_edges`, `generate_history`, `favorites`, `ratings`) verify แล้วว่า import + build metadata ผ่าน (ยังไม่ต่อ DB จริงเพราะ docker ไม่ขึ้น)
@@ -468,19 +468,20 @@ Response: { status: "success"|"error", data: {recipe_name, servings, adjusted_in
 ```
 Backend ยังรับ legacy ingredient strings/objects ที่มี metadata เพื่อ compatibility แต่ normalize เป็นชื่อเท่านั้นและ ignore `quantity`; FastAPI handler boundary ตรวจด้วย integration test ที่ mock `call_agentic_llm` แล้ว ไม่ใช่การทดสอบกับ live Gemini/network/server
 
-**`GET /api/user-ingredients`** (active presence-only contract):
+**`GET /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date):
 ```
-Request:  none
-Response: { status: "success"|"error", data: [{id, name, category, image, selected}] }
+Request:  none (gated: current_user จาก cookie session)
+Response: { status: "success"|"error", data: [{id, name, category, image, selected, expiry_date}] }
 ```
-เมื่อสำเร็จ `data` ไม่คืน legacy `quantity`; เมื่อ error จะคืน `message` แทน `data`
+เมื่อสำเร็จ `data` ไม่คืน legacy `quantity`; เมื่อ error จะคืน `message` แทน `data`. `expiry_date` เป็น `"YYYY-MM-DD"` string หรือ `null`. **`data` เรียงตาม `expiry_date ASC NULLS LAST, id ASC` เสมอ** (ใกล้หมดอายุสุดมาก่อน, ไม่มีวันหมดอายุไปท้าย, deterministic tiebreak ด้วย `id`) — เพื่อให้ทุกหน้าที่ใช้ `userIngredients` (My Fridge, Custom Cooking picker, Create Recipe picker) ได้ ordering เดียวกันโดยไม่ต้อง sort เอง ยกเว้นตอน append รายการใหม่ใน session เดียวกัน (`AddIngredient.jsx` ใช้ `utils/expiry.js`'s `sortByExpiry()` mirror logic เดียวกันไว้ในฝั่ง frontend เพราะ list ไม่ re-fetch ทุกครั้งที่เพิ่ม)
+✅ มี `user_id` จริงแล้ว (Auth Phase 2, ดูด้านล่าง) — คอมเมนต์เก่าที่บอกว่ายังไม่มีตกค้างไว้ ไม่ตรงกับโค้ดจริงแล้ว
 
-**`POST /api/user-ingredients`** (active presence-only contract):
+**`POST /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date):
 ```
-Request:  { name, category, image }
-Response: { status, data: {id, name, category, image, selected} }
+Request:  { name, category, image, expiry_date?: "YYYY-MM-DD" | null }
+Response: { status, data: {id, name, category, image, selected, expiry_date} }
 ```
-⚠️ ยังไม่มี `user_id` — ต้องเพิ่มตอน migrate ไป PostgreSQL พร้อม auth
+`expiry_date` เป็น optional field ใหม่ (schema มีอยู่แล้วตั้งแต่ migration `6cf630de4d7b`, ไม่ต้อง migrate เพิ่ม) — **เป็นวันคาดการณ์ ไม่ใช่ตัวเลขแม่นยำ** (frontend label: "วันหมดอายุ (โดยประมาณ, ไม่บังคับ)") ส่ง `""` (จาก `<input type="date">` ว่าง) ไม่ได้ ต้องเป็น `null` — Pydantic `date` type จะ 422 ถ้าได้ `""`, frontend's `toUserIngredientCreate` แปลงให้แล้ว (`expiryDate || null`)
 
 **`GET /api/ingredient-images/search`** (active contract, 2026-08-23):
 ```

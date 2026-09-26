@@ -11,23 +11,32 @@ def _public_ingredient(row: UserIngredient):
         "category": row.category,
         "image": row.image,
         "selected": True,
+        "expiry_date": row.expiry_date.isoformat() if row.expiry_date else None,
     }
 
 
 def list_user_ingredients(db: Session, user_id: int):
     rows = db.execute(
-        select(UserIngredient).where(UserIngredient.user_id == user_id)
+        select(UserIngredient)
+        .where(UserIngredient.user_id == user_id)
+        # Nearest-expiry first so every consumer of this list (fridge view,
+        # recipe ingredient pickers) gets the same "use it soon" ordering
+        # for free. Every pre-existing row has a NULL expiry_date, and
+        # NULLS LAST doesn't order ties among those NULLs — id.asc() keeps
+        # that group stable across reloads.
+        .order_by(UserIngredient.expiry_date.asc().nulls_last(), UserIngredient.id.asc())
     ).scalars().all()
     return [_public_ingredient(row) for row in rows]
 
 
-def insert_user_ingredient(db: Session, *, user_id: int, name, category, image):
+def insert_user_ingredient(db: Session, *, user_id: int, name, category, image, expiry_date=None):
     row = UserIngredient(
         user_id=user_id,
         name=name,
         category=category,
         quantity=None,
         image=image,
+        expiry_date=expiry_date,
     )
     db.add(row)
     db.commit()

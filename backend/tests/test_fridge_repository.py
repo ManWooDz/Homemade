@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from datetime import date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -65,6 +66,63 @@ class FridgeRepositoryTests(unittest.TestCase):
         )
         self.assertTrue(
             delete_user_ingredient(self.db, user_id=self.user_id, ingredient_id=created["id"])
+        )
+
+    def test_insert_stores_and_exposes_expiry_date(self):
+        expiry = date.today() + timedelta(days=5)
+        result = insert_user_ingredient(
+            self.db,
+            user_id=self.user_id,
+            name="milk",
+            category="Other",
+            image=None,
+            expiry_date=expiry,
+        )
+        self.assertEqual(result["expiry_date"], expiry.isoformat())
+
+    def test_insert_without_expiry_date_exposes_null(self):
+        result = insert_user_ingredient(
+            self.db, user_id=self.user_id, name="rice", category="Other", image=None
+        )
+        self.assertIsNone(result["expiry_date"])
+
+    def test_list_orders_by_nearest_expiry_first_nulls_last(self):
+        today = date.today()
+        # Inserted deliberately out of the order they should come back in,
+        # so the test can't pass on insertion order alone.
+        insert_user_ingredient(
+            self.db, user_id=self.user_id, name="no-expiry-item", category="Other", image=None
+        )
+        insert_user_ingredient(
+            self.db,
+            user_id=self.user_id,
+            name="expires-later",
+            category="Other",
+            image=None,
+            expiry_date=today + timedelta(days=10),
+        )
+        insert_user_ingredient(
+            self.db,
+            user_id=self.user_id,
+            name="already-expired",
+            category="Other",
+            image=None,
+            expiry_date=today - timedelta(days=1),
+        )
+        insert_user_ingredient(
+            self.db,
+            user_id=self.user_id,
+            name="expires-soonest",
+            category="Other",
+            image=None,
+            expiry_date=today + timedelta(days=1),
+        )
+
+        result = list_user_ingredients(self.db, self.user_id)
+
+        self.assertEqual(
+            [r["name"] for r in result],
+            ["already-expired", "expires-soonest", "expires-later", "no-expiry-item"],
         )
 
 

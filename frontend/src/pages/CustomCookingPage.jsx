@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { expiryBadgeLabel } from "../utils/expiry";
 
 export default function CustomCookingPage({
     userIngredients,
@@ -170,6 +171,11 @@ export default function CustomCookingPage({
                                             >
                                                 {ing.name}
                                             </span>
+                                            {expiryBadgeLabel(ing.expiry_date) && (
+                                                <span className="text-[10px] font-medium text-red-500">
+                                                    {expiryBadgeLabel(ing.expiry_date)}
+                                                </span>
+                                            )}
                                         </div>
                                     );
                                 })}

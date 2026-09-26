@@ -3,6 +3,7 @@ import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { expiryBadgeLabel } from "../utils/expiry";
 import {
   OTHER_OPTION,
   NO_RESTRICTION,
@@ -258,6 +259,11 @@ export default function CreateRecipe({
                             }
                           />
                           {ing.name}
+                          {expiryBadgeLabel(ing.expiry_date) && (
+                            <span className="text-[10px] font-medium text-red-500">
+                              ({expiryBadgeLabel(ing.expiry_date)})
+                            </span>
+                          )}
                           {!isSelected && (
                             <Plus className="w-3 h-3 ml-1 text-gray-400" />
                           )}
