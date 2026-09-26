@@ -18,6 +18,7 @@ import CookingPage from "./pages/CookingPage";
 import UserIngredients from "./pages/UserIngredients";
 import CustomCookingPage from "./pages/CustomCookingPage";
 import AddIngredient from "./pages/AddIngredient";
+import BarcodeScanPage from "./pages/BarcodeScanPage";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import HistoryDetail from "./pages/HistoryDetail";
@@ -36,6 +37,7 @@ function App() {
     const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
     const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
     const [cookingHistory, setCookingHistory] = useState([]);
+    const [barcodePrefill, setBarcodePrefill] = useState(null);
 
     const [recipes, setRecipes] = useState([]);
     const [categories, setCategories] = useState(["All"]);
@@ -74,6 +76,7 @@ function App() {
             "cooking-page": "CookingPage.jsx",
             "user-ingredients": "UserIngredients.jsx",
             "add-ingredient": "AddIngredient.jsx",
+            "barcode-scan": "BarcodeScanPage.jsx",
             "custom-cooking": "CustomCookingPage.jsx",
             favorites: "Favorites.jsx",
             profile: "Profile.jsx",
@@ -301,7 +304,7 @@ function App() {
             setCurrentView("favorites");
         } else if (tab === "me") {
             setCurrentView("profile");
-        } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient")) {
+        } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient" || currentView === "barcode-scan")) {
             setSelectedRecipe(null);
             setCurrentView("custom-cooking");
         }
@@ -399,10 +402,32 @@ function App() {
                 setActiveTab={handleTabChange}
                 userIngredients={userIngredients}
                 setUserIngredients={setUserIngredients}
-                goToAddIngredient={() => setCurrentView("add-ingredient")}
+                onAddManually={() => {
+                    setBarcodePrefill(null);
+                    setCurrentView("add-ingredient");
+                }}
+                onScanBarcode={() => setCurrentView("barcode-scan")}
                 onBack={() => {
                     setCurrentView("home");
                     setActiveTab("home");
+                }}
+            />
+        );
+    }
+
+    if (currentView === "barcode-scan") {
+        return (
+            <BarcodeScanPage
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => setCurrentView("user-ingredients")}
+                onScanned={(data) => {
+                    setBarcodePrefill(data);
+                    setCurrentView("add-ingredient");
+                }}
+                onAddManually={() => {
+                    setBarcodePrefill(null);
+                    setCurrentView("add-ingredient");
                 }}
             />
         );
@@ -437,6 +462,7 @@ function App() {
                 setUserIngredients={setUserIngredients}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
+                prefill={barcodePrefill}
                 onBack={() => setCurrentView("user-ingredients")}
             />
         );

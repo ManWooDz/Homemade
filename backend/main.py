@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 import uvicorn
 import json
 import os
+import re
 import uuid
 import requests
 from dotenv import load_dotenv
@@ -483,6 +484,59 @@ async def upload_ingredient_image(file: UploadFile = File(...)):
             f.write(await file.read())
         url = f"http://localhost:8000/images/ingredients/{filename}"
         return {"status": "success", "data": {"image": url}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+BARCODE_CODE_PATTERN = re.compile(r"^\d{8,14}$")
+
+CATEGORY_KEYWORD_MAP = {
+    "Meat & poultry": ["meat", "poultry", "meats", "fish", "seafood"],
+    "Vegetables": ["vegetable", "vegetables"],
+    "Fruits": ["fruit", "fruits"],
+}
+
+def _map_off_category(categories_tags):
+    tags = " ".join(categories_tags or []).lower()
+    for category, keywords in CATEGORY_KEYWORD_MAP.items():
+        if any(keyword in tags for keyword in keywords):
+            return category
+    return "Other"
+
+# lookup ingredient info from Open Food Facts by barcode
+@app.get("/api/barcode-lookup")
+def barcode_lookup(code: str, current_user: User = Depends(get_current_user)):
+    if not BARCODE_CODE_PATTERN.match(code):
+        return {"status": "error", "message": "Invalid barcode format"}
+    try:
+        response = requests.get(
+            f"https://world.openfoodfacts.org/api/v2/product/{code}.json",
+            params={
+                "fields": "product_name_th,product_name,generic_name,brands,image_front_url,categories_tags"
+            },
+            headers={"User-Agent": "Homemade-Capstone/1.0 (student capstone project)"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("status") != 1:
+            return {"status": "error", "message": "Product not found"}
+        product = payload.get("product", {})
+        name = (
+            product.get("product_name_th")
+            or product.get("product_name")
+            or product.get("generic_name")
+            or product.get("brands")
+        )
+        if not name:
+            return {"status": "error", "message": "Product not found"}
+        category = _map_off_category(product.get("categories_tags"))
+        image = product.get("image_front_url") or ""
+        return {
+            "status": "success",
+            "data": {"name": name, "category": category, "image": image},
+        }
+    except requests.RequestException as e:
+        return {"status": "error", "message": f"Could not reach Open Food Facts: {e}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

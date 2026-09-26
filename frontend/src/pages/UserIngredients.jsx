@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, Trash2, Plus } from "lucide-react";
+import { ChevronLeft, Trash2, Plus, PenLine, ScanLine } from "lucide-react";
 import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -11,10 +11,12 @@ export default function UserIngredients({
     onBack,
     activeTab,
     setActiveTab,
-    goToAddIngredient,
+    onAddManually,
+    onScanBarcode,
 }) {
     const { apiFetch } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState("All");
+    const [showAddMenu, setShowAddMenu] = useState(false);
 
     const categories = [
         "All",
@@ -151,12 +153,51 @@ export default function UserIngredients({
 
                 {/* Floating Action Button */}
                 <button
-                    onClick={goToAddIngredient}
+                    onClick={() => setShowAddMenu(true)}
                     className="absolute bottom-28 right-6 w-14 h-14 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40"
                     style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 >
                     <Plus className="w-7 h-7" />
                 </button>
+
+                {/* Add-ingredient choice sheet */}
+                {showAddMenu && (
+                    <>
+                        <div
+                            className="absolute inset-0 bg-black/30 z-40"
+                            onClick={() => setShowAddMenu(false)}
+                        ></div>
+                        <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 p-5 pb-28 flex flex-col gap-3">
+                            <p className="text-sm font-bold text-gray-700 mb-1">
+                                Add Ingredient
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setShowAddMenu(false);
+                                    onAddManually();
+                                }}
+                                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-left hover:border-[#EF5A3A] transition"
+                            >
+                                <PenLine className="w-5 h-5 text-[#EF5A3A]" />
+                                <span className="font-medium text-gray-800">
+                                    Add Manually
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowAddMenu(false);
+                                    onScanBarcode();
+                                }}
+                                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-left hover:border-[#EF5A3A] transition"
+                            >
+                                <ScanLine className="w-5 h-5 text-[#EF5A3A]" />
+                                <span className="font-medium text-gray-800">
+                                    Scan Barcode
+                                </span>
+                            </button>
+                        </div>
+                    </>
+                )}
 
                 {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />

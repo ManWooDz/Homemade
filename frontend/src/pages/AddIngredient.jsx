@@ -11,17 +11,18 @@ export default function AddIngredient({
     onBack,
     activeTab,
     setActiveTab,
+    prefill,
 }) {
     const { apiFetch } = useAuth();
-    const [name, setName] = useState("");
-    const [category, setCategory] = useState("Meat & poultry");
+    const [name, setName] = useState(prefill?.name || "");
+    const [category, setCategory] = useState(prefill?.category || "Meat & poultry");
 
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState("");
     const [fallbackImage, setFallbackImage] = useState("");
-    const [selectedImage, setSelectedImage] = useState("");
+    const [selectedImage, setSelectedImage] = useState(prefill?.image || "");
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);
@@ -37,7 +38,8 @@ export default function AddIngredient({
                 const result = await response.json();
                 if (result.status === "success") {
                     setFallbackImage(result.data.fallback);
-                    setSelectedImage(result.data.fallback); // default
+                    // don't stomp an image already set from a barcode prefill
+                    setSelectedImage((prev) => prev || result.data.fallback);
                 }
             } catch (error) {
                 console.error("Error fetching fallback image:", error);

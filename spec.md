@@ -496,7 +496,22 @@ Response: { status: "success"|"error", data?: {image: string}, message?: string 
 ```
 ไฟล์ถูก save ลง `backend/images/ingredients/` ด้วยชื่อสุ่ม (`uuid4`), ยังไม่มี size limit หรือ virus/content scan — เหมาะกับ local dev เท่านั้น ต้องทำเพิ่มก่อน production
 
-**ยังไม่ได้ออกแบบ (ต้องทำก่อนเริ่ม auth):** `/api/auth/register`, `/api/auth/login` (OAuth2PasswordRequestForm → JWT), `/api/barcode-lookup`, `/api/favorites`, `/api/ratings`, `/api/history`, `/api/user-preferences` (payload shape ร่างไว้แล้วใน `Onboarding.jsx`'s `submitProfile()` stub — ยังไม่มี endpoint จริง)
+**`GET /api/barcode-lookup`** (active contract, 2026-09-26, product envelope — Barcode Scanner):
+```
+Request:  query param "code" (string, ต้อง match ^\d{8,14}$ — EAN-8..GTIN-14)
+Response: { status: "success"|"error", data?: {name: string, category: string, image: string}, message?: string }
+```
+- gated ด้วย `get_current_user` (ต้อง login ก่อนเรียก — กัน anonymous proxy โดน OFF rate-limit ที่ IP server)
+- proxy ไป Open Food Facts (`world.openfoodfacts.org/api/v2/product/{code}.json`) พร้อม custom `User-Agent` (ไม่ใช่ email ผู้ใช้), field fallback `product_name_th` → `product_name` → `generic_name` → `brands`
+- `category` map จาก `categories_tags` ผ่าน keyword list เล็กๆ (`Meat & poultry`/`Vegetables`/`Fruits`) ไม่เจอ → `"Other"` — คาด "Other" เป็นส่วนใหญ่สำหรับสินค้าแพ็กเกจ (ของสดตลาดไทย coverage อ่อนอยู่แล้วตามที่ระบุไว้ด้านบน)
+- ไม่พบสินค้า/network error/format ผิด → `status: "error"` — frontend fallback ไปกรอกเองใน `AddIngredient.jsx` เดิม (ไม่กระทบ flow เดิม)
+- verify แล้วด้วย real call จริง (ไม่ mock) ผ่าน barcode จริง (Coca-Cola `5449000000996`) — ได้ name/category/image ถูกต้อง, not-found case และ invalid-format case ก็ verify แยกแล้ว
+- **Frontend flow (2026-09-26, revised จาก draft แรก):** My Fridge หน้า `UserIngredients.jsx` ปุ่ม "+" เปิด bottom-sheet เลือก "Add Manually" (flow เดิม) หรือ "Scan Barcode" → หน้าใหม่ `pages/BarcodeScanPage.jsx` (เต็มหน้า ไม่ใช่ modal) เป็นเจ้าของการเรียก `/api/barcode-lookup` และ navigation — สำเร็จแล้วส่ง `{name, category, image}` เป็น `barcodePrefill` state ใน `App.jsx` ไปหน้า `AddIngredient.jsx` (autofill ผ่าน `useState` initializer กัน race กับ fallback-image fetch เดิม, ยังแก้ไขเองได้ก่อน save), ไม่พบสินค้า → ปุ่ม "ลองใหม่"/"เพิ่มเอง" (ไม่ dead-end) ส่วน `components/BarcodeScanner.jsx` เป็น widget ล้วนๆ (กล้อง + ช่องพิมพ์เอง fallback, ใช้ `html5-qrcode` — npm package, last publish 3 ปีก่อน/maintenance-mode ไม่รับ PR แล้วแต่ยัง stable 1.2M download/สัปดาห์ — ตัดสินใจใช้ต่อแล้ว) — scanner lifecycle ใช้ module-level turnstile promise กัน StrictMode dev double-invoke ชน gate เดียวกัน, retry ผ่าน remount ด้วย `key` bump ไม่ใช่ ref guard (ref guard เดิมมี bug: กล้องไม่ปิดจริงตอน unmount จริง)
+- `barcodePrefill` set/clear ที่ entry point เท่านั้น (ไม่ใช่ตอนออกจากหน้า) กัน state ค้าง — verify แล้วว่า "Add Manually" หลัง scan สำเร็จไม่โชว์ข้อมูลเก่าค้าง
+- **verify แล้วจริงด้วย Playwright ผ่าน browser จริง (ไม่ mock อะไรเลย) — 13/13 checks ผ่าน:** register→login (ผ่าน cookie จริง)→My Fridge→"+"→"Scan Barcode"→camera widget mount ด้วย `--use-fake-device-for-media-stream` (ไม่ crash)→พิมพ์บาร์โค้ดจริง (Coca-Cola `5449000000996`)→เรียก OFF จริง→AddIngredient autofill ถูกต้อง (name/category/image)→save จริงลง Postgres จริง (`docker compose up -d db`)→โชว์ใน fridge list จริง, บวก not-found case (`00000000`) โชว์ retry/manual buttons ถูกต้อง, บวก prefill-staleness fix verify แล้วจริง, บวก **ไม่มี uncaught page/console error ตลอด flow** (เจอ bug จริงระหว่าง verify: unmount กล้องเร็วเกินไปตอน `video.play()` ยังไม่ resolve ทำให้เกิด browser-level unhandled rejection "play() request was interrupted..." — แก้แล้วด้วย module-level `unhandledrejection` listener กรองเฉพาะ message นี้ เพราะเป็น Chrome-documented benign case ไม่ใช่ error จริง)
+- test script อยู่ที่ scratchpad ของ session นี้ ไม่ใช่ไฟล์ในโปรเจกต์ (ใช้ throwaway Playwright install แยกจาก `frontend/package.json` ไม่กระทบ dependency จริง)
+
+**ยังไม่ได้ออกแบบ:** `/api/favorites`, `/api/ratings`, `/api/history`, `/api/user-preferences` (payload shape ร่างไว้แล้วใน `Onboarding.jsx`'s `submitProfile()` stub — ยังไม่มี endpoint จริง) — หมายเหตุ: `/api/auth/register`/`/api/auth/login`/`/api/barcode-lookup` เอาออกจาก list นี้แล้วเพราะทำเสร็จแล้วจริง (list เดิมค้างของเก่าไว้)
 ## Research note (2026-07-15)
 
 - Official CPI reference checked: TPSO/Ministry of Commerce annual CPI release for December 2568 and year 2568.
