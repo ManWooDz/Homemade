@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from database.db import SessionLocal
 from database.models import IngredientNutrition, IngredientNutritionAlias
+from nutrition.lookup import match_ingredient
 from nutrition.text import normalize_alias
 
 load_dotenv()
@@ -92,23 +93,49 @@ def _extract_portion_grams(detail: dict, search_term: str) -> dict[str, float]:
     return portions
 
 
+def _get_json_sanitized(session, url: str, params: dict, what: str) -> dict:
+    """requests' exceptions (HTTPError, ConnectionError, ...) embed the full
+    request URL -- including the api_key query param -- in their message.
+    Re-raise as a RuntimeError carrying only a key-free description, and
+    'from None' so the original (URL-bearing) exception is not chained into
+    the traceback either."""
+    try:
+        response = session.get(url, params=params, timeout=10)
+        response.raise_for_status()
+    except Exception as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        status_text = f" (HTTP {status})" if status is not None else ""
+        raise RuntimeError(f"USDA API request failed for {what}{status_text}: {type(exc).__name__}") from None
+    return response.json()
+
+
 def fetch_food(session, api_key: str, query: str) -> dict | None:
-    search_response = session.get(_SEARCH_URL, params={"query": query, "dataType": _PREFERRED_DATA_TYPES, "pageSize": 1, "api_key": api_key}, timeout=10)
-    search_response.raise_for_status()
-    foods = search_response.json().get("foods", [])
+    search_json = _get_json_sanitized(
+        session, _SEARCH_URL,
+        {"query": query, "dataType": _PREFERRED_DATA_TYPES, "pageSize": 1, "api_key": api_key},
+        f"search query {query!r}",
+    )
+    foods = search_json.get("foods", [])
     if not foods:
         return None
     fdc_id = foods[0]["fdcId"]
-    detail_response = session.get(_DETAIL_URL.format(fdc_id=fdc_id), params={"api_key": api_key}, timeout=10)
-    detail_response.raise_for_status()
-    return detail_response.json()
+    return _get_json_sanitized(
+        session, _DETAIL_URL.format(fdc_id=fdc_id), {"api_key": api_key},
+        f"food detail fdcId={fdc_id} (query {query!r})",
+    )
 
 
 def import_usda(db, session, api_key: str, search_terms: dict[str, str]) -> dict:
     imported = skipped_existing = skipped_no_match = 0
 
     for ingredient_name, query in search_terms.items():
-        if db.query(IngredientNutrition).filter_by(ingredient_name=ingredient_name).first():
+        # Skip if the exact name exists OR the name already resolves through
+        # the alias table (e.g. an INMU curated alias) -- otherwise we'd
+        # spend an API call and insert a duplicate row for a covered name.
+        if (
+            db.query(IngredientNutrition).filter_by(ingredient_name=ingredient_name).first()
+            or match_ingredient(db, ingredient_name) is not None
+        ):
             skipped_existing += 1
             continue
 

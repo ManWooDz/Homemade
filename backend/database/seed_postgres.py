@@ -18,6 +18,8 @@ from nutrition.calculator import compute_from_quantities
 
 DEV_USER_EMAIL = "dev@local"
 
+# `ingredient_quantities` gram amounts are team-estimated typical portions,
+# not cited from any specific real source recipe.
 MOCK_RECIPES = [
     {
         "name": "Superfood Veggie",
@@ -232,9 +234,24 @@ def seed():
     try:
         if db.query(User).filter_by(email=DEV_USER_EMAIL).first() is None:
             db.add(User(email=DEV_USER_EMAIL, hashed_password=None))
+        # Committed on its own so the dev user survives even if a later
+        # step (recipes/images) fails.
+        db.commit()
 
+        fallback_recipes: list[str] = []
         for recipe in MOCK_RECIPES:
-            nutrition = compute_from_quantities(db, recipe["ingredient_quantities"], recipe["servings"])
+            try:
+                nutrition = compute_from_quantities(db, recipe["ingredient_quantities"], recipe["servings"])
+            except ValueError as e:
+                # Typically: USDA import hasn't run yet (no USDA_API_KEY) or
+                # a DB row is incomplete. Degrade for THIS recipe only, and
+                # loudly -- the hand-typed dict is not grounded.
+                print(
+                    f"[seed] WARNING: could not compute nutrition for '{recipe['name']}': {e} "
+                    "-- falling back to the hand-typed nutrition dict for this recipe only"
+                )
+                nutrition = recipe["nutrition"]
+                fallback_recipes.append(recipe["name"])
             existing = db.query(BaseRecipe).filter_by(name=recipe["name"]).first()
             if existing:
                 existing.servings = recipe["servings"]
@@ -254,6 +271,11 @@ def seed():
 
         db.commit()
         print(f"seeded: dev user, {len(MOCK_RECIPES)} base_recipes, {len(unique_ingredients)} recipe_ingredient_images")
+        if fallback_recipes:
+            print(
+                f"[seed] WARNING: {len(fallback_recipes)} of {len(MOCK_RECIPES)} base_recipes use the "
+                f"hand-typed (NOT computed) nutrition fallback: {fallback_recipes}"
+            )
     finally:
         db.close()
 

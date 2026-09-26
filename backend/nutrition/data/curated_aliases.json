@@ -2,11 +2,11 @@
   {"alias": "กุ้ง", "food_code": "G4", "note": "กุ้งก้ามกราม, สด -- fresh, raw default"},
   {"alias": "กระเทียม", "food_code": "N2", "note": "กระเทียม, สด -- fresh, raw default"},
   {"alias": "กะปิ", "food_code": "N43", "note": "กะปิกุ้ง, คุณภาพดี"},
-  {"alias": "ไข่ไก่", "food_code": "H19", "note": "ไข่ไก่, ทั้งฟอง, ดิบ (2001-2010)"},
+  {"alias": "ไข่ไก่", "food_code": "H19", "note": "ไข่ไก่, ทั้งฟอง, ดิบ (2001-2010); portion ฟอง=50 g from a user-supplied standard home-cooking unit-conversion reference (not a USDA/INMU citation)", "portion_grams": {"ฟอง": 50.0}},
   {"alias": "ข้าวสวย", "food_code": "A11", "note": "ข้าวเจ้า, สุก -- cooked form is what this name means"},
   {"alias": "พริกไทย", "food_code": "N26", "note": "พริกไทย, ดำ -- exact prompt staple word"},
   {"alias": "น้ำปลา", "food_code": "N72", "note": "น้ำปลา, เกรด1, ต่อ 100 มล. -- exact prompt staple word"},
   {"alias": "ซีอิ๊ว", "food_code": "N134", "note": "ซีอิ๊วขาว, สูตร 1 -- exact prompt staple word"},
   {"alias": "น้ำมัน", "food_code": "K41", "note": "น้ำมันถั่วเหลือง (generic vegetable-oil proxy, documented approximation) -- exact prompt staple word"},
-  {"alias": "น้ำตาล", "food_code": "__USDA_SUGAR_FDC_ID__", "note": "no clean bare INMU row found for plain white sugar -- points at the real USDA 'sugars granulated' fdcId; fill in the real id printed by Task 7 Step 6 before running this script for real -- exact prompt staple word"}
+  {"alias": "น้ำตาล", "food_code": "__USDA_SUGAR_FDC_ID__", "note": "no clean bare INMU row found for plain white sugar -- points at the real USDA 'sugars granulated' fdcId; fill in the real id printed by Task 7 Step 6 before running this script for real -- exact prompt staple word; portion ช้อนโต๊ะ=15 g (granulated sugar) from a user-supplied standard home-cooking unit-conversion reference (not a USDA/INMU citation)", "portion_grams": {"ช้อนโต๊ะ": 15.0}}
 ]

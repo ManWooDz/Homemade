@@ -83,8 +83,9 @@ class ParseIngredientStringTests(unittest.TestCase):
         # (Step 5, real Gemini output, case
         # shrimp_allergy_should_avoid_shrimp_and_shrimp_paste, 2026-09-25)
         # Unlike the trailing-note tests above, this note sits BEFORE the
-        # quantity/unit -- the original _TRAILING_NOTE_RE (anchored to the
-        # end of the string) doesn't strip it, so the name previously came
+        # quantity/unit -- an end-anchored (`$`) note regex, as first drafted,
+        # wouldn't strip it (the shipped _PARENTHETICAL_NOTE_RE is global,
+        # not end-anchored, for exactly this reason), so the name would come
         # out as "กะปิเจ (ทำจากถั่วเหลืองหรือธัญพืช" (a broken, unclosed
         # paren fragment folded into the name by the greedy-backtracking
         # name group) instead of the clean ingredient name.

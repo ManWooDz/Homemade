@@ -26,6 +26,14 @@ class ResolveGramsTests(unittest.TestCase):
     def test_portion_grams_present_but_missing_this_unit_is_unresolved(self):
         self.assertIsNone(resolve_grams(2.0, "ฟอง", {"ถ้วย": 240.0}))
 
+    def test_measuring_cup_tablespoon_teaspoon_use_water_density(self):
+        self.assertEqual(resolve_grams(1.0, "ถ้วยตวง", None), 240.0)
+        self.assertEqual(resolve_grams(2.0, "ช้อนโต๊ะ", None), 30.0)
+        self.assertEqual(resolve_grams(3.0, "ช้อนชา", None), 15.0)
+
+    def test_ingredient_specific_portion_grams_still_beats_global_volume_unit(self):
+        self.assertEqual(resolve_grams(2.0, "ช้อนโต๊ะ", {"ช้อนโต๊ะ": 12.5}), 25.0)
+
     def test_missing_quantity_is_unresolved(self):
         self.assertIsNone(resolve_grams(None, "กรัม", None))
 

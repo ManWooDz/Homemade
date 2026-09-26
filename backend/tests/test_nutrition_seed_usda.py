@@ -1,11 +1,13 @@
 import unittest
 from unittest.mock import MagicMock
 
+import requests
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from database.models import Base, IngredientNutrition, IngredientNutritionAlias
-from nutrition.seed_usda import backfill_portions, import_usda
+from nutrition.seed_usda import backfill_portions, fetch_food, import_usda
 
 _SEARCH_RESPONSE = {"foods": [{"fdcId": 12345, "description": "Shrimp, raw", "dataType": "SR Legacy"}]}
 
@@ -73,6 +75,55 @@ class ImportUsdaTests(unittest.TestCase):
         result = import_usda(self.db, _fake_session(_SEARCH_RESPONSE, _DETAIL_RESPONSE), "fake-key", {"shrimp": "shrimp raw"})
         self.assertEqual(result["imported"], 0)
         self.assertEqual(result["skipped_existing"], 1)
+
+    def test_skips_name_already_covered_by_an_alias_without_calling_api(self):
+        row = IngredientNutrition(ingredient_name="ไข่ไก่, ทั้งฟอง, ดิบ", unit_basis="100g", calories=1.0, protein_g=1.0, carbs_g=1.0, fat_g=1.0, source="INMU", source_ref="H19")
+        self.db.add(row)
+        self.db.flush()
+        self.db.add(IngredientNutritionAlias(alias="egg", ingredient_nutrition_id=row.id))
+        self.db.commit()
+        session = _fake_session(_SEARCH_RESPONSE, _DETAIL_RESPONSE)
+
+        result = import_usda(self.db, session, "fake-key", {"egg": "egg whole raw"})
+
+        self.assertEqual(result["imported"], 0)
+        self.assertEqual(result["skipped_existing"], 1)
+        session.get.assert_not_called()
+        self.assertEqual(self.db.query(IngredientNutrition).count(), 1)
+
+    def test_http_error_does_not_leak_api_key(self):
+        secret = "SECRET-KEY-123"
+        session = MagicMock()
+
+        def failing_get(url, params=None, timeout=None):
+            response = MagicMock()
+            response.status_code = 403
+            full_url = requests.Request("GET", url, params=params).prepare().url
+
+            def raise_for_status():
+                raise requests.HTTPError(f"403 Client Error: Forbidden for url: {full_url}", response=response)
+
+            response.raise_for_status = raise_for_status
+            return response
+
+        session.get.side_effect = failing_get
+        with self.assertRaises(RuntimeError) as ctx:
+            fetch_food(session, secret, "shrimp raw")
+
+        self.assertNotIn(secret, str(ctx.exception))
+        self.assertNotIn("api_key", str(ctx.exception))
+        self.assertIn("shrimp raw", str(ctx.exception))
+        self.assertIn("403", str(ctx.exception))
+        self.assertIsNone(ctx.exception.__cause__)
+        self.assertTrue(ctx.exception.__suppress_context__)
+
+    def test_connection_error_does_not_leak_api_key(self):
+        secret = "SECRET-KEY-123"
+        session = MagicMock()
+        session.get.side_effect = requests.ConnectionError(f"Max retries exceeded with url: /fdc/v1/foods/search?api_key={secret}")
+        with self.assertRaises(RuntimeError) as ctx:
+            fetch_food(session, secret, "shrimp raw")
+        self.assertNotIn(secret, str(ctx.exception))
 
     def test_no_search_results_is_skipped_not_an_error(self):
         result = import_usda(self.db, _fake_session({"foods": []}, _DETAIL_RESPONSE), "fake-key", {"nonexistent": "zzz"})

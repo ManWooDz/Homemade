@@ -44,6 +44,13 @@ def apply_curated_aliases(db, entries: list[dict]) -> dict:
             existing.ingredient_nutrition_id = row.id
         else:
             db.add(IngredientNutritionAlias(alias=normalized, ingredient_nutrition_id=row.id))
+        if "portion_grams" in entry:
+            # Curated, ingredient-specific unit weights (e.g. 1 ฟอง egg ~ 50 g).
+            # Merged -- never replaces -- whatever portions the row already
+            # has (e.g. from seed_usda.py's backfill_portions); a curated
+            # value for the same unit key wins. Reassigned as a new dict so
+            # SQLAlchemy sees the JSON column change.
+            row.portion_grams = {**(row.portion_grams or {}), **entry["portion_grams"]}
         applied += 1
 
     db.commit()
