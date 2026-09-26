@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Plus, Search, Upload, Loader2 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import NutritionBox from "../components/NutritionBox";
 import { toUserIngredientCreate } from "../utils/ingredientPayload";
 import { sortByExpiry } from "../utils/expiry";
 import { useAuth } from "../context/AuthContext";
@@ -130,6 +131,7 @@ export default function AddIngredient({
                             category,
                             image: selectedImage,
                             expiryDate,
+                            nutritionData: prefill?.nutrition_data || null,
                         }),
                     ),
                 },
@@ -333,6 +335,9 @@ export default function AddIngredient({
                                 onChange={(e) => setExpiryDate(e.target.value)}
                             />
                         </div>
+
+                        {/* Nutrition (read-only, from Open Food Facts scan) */}
+                        <NutritionBox nutrition={prefill?.nutrition_data} />
                     </div>
 
                     <button

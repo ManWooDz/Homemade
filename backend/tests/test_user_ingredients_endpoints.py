@@ -172,6 +172,32 @@ class UserIngredientsEndpointTests(unittest.TestCase):
         self.assertEqual(create_res.status_code, 200)
         self.assertIsNone(create_res.json()["data"]["expiry_date"])
 
+    def test_post_with_nutrition_data_stores_and_returns_it(self):
+        client = TestClient(app)
+        self._register_and_login(client, "nutritionuser@example.com")
+        nutrition = {"basis": "per_100g_or_ml", "calories": 42.0, "protein_g": 0.0, "carbs_g": 10.6, "fat_g": 0.0}
+        create_res = client.post(
+            "/api/user-ingredients",
+            json={"name": "cola", "category": "Other", "nutrition_data": nutrition},
+            headers=self.origin_headers,
+        )
+        self.assertEqual(create_res.status_code, 200)
+        self.assertEqual(create_res.json()["data"]["nutrition_data"], nutrition)
+
+    def test_post_with_unknown_nutrition_data_field_is_422(self):
+        client = TestClient(app)
+        self._register_and_login(client, "badnutritionuser@example.com")
+        create_res = client.post(
+            "/api/user-ingredients",
+            json={
+                "name": "cola",
+                "category": "Other",
+                "nutrition_data": {"basis": "per_100g_or_ml", "sneaky_field": "x"},
+            },
+            headers=self.origin_headers,
+        )
+        self.assertEqual(create_res.status_code, 422)
+
     def test_post_without_trusted_origin_is_403(self):
         client = TestClient(app)
         self._register_and_login(client, "csrfuser@example.com")

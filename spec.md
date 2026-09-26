@@ -468,20 +468,24 @@ Response: { status: "success"|"error", data: {recipe_name, servings, adjusted_in
 ```
 Backend ยังรับ legacy ingredient strings/objects ที่มี metadata เพื่อ compatibility แต่ normalize เป็นชื่อเท่านั้นและ ignore `quantity`; FastAPI handler boundary ตรวจด้วย integration test ที่ mock `call_agentic_llm` แล้ว ไม่ใช่การทดสอบกับ live Gemini/network/server
 
-**`GET /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date):
+**`GET /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date + nutrition_data):
 ```
 Request:  none (gated: current_user จาก cookie session)
-Response: { status: "success"|"error", data: [{id, name, category, image, selected, expiry_date}] }
+Response: { status: "success"|"error", data: [{id, name, category, image, selected, expiry_date, nutrition_data}] }
 ```
 เมื่อสำเร็จ `data` ไม่คืน legacy `quantity`; เมื่อ error จะคืน `message` แทน `data`. `expiry_date` เป็น `"YYYY-MM-DD"` string หรือ `null`. **`data` เรียงตาม `expiry_date ASC NULLS LAST, id ASC` เสมอ** (ใกล้หมดอายุสุดมาก่อน, ไม่มีวันหมดอายุไปท้าย, deterministic tiebreak ด้วย `id`) — เพื่อให้ทุกหน้าที่ใช้ `userIngredients` (My Fridge, Custom Cooking picker, Create Recipe picker) ได้ ordering เดียวกันโดยไม่ต้อง sort เอง ยกเว้นตอน append รายการใหม่ใน session เดียวกัน (`AddIngredient.jsx` ใช้ `utils/expiry.js`'s `sortByExpiry()` mirror logic เดียวกันไว้ในฝั่ง frontend เพราะ list ไม่ re-fetch ทุกครั้งที่เพิ่ม)
 ✅ มี `user_id` จริงแล้ว (Auth Phase 2, ดูด้านล่าง) — คอมเมนต์เก่าที่บอกว่ายังไม่มีตกค้างไว้ ไม่ตรงกับโค้ดจริงแล้ว
 
-**`POST /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date):
+`nutrition_data` เป็น `{basis: "per_100g_or_ml", calories, protein_g, carbs_g, fat_g}` (แต่ละ macro เป็น `float | null`) หรือ `null` — **raw data จาก Open Food Facts เท่านั้น ไม่ใช่ output ของ Nutrition Engine contribution และไม่เคยถูกป้อนเข้า engine นั้นเลย** (คนละ pipeline กับ `compute_recipe_nutrition`/`NutritionLLMEstimator` ที่คำนวณ nutrition ระดับสูตรทั้งจาน) — **ห้ามอ้างว่าเป็น engine coverage ที่เพิ่มขึ้นตอนเขียนเล่ม/สอบ** มีเฉพาะวัตถุดิบที่เพิ่มผ่าน barcode scan และ OFF มีข้อมูล nutriments เท่านั้น (ของสด/เพิ่มมือเป็น `null` เสมอ)
+
+**`POST /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date + nutrition_data):
 ```
-Request:  { name, category, image, expiry_date?: "YYYY-MM-DD" | null }
-Response: { status, data: {id, name, category, image, selected, expiry_date} }
+Request:  { name, category, image, expiry_date?: "YYYY-MM-DD" | null, nutrition_data?: {basis: "per_100g_or_ml", calories?, protein_g?, carbs_g?, fat_g?} | null }
+Response: { status, data: {id, name, category, image, selected, expiry_date, nutrition_data} }
 ```
-`expiry_date` เป็น optional field ใหม่ (schema มีอยู่แล้วตั้งแต่ migration `6cf630de4d7b`, ไม่ต้อง migrate เพิ่ม) — **เป็นวันคาดการณ์ ไม่ใช่ตัวเลขแม่นยำ** (frontend label: "วันหมดอายุ (โดยประมาณ, ไม่บังคับ)") ส่ง `""` (จาก `<input type="date">` ว่าง) ไม่ได้ ต้องเป็น `null` — Pydantic `date` type จะ 422 ถ้าได้ `""`, frontend's `toUserIngredientCreate` แปลงให้แล้ว (`expiryDate || null`)
+`expiry_date` เป็น optional field (schema มีอยู่แล้วตั้งแต่ migration `6cf630de4d7b`, ไม่ต้อง migrate เพิ่ม) — **เป็นวันคาดการณ์ ไม่ใช่ตัวเลขแม่นยำ** (frontend label: "วันหมดอายุ (โดยประมาณ, ไม่บังคับ)") ส่ง `""` (จาก `<input type="date">` ว่าง) ไม่ได้ ต้องเป็น `null` — Pydantic `date` type จะ 422 ถ้าได้ `""`, frontend's `toUserIngredientCreate` แปลงให้แล้ว (`expiryDate || null`)
+
+`nutrition_data` เป็น field ใหม่ **ต้อง migrate** (migration `b3c4d5e6f7a8`, ต่อจาก `a1b2c3d4e5f6` — รันจริงแล้วบน dev Postgres, verify แล้วทั้ง upgrade/downgrade/re-upgrade กลับไปมา, column เป็น `jsonb`) **ทุกคนต้องรัน `alembic upgrade head` หลัง pull** ไม่งั้น `GET /api/user-ingredients` จะ throw แล้ว fridge จะโชว์ว่างเปล่าแบบไม่มี error ให้เห็น เป็น typed Pydantic model (`NutritionData`, `extra="forbid"`) ไม่ใช่ bare `dict` เพราะเป็น client-writable system boundary — POST field ที่ไม่รู้จักจะได้ 422 ทันที ไม่ใช่แค่ UI ไม่ยอมให้แก้เฉยๆ
 
 **`GET /api/ingredient-images/search`** (active contract, 2026-08-23):
 ```
@@ -511,6 +515,12 @@ Response: { status: "success"|"error", data?: {name: string, category: string, i
 - `barcodePrefill` set/clear ที่ entry point เท่านั้น (ไม่ใช่ตอนออกจากหน้า) กัน state ค้าง — verify แล้วว่า "Add Manually" หลัง scan สำเร็จไม่โชว์ข้อมูลเก่าค้าง
 - **verify แล้วจริงด้วย Playwright ผ่าน browser จริง (ไม่ mock อะไรเลย) — 13/13 checks ผ่าน:** register→login (ผ่าน cookie จริง)→My Fridge→"+"→"Scan Barcode"→camera widget mount ด้วย `--use-fake-device-for-media-stream` (ไม่ crash)→พิมพ์บาร์โค้ดจริง (Coca-Cola `5449000000996`)→เรียก OFF จริง→AddIngredient autofill ถูกต้อง (name/category/image)→save จริงลง Postgres จริง (`docker compose up -d db`)→โชว์ใน fridge list จริง, บวก not-found case (`00000000`) โชว์ retry/manual buttons ถูกต้อง, บวก prefill-staleness fix verify แล้วจริง, บวก **ไม่มี uncaught page/console error ตลอด flow** (เจอ bug จริงระหว่าง verify: unmount กล้องเร็วเกินไปตอน `video.play()` ยังไม่ resolve ทำให้เกิด browser-level unhandled rejection "play() request was interrupted..." — แก้แล้วด้วย module-level `unhandledrejection` listener กรองเฉพาะ message นี้ เพราะเป็น Chrome-documented benign case ไม่ใช่ error จริง)
 - test script อยู่ที่ scratchpad ของ session นี้ ไม่ใช่ไฟล์ในโปรเจกต์ (ใช้ throwaway Playwright install แยกจาก `frontend/package.json` ไม่กระทบ dependency จริง)
+
+**Ingredient detail page + read-only nutrition display (2026-09-27):** `UserIngredients.jsx`'s แถวใน My Fridge list เปลี่ยนจาก inline trash-icon delete เป็น tap-to-open **`pages/IngredientDetail.jsx`** ใหม่ (header+back+BottomMenu แบบหน้าอื่น) โชว์ name/image/category/วันหมดอายุจริง (ไม่ใช่แค่ badge — วันที่จริงโชว์เสมอถ้ามี, badge โชว์เพิ่มถ้าใกล้หมดอายุ)/`NutritionBox` (component ใหม่ ใช้ร่วมกันทั้ง `AddIngredient.jsx` ตอน scan เสร็จ กับหน้านี้) — **read-only ทั้งหมด แก้ไขไม่ได้**, ปุ่มลบ (พร้อม `window.confirm` ก่อนลบจริง) ย้ายมาอยู่ล่างสุดของหน้านี้เป็นที่เดียวที่ลบได้แล้ว
+- `App.jsx`: state `selectedIngredientDetail` + view `"ingredient-detail"`, wiring แบบเดียวกับ `selectedHistoryItem`/`selectedRecipe` เดิม, cooking-tab condition เพิ่ม view นี้ด้วยกันไม่ dead-end
+- delete fail → โชว่ inline error ในหน้า ไม่ใช่แค่ `console.error` เงียบๆ เหมือนโค้ดเดิม
+- **verify แล้วจริงด้วย Playwright ผ่าน browser จริง — 10/10 checks:** scan บาร์โค้ดจริง (Coca-Cola) → NutritionBox โชว์ label ถูก ("ต่อ 100 ก./มล." ไม่ใช่ "100 กรัม" เฉยๆ เพราะโค้กเป็นของเหลว) → save จริงพร้อม `nutrition_data` ที่ persist จริง → เปิด detail จาก fridge list → เห็นวันหมดอายุจริง + nutrition data เดิม → ลบพร้อม confirm dialog จริง → หายจาก list จริง, ไม่มี uncaught error ตลอด flow — เจอ bug จริงในตัว test script เอง (ไม่ใช่โค้ดแอป): selector `text=My Fridge` ชนกับข้อความปุ่มลบเอง ("ลบออกจาก My Fridge") ทำให้ check แรกผ่านเร็วเกินจริง แก้ script แล้ว ไม่ใช่ product bug
+- regression-check แล้ว: barcode flow เดิม (13/13) กับ expiry flow เดิม (10/10) ยัง pass ทั้งคู่หลังแก้ `UserIngredients.jsx`/`AddIngredient.jsx` รอบนี้
 
 **ยังไม่ได้ออกแบบ:** `/api/favorites`, `/api/ratings`, `/api/history`, `/api/user-preferences` (payload shape ร่างไว้แล้วใน `Onboarding.jsx`'s `submitProfile()` stub — ยังไม่มี endpoint จริง) — หมายเหตุ: `/api/auth/register`/`/api/auth/login`/`/api/barcode-lookup` เอาออกจาก list นี้แล้วเพราะทำเสร็จแล้วจริง (list เดิมค้างของเก่าไว้)
 ## Research note (2026-07-15)

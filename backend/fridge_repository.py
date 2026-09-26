@@ -12,6 +12,7 @@ def _public_ingredient(row: UserIngredient):
         "image": row.image,
         "selected": True,
         "expiry_date": row.expiry_date.isoformat() if row.expiry_date else None,
+        "nutrition_data": row.nutrition_data,
     }
 
 
@@ -29,7 +30,9 @@ def list_user_ingredients(db: Session, user_id: int):
     return [_public_ingredient(row) for row in rows]
 
 
-def insert_user_ingredient(db: Session, *, user_id: int, name, category, image, expiry_date=None):
+def insert_user_ingredient(
+    db: Session, *, user_id: int, name, category, image, expiry_date=None, nutrition_data=None
+):
     row = UserIngredient(
         user_id=user_id,
         name=name,
@@ -37,6 +40,7 @@ def insert_user_ingredient(db: Session, *, user_id: int, name, category, image, 
         quantity=None,
         image=image,
         expiry_date=expiry_date,
+        nutrition_data=nutrition_data,
     )
     db.add(row)
     db.commit()

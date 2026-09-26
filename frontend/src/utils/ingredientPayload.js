@@ -24,7 +24,7 @@ export function toPresenceIngredients(items = []) {
   });
 }
 
-export function toUserIngredientCreate({ name, category, image, expiryDate }) {
+export function toUserIngredientCreate({ name, category, image, expiryDate, nutritionData }) {
   return {
     name: cleanIngredientName(name),
     category: category || "Other",
@@ -33,5 +33,8 @@ export function toUserIngredientCreate({ name, category, image, expiryDate }) {
     // Pydantic's `date` type 422s on "", and apiFetch doesn't throw on
     // non-2xx, so that would otherwise fail the save silently.
     expiry_date: expiryDate || null,
+    // Passed straight through from a barcode-lookup response, or null when
+    // manually added — never user-editable, so no client-side shaping here.
+    nutrition_data: nutritionData || null,
   };
 }

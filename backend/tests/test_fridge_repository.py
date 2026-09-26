@@ -68,6 +68,26 @@ class FridgeRepositoryTests(unittest.TestCase):
             delete_user_ingredient(self.db, user_id=self.user_id, ingredient_id=created["id"])
         )
 
+    def test_insert_stores_and_exposes_nutrition_data(self):
+        nutrition = {"basis": "per_100g_or_ml", "calories": 42.0, "protein_g": 0.0, "carbs_g": 10.6, "fat_g": 0.0}
+        result = insert_user_ingredient(
+            self.db,
+            user_id=self.user_id,
+            name="cola",
+            category="Other",
+            image=None,
+            nutrition_data=nutrition,
+        )
+        self.assertEqual(result["nutrition_data"], nutrition)
+        stored = self.db.get(UserIngredient, result["id"])
+        self.assertEqual(stored.nutrition_data, nutrition)
+
+    def test_insert_without_nutrition_data_exposes_null(self):
+        result = insert_user_ingredient(
+            self.db, user_id=self.user_id, name="salt", category="Other", image=None
+        )
+        self.assertIsNone(result["nutrition_data"])
+
     def test_insert_stores_and_exposes_expiry_date(self):
         expiry = date.today() + timedelta(days=5)
         result = insert_user_ingredient(

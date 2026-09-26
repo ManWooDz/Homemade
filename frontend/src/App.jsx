@@ -19,6 +19,7 @@ import UserIngredients from "./pages/UserIngredients";
 import CustomCookingPage from "./pages/CustomCookingPage";
 import AddIngredient from "./pages/AddIngredient";
 import BarcodeScanPage from "./pages/BarcodeScanPage";
+import IngredientDetail from "./pages/IngredientDetail";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import HistoryDetail from "./pages/HistoryDetail";
@@ -38,6 +39,7 @@ function App() {
     const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
     const [cookingHistory, setCookingHistory] = useState([]);
     const [barcodePrefill, setBarcodePrefill] = useState(null);
+    const [selectedIngredientDetail, setSelectedIngredientDetail] = useState(null);
 
     const [recipes, setRecipes] = useState([]);
     const [categories, setCategories] = useState(["All"]);
@@ -77,6 +79,7 @@ function App() {
             "user-ingredients": "UserIngredients.jsx",
             "add-ingredient": "AddIngredient.jsx",
             "barcode-scan": "BarcodeScanPage.jsx",
+            "ingredient-detail": "IngredientDetail.jsx",
             "custom-cooking": "CustomCookingPage.jsx",
             favorites: "Favorites.jsx",
             profile: "Profile.jsx",
@@ -304,7 +307,7 @@ function App() {
             setCurrentView("favorites");
         } else if (tab === "me") {
             setCurrentView("profile");
-        } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient" || currentView === "barcode-scan")) {
+        } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient" || currentView === "barcode-scan" || currentView === "ingredient-detail")) {
             setSelectedRecipe(null);
             setCurrentView("custom-cooking");
         }
@@ -401,15 +404,38 @@ function App() {
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 userIngredients={userIngredients}
-                setUserIngredients={setUserIngredients}
                 onAddManually={() => {
                     setBarcodePrefill(null);
                     setCurrentView("add-ingredient");
                 }}
                 onScanBarcode={() => setCurrentView("barcode-scan")}
+                onOpenIngredient={(ing) => {
+                    setSelectedIngredientDetail(ing);
+                    setCurrentView("ingredient-detail");
+                }}
                 onBack={() => {
                     setCurrentView("home");
                     setActiveTab("home");
+                }}
+            />
+        );
+    }
+
+    if (currentView === "ingredient-detail") {
+        return (
+            <IngredientDetail
+                ingredient={selectedIngredientDetail}
+                userIngredients={userIngredients}
+                setUserIngredients={setUserIngredients}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                onBack={() => {
+                    setSelectedIngredientDetail(null);
+                    setCurrentView("user-ingredients");
+                }}
+                onDeleted={() => {
+                    setSelectedIngredientDetail(null);
+                    setCurrentView("user-ingredients");
                 }}
             />
         );

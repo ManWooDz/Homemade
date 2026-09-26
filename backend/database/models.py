@@ -51,6 +51,14 @@ class UserIngredient(Base):
     quantity: Mapped[str | None] = mapped_column(String, nullable=True)
     image: Mapped[str | None] = mapped_column(String, nullable=True)
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Raw per-100g/100ml nutrition from Open Food Facts when added via
+    # barcode scan (shape: {basis, calories, protein_g, carbs_g, fat_g}) —
+    # separate from the nutrition engine's own computed/estimated nutrition,
+    # never fed into it. .with_variant(JSON(), "sqlite"): same
+    # SQLite-portability pattern as BaseRecipe's JSONB columns (d1ed36c4).
+    nutrition_data: Mapped[dict | None] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

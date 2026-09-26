@@ -1,21 +1,19 @@
 import { useState } from "react";
-import { ChevronLeft, Trash2, Plus, PenLine, ScanLine } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, PenLine, ScanLine } from "lucide-react";
 import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { expiryBadgeLabel } from "../utils/expiry";
-import { useAuth } from "../context/AuthContext";
 
 export default function UserIngredients({
     userIngredients,
-    setUserIngredients,
     onBack,
     activeTab,
     setActiveTab,
     onAddManually,
     onScanBarcode,
+    onOpenIngredient,
 }) {
-    const { apiFetch } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [showAddMenu, setShowAddMenu] = useState(false);
 
@@ -26,27 +24,6 @@ export default function UserIngredients({
         "Fruits",
         "Other",
     ];
-
-    const handleDeleteIngredient = async (id) => {
-        try {
-            const response = await apiFetch(
-                `/api/user-ingredients/${id}`,
-                {
-                    method: "DELETE",
-                },
-            );
-            const result = await response.json();
-            if (result.status === "success") {
-                setUserIngredients(
-                    userIngredients.filter((ing) => ing.id !== id),
-                );
-            } else {
-                console.error("Failed to delete ingredient", result.message);
-            }
-        } catch (error) {
-            console.error("Error deleting ingredient:", error);
-        }
-    };
 
     const filteredIngredients =
         selectedCategory === "All"
@@ -113,9 +90,10 @@ export default function UserIngredients({
                             </div>
                         ) : (
                             filteredIngredients.map((ing) => (
-                                <div
+                                <button
                                     key={ing.id}
-                                    className="flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm"
+                                    onClick={() => onOpenIngredient(ing)}
+                                    className="flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm text-left hover:border-[#EF5A3A] transition"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 bg-gray-50 rounded-full overflow-hidden shrink-0 border border-gray-100">
@@ -143,15 +121,8 @@ export default function UserIngredients({
                                             )}
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() =>
-                                            handleDeleteIngredient(ing.id)
-                                        }
-                                        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
-                                </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-300" />
+                                </button>
                             ))
                         )}
                     </div>

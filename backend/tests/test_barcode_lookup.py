@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from auth import get_current_user
 from database.models import User
-from main import app
+from main import app, _map_off_nutrition
 
 
 class BarcodeLookupTests(unittest.TestCase):
@@ -81,6 +81,74 @@ class BarcodeLookupTests(unittest.TestCase):
         with patch("main.requests.get", return_value=mock_response):
             res = self.client.get("/api/barcode-lookup", params={"code": "8850999327015"})
         self.assertEqual(res.json()["data"]["category"], "Meat & poultry")
+
+    def test_product_with_full_nutriments_maps_all_macros(self):
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "status": 1,
+            "product": {
+                "product_name": "Cola",
+                "categories_tags": [],
+                "image_front_url": "",
+                "nutriments": {
+                    "energy-kcal_100g": 42,
+                    "proteins_100g": 0,
+                    "carbohydrates_100g": 10.6,
+                    "fat_100g": 0,
+                },
+            },
+        }
+        with patch("main.requests.get", return_value=mock_response):
+            res = self.client.get("/api/barcode-lookup", params={"code": "8850999327015"})
+        nutrition = res.json()["data"]["nutrition_data"]
+        self.assertEqual(
+            nutrition,
+            {"basis": "per_100g_or_ml", "calories": 42.0, "protein_g": 0.0, "carbs_g": 10.6, "fat_g": 0.0},
+        )
+
+    def test_product_with_no_nutriments_has_null_nutrition_data(self):
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "status": 1,
+            "product": {"product_name": "Mystery Item", "categories_tags": [], "image_front_url": ""},
+        }
+        with patch("main.requests.get", return_value=mock_response):
+            res = self.client.get("/api/barcode-lookup", params={"code": "8850999327015"})
+        self.assertIsNone(res.json()["data"]["nutrition_data"])
+
+
+class MapOffNutritionUnitTests(unittest.TestCase):
+    def test_partial_data_keeps_missing_macros_as_none(self):
+        result = _map_off_nutrition({"energy-kcal_100g": 100})
+        self.assertEqual(result, {"basis": "per_100g_or_ml", "calories": 100.0, "protein_g": None, "carbs_g": None, "fat_g": None})
+
+    def test_no_calorie_figure_at_all_returns_none(self):
+        result = _map_off_nutrition({"proteins_100g": 5})
+        self.assertIsNone(result)
+
+    def test_empty_nutriments_returns_none(self):
+        self.assertIsNone(_map_off_nutrition({}))
+        self.assertIsNone(_map_off_nutrition(None))
+
+    def test_non_numeric_value_becomes_none_for_that_field_not_a_crash(self):
+        result = _map_off_nutrition({"energy-kcal_100g": 50, "proteins_100g": "not-a-number"})
+        self.assertEqual(result["calories"], 50.0)
+        self.assertIsNone(result["protein_g"])
+
+    def test_kj_fallback_used_when_kcal_missing(self):
+        # 180 kJ / 4.184 = 43.0 kcal
+        result = _map_off_nutrition({"energy-kj_100g": 180})
+        self.assertEqual(result["calories"], 43.0)
+
+    def test_generic_energy_field_used_as_kj_fallback_when_no_explicit_kj_key(self):
+        result = _map_off_nutrition({"energy_100g": 180})
+        self.assertEqual(result["calories"], 43.0)
+
+    def test_kcal_takes_priority_over_kj_when_both_present(self):
+        result = _map_off_nutrition({"energy-kcal_100g": 42, "energy-kj_100g": 999})
+        self.assertEqual(result["calories"], 42.0)
 
 
 if __name__ == "__main__":

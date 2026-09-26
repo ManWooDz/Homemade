@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 
 from auth import (
     REFRESH_TOKEN_EXPIRE_DAYS,
@@ -426,11 +426,24 @@ async def get_all_recipes(db: Session = Depends(get_db)):
 
 
 
+class NutritionData(BaseModel):
+    # System boundary (client-writable via POST /api/user-ingredients), not
+    # just a UI-read-only display value — reject unknown fields, coerce
+    # nothing implicitly.
+    model_config = {"extra": "forbid"}
+    basis: Literal["per_100g_or_ml"]
+    calories: Optional[float] = None
+    protein_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fat_g: Optional[float] = None
+
+
 class UserIngredientCreate(BaseModel):
     name: str
     category: str = "Other"
     image: str = "http://localhost:8000/images/No-image-available.png"
     expiry_date: Optional[date] = None
+    nutrition_data: Optional[NutritionData] = None
 
 # get ingredient images from folder images/ingredients
 @app.get("/api/ingredient-images")
@@ -503,6 +516,40 @@ def _map_off_category(categories_tags):
             return category
     return "Other"
 
+
+def _off_float(nutriments, key):
+    value = nutriments.get(key)
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _map_off_nutrition(nutriments):
+    """Raw per-100g/100ml nutrition from Open Food Facts, kept separate from
+    (never fed into) the nutrition engine's own computed/estimated nutrition.
+    Real OFF data is often partial — a missing individual macro stays None
+    rather than dropping the whole record."""
+    if not nutriments:
+        return None
+    calories = _off_float(nutriments, "energy-kcal_100g")
+    if calories is None:
+        # Some products only carry energy in kJ, not kcal directly.
+        energy_kj = _off_float(nutriments, "energy-kj_100g") or _off_float(nutriments, "energy_100g")
+        if energy_kj is not None:
+            calories = round(energy_kj / 4.184, 1)
+    if calories is None:
+        return None
+    return {
+        "basis": "per_100g_or_ml",
+        "calories": calories,
+        "protein_g": _off_float(nutriments, "proteins_100g"),
+        "carbs_g": _off_float(nutriments, "carbohydrates_100g"),
+        "fat_g": _off_float(nutriments, "fat_100g"),
+    }
+
 # lookup ingredient info from Open Food Facts by barcode
 @app.get("/api/barcode-lookup")
 def barcode_lookup(code: str, current_user: User = Depends(get_current_user)):
@@ -512,7 +559,7 @@ def barcode_lookup(code: str, current_user: User = Depends(get_current_user)):
         response = requests.get(
             f"https://world.openfoodfacts.org/api/v2/product/{code}.json",
             params={
-                "fields": "product_name_th,product_name,generic_name,brands,image_front_url,categories_tags"
+                "fields": "product_name_th,product_name,generic_name,brands,image_front_url,categories_tags,nutriments"
             },
             headers={"User-Agent": "Homemade-Capstone/1.0 (student capstone project)"},
             timeout=10,
@@ -532,9 +579,15 @@ def barcode_lookup(code: str, current_user: User = Depends(get_current_user)):
             return {"status": "error", "message": "Product not found"}
         category = _map_off_category(product.get("categories_tags"))
         image = product.get("image_front_url") or ""
+        nutrition_data = _map_off_nutrition(product.get("nutriments"))
         return {
             "status": "success",
-            "data": {"name": name, "category": category, "image": image},
+            "data": {
+                "name": name,
+                "category": category,
+                "image": image,
+                "nutrition_data": nutrition_data,
+            },
         }
     except requests.RequestException as e:
         return {"status": "error", "message": f"Could not reach Open Food Facts: {e}"}
@@ -568,6 +621,7 @@ async def add_user_ingredient(
             category=ingredient.category,
             image=ingredient.image,
             expiry_date=ingredient.expiry_date,
+            nutrition_data=ingredient.nutrition_data.model_dump() if ingredient.nutrition_data else None,
         )
         return {"status": "success", "data": created}
     except Exception as e:
