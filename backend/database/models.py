@@ -65,12 +65,16 @@ class BaseRecipe(Base):
     ratings: Mapped[float | None] = mapped_column(Float, nullable=True)
     review: Mapped[int | None] = mapped_column(Integer, nullable=True)
     image: Mapped[str | None] = mapped_column(String, nullable=True)
-    tags: Mapped[list] = mapped_column(JSONB, default=list)
-    ingredients: Mapped[list] = mapped_column(JSONB, default=list)
-    nutrition: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # .with_variant(JSON(), "sqlite"): JSONB on Postgres (unchanged behavior),
+    # plain JSON on SQLite so these columns are creatable in SQLite-backed
+    # unit tests (SQLAlchemy's SQLite dialect has no JSONB type compiler at
+    # all -- verified directly, this isn't a version-compat guess).
+    tags: Mapped[list] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=list)
+    ingredients: Mapped[list] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=list)
+    nutrition: Mapped[dict] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=dict)
     servings: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ingredient_quantities: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    instructions: Mapped[list] = mapped_column(JSONB, default=list)
+    instructions: Mapped[list] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=list)
 
 
 class IngredientNutrition(Base):
