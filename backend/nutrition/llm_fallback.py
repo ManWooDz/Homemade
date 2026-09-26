@@ -3,6 +3,7 @@ INMU/USDA. Mirrors generators/gemini_generator.py's structure. Estimates
 ONLY per-100g composition -- never the whole recipe's totals -- and its
 output is NEVER written back into ingredient_nutrition."""
 import json
+import math
 import os
 
 from dotenv import load_dotenv
@@ -14,6 +15,19 @@ from nutrition.lookup import MacroValues
 load_dotenv()
 
 _MODEL_NAME = "gemini-3.1-flash-lite-preview"
+
+
+def _to_float_or_none(value) -> float | None:
+    """The model may return a macro as a string ("50") or junk; calculator.py
+    does arithmetic on these, so coerce here and treat anything
+    non-numeric as missing (None) rather than letting a TypeError escape."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 class NutritionLLMEstimator:
@@ -42,7 +56,12 @@ class NutritionLLMEstimator:
             if not isinstance(raw, list) or len(raw) != len(names):
                 return [MacroValues(None, None, None, None) for _ in names]
             return [
-                MacroValues(calories=item.get("calories"), protein_g=item.get("protein_g"), carbs_g=item.get("carbs_g"), fat_g=item.get("fat_g"))
+                MacroValues(
+                    calories=_to_float_or_none(item.get("calories")),
+                    protein_g=_to_float_or_none(item.get("protein_g")),
+                    carbs_g=_to_float_or_none(item.get("carbs_g")),
+                    fat_g=_to_float_or_none(item.get("fat_g")),
+                )
                 for item in raw
             ]
         except Exception:

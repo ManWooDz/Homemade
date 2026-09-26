@@ -181,6 +181,15 @@ class RecipeContractTests(unittest.TestCase):
         is_valid, _ = validate_generated_recipe_shape(recipe)
         self.assertTrue(is_valid)
 
+    def test_extra_computed_nutrition_field_does_not_break_validation(self):
+        recipe = deepcopy(VALID_RECIPE)
+        recipe["computed_nutrition"] = {
+            "basis": "per_serving", "calories": 1.0, "protein_g": 1.0, "carbs_g": 1.0, "fat_g": 1.0,
+        }
+        recipe["nutrition_partially_estimated"] = True
+        is_valid, _ = validate_generated_recipe_shape(recipe)
+        self.assertTrue(is_valid)
+
 
 if __name__ == "__main__":
     unittest.main()

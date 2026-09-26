@@ -604,18 +604,30 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
             finally:
                 db.close()
 
-            final_output["nutrition"] = nutrition_result.nutrition
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
-            final_output["nutrition_partially_estimated"] = nutrition_result.partially_estimated
+            final_output["computed_nutrition"] = nutrition_result.nutrition
             if nutrition_result.partially_estimated:
+                # `nutrition` keeps the LLM's original guess -- do not
+                # overwrite it with a partially-estimated computed value
+                # (design spec: "never let a partially-estimated number pass
+                # as fully grounded"). The computed value is still exposed
+                # separately as `computed_nutrition`.
+                final_output["nutrition_partially_estimated"] = True
                 print(f"[Nutrition Engine] partially estimated: {nutrition_result.partially_estimated_reasons}")
-
-            # Sanity bound on the COMPUTED result -- log and flag only,
-            # never retried (a computation bug is not the LLM's mistake
-            # to fix, see design spec).
-            computed_calories = nutrition_result.nutrition.get("calories", 0)
-            if computed_calories < 0 or computed_calories > 3000:
-                print(f"[Nutrition Engine] sanity check failed on computed result: {nutrition_result.nutrition}")
+            else:
+                # Sanity bound on the COMPUTED result -- log and flag only,
+                # never retried (a computation bug is not the LLM's mistake
+                # to fix, see design spec). A failed bound means the value
+                # is not trustworthy as grounded, so it is treated exactly
+                # like the partially-estimated branch above: flag it, and
+                # leave `nutrition` as the LLM's guess.
+                computed_calories = nutrition_result.nutrition.get("calories", 0)
+                if computed_calories < 0 or computed_calories > 3000:
+                    print(f"[Nutrition Engine] sanity check failed on computed result: {nutrition_result.nutrition}")
+                    final_output["nutrition_partially_estimated"] = True
+                else:
+                    final_output["nutrition"] = nutrition_result.nutrition
+                    final_output["nutrition_partially_estimated"] = False
         except Exception as e:
             print(f"[Nutrition Engine] failed, keeping LLM's original guess: {e}")
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition

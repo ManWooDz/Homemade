@@ -56,6 +56,28 @@ class NutritionLLMEstimatorTests(unittest.TestCase):
         self.assertIsNone(result[0].calories)
         self.assertIsNone(result[1].calories)
 
+    def test_non_numeric_macro_values_are_coerced_or_nulled(self):
+        fake_payload = [
+            {"calories": "50", "protein_g": "1.5", "carbs_g": "lots", "fat_g": None},
+            {"calories": [1], "protein_g": {"x": 1}, "carbs_g": "NaN", "fat_g": 2},
+        ]
+
+        def fake_generate_content(**kwargs):
+            return SimpleNamespace(text=json.dumps(fake_payload))
+
+        fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=fake_generate_content))
+        estimator = NutritionLLMEstimator(api_key="fake-key")
+        with patch.object(estimator, "_client", fake_client):
+            result = estimator.estimate(["ใบมะกรูด", "หมูสามชั้น"])
+        self.assertEqual(result[0].calories, 50.0)
+        self.assertEqual(result[0].protein_g, 1.5)
+        self.assertIsNone(result[0].carbs_g)
+        self.assertIsNone(result[0].fat_g)
+        self.assertIsNone(result[1].calories)
+        self.assertIsNone(result[1].protein_g)
+        self.assertIsNone(result[1].carbs_g)
+        self.assertEqual(result[1].fat_g, 2.0)
+
 
 if __name__ == "__main__":
     unittest.main()
