@@ -41,14 +41,51 @@ export default function BarcodeScanner({ onDetected }) {
     useEffect(() => {
         let cancelled = false;
         let startPromise = null;
-        const html5QrCode = new Html5Qrcode(elementId);
+        // useBarCodeDetectorIfSupported belongs HERE (2nd constructor arg),
+        // not in start()'s config — verified in html5-qrcode's own source
+        // (html5-qrcode.js: Html5Qrcode constructor reads it, not start()).
+        // Omitting it (as this code did before) silently defaults to true,
+        // meaning it tries the browser's native BarcodeDetector API — whose
+        // per-format support (EAN/UPC specifically) varies unpredictably
+        // across devices/browsers and isn't actually verified by the
+        // library before use. Forcing the bundled ZXing-JS decoder instead
+        // trades a rare native-speed win for real cross-device consistency.
+        const html5QrCode = new Html5Qrcode(elementId, {
+            useBarCodeDetectorIfSupported: false,
+        });
         const myTurn = scannerTurnstile;
 
         const ready = myTurn.then(() => {
             if (cancelled) return;
             startPromise = html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: 220 },
+                {
+                    fps: 10,
+                    // A square box crops out most of a 1D barcode's width in
+                    // the actual decoded region (verified in html5-qrcode's
+                    // own source: foreverScan() draws only this box's pixels
+                    // to the decode canvas — nothing outside it is ever
+                    // seen, regardless of what the live preview shows). EAN/
+                    // UPC barcodes are wide relative to their height, so the
+                    // box needs to be too.
+                    qrbox: (viewfinderWidth, viewfinderHeight) => ({
+                        width: Math.floor(viewfinderWidth * 0.85),
+                        height: Math.floor(viewfinderHeight * 0.65),
+                    }),
+                    // Confirmed via source (html5-qrcode.js start()): when
+                    // videoConstraints is set, it REPLACES the first-arg
+                    // camera selection entirely — facingMode has to be
+                    // repeated here or it's silently dropped. Requesting
+                    // higher resolution matters specifically for 1D barcodes
+                    // (EAN/UPC): decode reliability scales with how many
+                    // pixels the bars actually span, unlike QR codes which
+                    // are far more tolerant of low resolution.
+                    videoConstraints: {
+                        facingMode: "environment",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                    },
+                },
                 (decodedText) => {
                     // Stop after the first hit; the callback otherwise fires
                     // on every decoded frame and would re-trigger lookups.
@@ -69,6 +106,25 @@ export default function BarcodeScanner({ onDetected }) {
                     // per-frame "nothing decoded yet" noise, not a real error
                 },
             );
+            startPromise.then(() => {
+                // html5-qrcode's own createVideoElement() snapshots the
+                // container's clientWidth ONCE at creation and hardcodes it
+                // as an inline px width on the <video> forever — it never
+                // re-measures (confirmed: no resize listener in its source).
+                // If the container's real width differs even slightly by
+                // the time layout settles (e.g. a scrollbar appearing or
+                // disappearing between that measurement and final paint),
+                // the video is left permanently smaller than its container,
+                // showing as a thin dark border. Overriding to fill
+                // responsively removes any dependence on that one-time
+                // snapshot being exactly right.
+                const videoEl = document.getElementById(elementId)?.querySelector("video");
+                if (videoEl) {
+                    videoEl.style.width = "100%";
+                    videoEl.style.height = "100%";
+                    videoEl.style.objectFit = "cover";
+                }
+            });
             startPromise.catch(() => {
                 if (!cancelled) {
                     setCameraError(
@@ -109,11 +165,23 @@ export default function BarcodeScanner({ onDetected }) {
         <div>
             <div
                 id={elementId}
-                className="w-full aspect-square bg-gray-900 rounded-xl overflow-hidden mb-3"
+                // html5-qrcode's <video> only gets an explicit width — its
+                // height auto-follows the real camera stream's aspect ratio
+                // (confirmed 16:9 on the webcam tested against). A square
+                // container is taller than that, leaving real empty space
+                // below the video (not a shading artifact) — matching the
+                // container's own aspect ratio to the camera's fills it.
+                className="w-full aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3"
             />
 
             {cameraError && (
                 <p className="text-sm text-red-500 mb-3">{cameraError}</p>
+            )}
+
+            {!cameraError && (
+                <p className="text-xs text-gray-400 mb-3 text-center">
+                    วางบาร์โค้ดในแนวนอน ให้เห็นเต็มแท่งในกรอบ
+                </p>
             )}
 
             <p className="text-xs text-gray-400 mb-2">
