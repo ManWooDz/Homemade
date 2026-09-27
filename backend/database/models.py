@@ -59,6 +59,13 @@ class UserIngredient(Base):
     nutrition_data: Mapped[dict | None] = mapped_column(
         JSONB().with_variant(JSON(), "sqlite"), nullable=True
     )
+    # Real, user-entered quantity (distinct from the legacy `quantity`
+    # String column above, which stays untouched/unused — it holds free
+    # text like "12 pieces" and can't sort numerically). unit is
+    # restricted to a fixed preset at the API boundary (main.py's
+    # NutritionData-style Literal), not just in the frontend dropdown.
+    quantity_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quantity_unit: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -5,6 +5,7 @@ import BottomMenu from "../components/bottomMenu";
 import NutritionBox from "../components/NutritionBox";
 import { toUserIngredientCreate } from "../utils/ingredientPayload";
 import { sortByExpiry } from "../utils/expiry";
+import { QUANTITY_UNITS } from "../utils/quantityUnits";
 import { useAuth } from "../context/AuthContext";
 
 export default function AddIngredient({
@@ -35,6 +36,9 @@ export default function AddIngredient({
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [expiryDate, setExpiryDate] = useState("");
+    const [quantityAmount, setQuantityAmount] = useState("");
+    const [quantityUnit, setQuantityUnit] = useState("");
+    const [saveError, setSaveError] = useState("");
     const fileInputRef = useRef(null);
 
     const categories = ["Meat & poultry", "Vegetables", "Fruits", "Other"];
@@ -118,6 +122,18 @@ export default function AddIngredient({
 
     const handleSave = async () => {
         if (!name.trim()) return;
+        setSaveError("");
+        // Backend rejects amount <= 0 or > 100000 with a 422 that retrying
+        // never fixes -- min="0" on the input still lets someone type 0,
+        // so check before sending instead of showing a generic failure.
+        const trimmedAmount = quantityAmount.trim();
+        if (trimmedAmount !== "") {
+            const parsed = Number(trimmedAmount);
+            if (!(parsed > 0 && parsed <= 100000)) {
+                setSaveError("ปริมาณต้องมากกว่า 0 และไม่เกิน 100,000");
+                return;
+            }
+        }
         setIsSaving(true);
         try {
             const response = await apiFetch(
@@ -132,6 +148,8 @@ export default function AddIngredient({
                             image: selectedImage,
                             expiryDate,
                             nutritionData: prefill?.nutrition_data || null,
+                            quantityAmount,
+                            quantityUnit,
                         }),
                     ),
                 },
@@ -146,9 +164,11 @@ export default function AddIngredient({
                 onBack(); // Return to previous screen (My Fridge)
             } else {
                 console.error("Failed to add ingredient", result.message);
+                setSaveError(result.message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
             }
         } catch (error) {
             console.error("Error adding ingredient:", error);
+            setSaveError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
         } finally {
             setIsSaving(false);
         }
@@ -323,6 +343,46 @@ export default function AddIngredient({
                             </div>
                         </div>
 
+                        {/* Quantity (optional) */}
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                ปริมาณ (ไม่บังคับ)
+                            </h3>
+                            <div className="flex gap-3">
+                                <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="any"
+                                    min="0"
+                                    placeholder="เช่น 2"
+                                    className="flex-1 bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
+                                    value={quantityAmount}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setQuantityAmount(value);
+                                        // Backend rejects a unit with no
+                                        // amount -- keep the UI from ever
+                                        // reaching that state.
+                                        if (!value.trim()) setQuantityUnit("");
+                                    }}
+                                />
+                                <select
+                                    value={quantityUnit}
+                                    onChange={(e) =>
+                                        setQuantityUnit(e.target.value)
+                                    }
+                                    className="flex-1 bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
+                                >
+                                    <option value="">หน่วย</option>
+                                    {QUANTITY_UNITS.map((unit) => (
+                                        <option key={unit} value={unit}>
+                                            {unit}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         {/* Expiry Date (optional) */}
                         <div>
                             <h3 className="text-sm font-bold text-gray-700 mb-2">
@@ -339,6 +399,12 @@ export default function AddIngredient({
                         {/* Nutrition (read-only, from Open Food Facts scan) */}
                         <NutritionBox nutrition={prefill?.nutrition_data} />
                     </div>
+
+                    {saveError && (
+                        <p className="text-sm text-red-500 mt-4 text-center">
+                            {saveError}
+                        </p>
+                    )}
 
                     <button
                         onClick={handleSave}

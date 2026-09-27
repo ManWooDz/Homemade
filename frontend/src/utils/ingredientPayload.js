@@ -24,7 +24,22 @@ export function toPresenceIngredients(items = []) {
   });
 }
 
-export function toUserIngredientCreate({ name, category, image, expiryDate, nutritionData }) {
+export function toUserIngredientCreate({
+  name,
+  category,
+  image,
+  expiryDate,
+  nutritionData,
+  quantityAmount,
+  quantityUnit,
+}) {
+  // "" from an empty number input/select must become null, not "" or NaN —
+  // same 422 trap as expiry_date. Number("") is 0 (a real, wrong value), so
+  // this can't just be `Number(quantityAmount) || null`.
+  const trimmedAmount =
+    typeof quantityAmount === "string" ? quantityAmount.trim() : quantityAmount;
+  const parsedAmount =
+    trimmedAmount === "" || trimmedAmount == null ? null : Number(trimmedAmount);
   return {
     name: cleanIngredientName(name),
     category: category || "Other",
@@ -36,5 +51,10 @@ export function toUserIngredientCreate({ name, category, image, expiryDate, nutr
     // Passed straight through from a barcode-lookup response, or null when
     // manually added — never user-editable, so no client-side shaping here.
     nutrition_data: nutritionData || null,
+    quantity_amount: parsedAmount,
+    // Backend rejects a unit with no amount (422) -- drop the unit here too
+    // if there's no amount, so the UI's own state can't produce that
+    // invalid combination on save.
+    quantity_unit: parsedAmount == null ? null : quantityUnit || null,
   };
 }

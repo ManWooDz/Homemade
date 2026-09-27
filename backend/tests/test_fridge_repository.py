@@ -88,6 +88,26 @@ class FridgeRepositoryTests(unittest.TestCase):
         )
         self.assertIsNone(result["nutrition_data"])
 
+    def test_insert_stores_and_exposes_quantity(self):
+        result = insert_user_ingredient(
+            self.db,
+            user_id=self.user_id,
+            name="rice",
+            category="Other",
+            image=None,
+            quantity_amount=2.5,
+            quantity_unit="กก.",
+        )
+        self.assertEqual(result["quantity_amount"], 2.5)
+        self.assertEqual(result["quantity_unit"], "กก.")
+
+    def test_insert_without_quantity_exposes_null(self):
+        result = insert_user_ingredient(
+            self.db, user_id=self.user_id, name="pepper", category="Other", image=None
+        )
+        self.assertIsNone(result["quantity_amount"])
+        self.assertIsNone(result["quantity_unit"])
+
     def test_insert_stores_and_exposes_expiry_date(self):
         expiry = date.today() + timedelta(days=5)
         result = insert_user_ingredient(

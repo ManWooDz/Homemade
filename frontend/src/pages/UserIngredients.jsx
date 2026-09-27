@@ -17,6 +17,7 @@ import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { expiryBadgeLabel, sortByExpiry } from "../utils/expiry";
 import { normalizeForSearch } from "../utils/thaiText";
+import { quantityDimension, normalizedQuantityAmount } from "../utils/quantityUnits";
 
 // value must match what AddIngredient.jsx / backend actually store
 // ("Meat & poultry", lowercase p) -- label is just the mockup's display
@@ -54,13 +55,29 @@ function applySort(items, sortBy) {
                 a.category.localeCompare(b.category, "th"),
             );
         case "quantity":
-            // No real quantity data exists yet -- fridge_repository.py is
-            // presence-only by design (quantity is always null/absent from
-            // the API). Intentionally identical to "expiry" as a no-op
-            // until a planned follow-up adds a real numeric quantity field
-            // (the existing `quantity` column is legacy free text like
-            // "12 pieces", not usable for numeric sorting as-is).
-            return sortByExpiry(items);
+            // Stable sort on top of the expiry-ordered base (same pattern
+            // as "category"): items with no quantity_amount stay in their
+            // expiry-order position instead of being shoved to the end by
+            // an id-only fallback, so an all-null fridge sorts identically
+            // to "expiry". Among items that DO have a quantity, group by
+            // dimension first (weight/volume normalize to a common unit;
+            // everything else groups by its own exact unit, since e.g.
+            // ขวด vs ถุง isn't a meaningful numeric comparison) and sort by
+            // normalized amount within each group.
+            return sortByExpiry(items).sort((a, b) => {
+                const aHas = a.quantity_amount != null;
+                const bHas = b.quantity_amount != null;
+                if (!aHas && !bHas) return 0;
+                if (!aHas) return 1;
+                if (!bHas) return -1;
+                const dimA = quantityDimension(a.quantity_unit);
+                const dimB = quantityDimension(b.quantity_unit);
+                if (dimA !== dimB) return dimA.localeCompare(dimB);
+                return (
+                    normalizedQuantityAmount(a.quantity_amount, a.quantity_unit) -
+                    normalizedQuantityAmount(b.quantity_amount, b.quantity_unit)
+                );
+            });
         case "expiry":
         default:
             return sortByExpiry(items);

@@ -124,6 +124,24 @@ export default function IngredientDetail({
                             )}
                         </div>
 
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-700 mb-1">
+                                ปริมาณ
+                            </h3>
+                            {ingredient.quantity_amount != null ? (
+                                <p className="text-base text-gray-800">
+                                    {ingredient.quantity_amount}
+                                    {ingredient.quantity_unit
+                                        ? ` ${ingredient.quantity_unit}`
+                                        : ""}
+                                </p>
+                            ) : (
+                                <p className="text-base text-gray-400">
+                                    ไม่ได้ระบุ
+                                </p>
+                            )}
+                        </div>
+
                         <NutritionBox nutrition={ingredient.nutrition_data} />
                     </div>
 

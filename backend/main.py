@@ -1,9 +1,12 @@
 from datetime import date, datetime, timedelta, timezone
 import logging
+import math
 
 logging.basicConfig(level=logging.INFO)
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -19,7 +22,7 @@ import requests
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Dict, Any, Optional, Literal
 
 from auth import (
@@ -76,6 +79,46 @@ app.add_middleware(
 
 # Serves local images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # FastAPI's default handler for this exception echoes the rejected
+    # value back in each error's "input" field, then serializes the whole
+    # error list with json.dumps(..., allow_nan=False) -- if the rejected
+    # value is itself NaN/Infinity (e.g. a float field with
+    # allow_inf_nan=False, sent a literal NaN/Infinity JSON token), that
+    # serialization step raises ValueError and the request 500s instead of
+    # returning the clean 422 the validation logic already decided on.
+    # Verified directly against a real server, not assumed: a raw NaN body
+    # produces exactly this crash without this handler.
+    #
+    # Must recurse: "input" isn't always the bare rejected scalar. A
+    # missing-field error's "input" is the whole parent dict, and a nested
+    # model's (e.g. NutritionData) failing field carries the whole nested
+    # dict — either can contain a NaN/Infinity buried inside, not just at
+    # the top level. A body missing "name" alongside a NaN quantity_amount,
+    # or a NutritionData.calories of NaN, both reach this path with the
+    # bad float nested inside "input", not equal to it.
+    def sanitize(value):
+        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+            return str(value)
+        if isinstance(value, dict):
+            return {k: sanitize(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [sanitize(v) for v in value]
+        return value
+
+    errors = []
+    for error in exc.errors():
+        error = dict(error)
+        if "input" in error:
+            error["input"] = sanitize(error["input"])
+        errors.append(error)
+    # jsonable_encoder for everything else, matching FastAPI's own default
+    # handler exactly (dates, enums, etc.) -- only the non-finite-float
+    # "input" case needed a special case above.
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 
 
 BASIC_INGREDIENTS = ["salt", "pepper", "oil", "soy sauce", "fish sauce", "sugar", "water"]
@@ -429,13 +472,23 @@ async def get_all_recipes(db: Session = Depends(get_db)):
 class NutritionData(BaseModel):
     # System boundary (client-writable via POST /api/user-ingredients), not
     # just a UI-read-only display value — reject unknown fields, coerce
-    # nothing implicitly.
-    model_config = {"extra": "forbid"}
+    # nothing implicitly. allow_inf_nan=False (model-level, applies to every
+    # float field here) closes the same NaN/Infinity boundary gap fixed on
+    # quantity_amount -- a literal NaN in calories/protein_g/etc. would
+    # otherwise pass field validation and only surface later as a nested
+    # NaN inside a DIFFERENT error's "input" (see the global
+    # RequestValidationError handler's docstring for why that matters).
+    model_config = {"extra": "forbid", "allow_inf_nan": False}
     basis: Literal["per_100g_or_ml"]
     calories: Optional[float] = None
     protein_g: Optional[float] = None
     carbs_g: Optional[float] = None
     fat_g: Optional[float] = None
+
+
+QuantityUnit = Literal[
+    "ชิ้น", "กรัม", "กก.", "มล.", "ลิตร", "ขวด", "ถุง", "แพ็ค", "ฟอง", "หัว", "ลูก", "ห่อ",
+]
 
 
 class UserIngredientCreate(BaseModel):
@@ -444,6 +497,19 @@ class UserIngredientCreate(BaseModel):
     image: str = "http://localhost:8000/images/No-image-available.png"
     expiry_date: Optional[date] = None
     nutrition_data: Optional[NutritionData] = None
+    # Real, user-entered quantity — distinct from the legacy `quantity`
+    # string column, left untouched/unused. amount is a client-writable
+    # system boundary: reject non-positive/NaN/Infinity/absurd values here,
+    # not just in the frontend's number input, since a stored NaN would
+    # break JSON serialization on every future GET for this user.
+    quantity_amount: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False, le=100000)
+    quantity_unit: Optional[QuantityUnit] = None
+
+    @model_validator(mode="after")
+    def _quantity_unit_requires_amount(self):
+        if self.quantity_unit is not None and self.quantity_amount is None:
+            raise ValueError("quantity_unit requires quantity_amount")
+        return self
 
 # get ingredient images from folder images/ingredients
 @app.get("/api/ingredient-images")
@@ -622,6 +688,8 @@ async def add_user_ingredient(
             image=ingredient.image,
             expiry_date=ingredient.expiry_date,
             nutrition_data=ingredient.nutrition_data.model_dump() if ingredient.nutrition_data else None,
+            quantity_amount=ingredient.quantity_amount,
+            quantity_unit=ingredient.quantity_unit,
         )
         return {"status": "success", "data": created}
     except Exception as e:
