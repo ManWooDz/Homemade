@@ -113,11 +113,17 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 ## Current state
 
-**Personalization data capture — design approved, not implemented (2026-09-29) — product envelope, ไม่ใช่ contribution, ไม่มี KPI:**
+**Personalization data capture — IMPLEMENTED in code, verified at API level on a real server; UI flow NOT yet driven in a browser (2026-09-29, branch `personalization-data-capture`) — product envelope, ไม่ใช่ contribution, ไม่มี KPI:**
+- **สถานะ implement:** backend Tasks 1-5 + frontend Tasks 6-8 เสร็จ ผ่าน task review ทุก task (Task 8 แก้ 1 รอบ: tab ของ Favorites หายหลังกลับจาก HistoryDetail → ยก `favoritesTab` ขึ้น App). backend suite **470 tests OK (skipped=1)** (baseline 442). `bun run build` ผ่านที่ head
+- **Verify จริง (uvicorn จากโค้ด branch + Postgres dev, ไม่ใช่ TestClient):** bind สด (ไม่มี 10048), `/api/history` ตอบ 401 (route ใหม่มีจริง); generate ไม่ login → 401, login แต่ไม่มี Origin → 403; generate จริงผ่าน Gemini 2 ครั้ง (custom + base recipe id 1) ได้ `history_id` เป็นเลข 1, 2 (ไม่ใช่ null) และ log ไม่มีบรรทัดเขียน history พัง; rating ภาษาไทย+emoji+`→` (`เผ็ดไป 🌶️ → ลดพริก`) round-trip ตรงตัว; `GET /api/history` เรียงใหม่สุดก่อน, base recipe ได้ image URL ตรงกับ `/api/recipes`, `recipe_data` ไม่มี `history_id`; user B เห็น list ว่าง และ PUT rating / PUT favorite / DELETE favorite บน id ของ A ได้ 404; stars 6 + tag ผิด → 422; DELETE favorite ซ้ำ → 200 idempotent; id ไม่มีจริง → 404. migration up/down/up บน Postgres dev ผ่าน, `alembic check` ไม่มี diff
+- **ยังไม่ได้ verify:** UI ใน browser (ปุ่ม ♥, rating sheet ที่ปิดเฉพาะเมื่อบันทึกสำเร็จ, Profile filter, Favorites tabs, กดกลับจาก detail, refresh แล้วข้อมูลยังอยู่, login user คนที่สองผ่านหน้าเว็บ, กด ♥ รัวๆ) — session นี้ไม่มีเครื่องมือควบคุม browser จึงตรวจได้แค่ build + eslint + อ่านโค้ดใน review. **ห้ามรายงานว่า UI ผ่านจนกว่าจะรัน flow ตาม spec section 6.2 จริง**
+- ทิ้ง test user ไว้ใน dev DB: `pdc_check_a@example.com` (id 55), `pdc_check_b@example.com` (id 56) และ generate_history id 1, 2 ของ user 55 — ลบเองได้ตามสะดวก
+- Minor ที่เลื่อนไว้ (ledger): `ratings.updated_at` ของแถวเก่าจะเป็นเวลา migration; IntegrityError catch กว้างใน `upsert_rating`/`set_favorite` (latent, ยังไม่มี delete path); base recipe id เกิน int32 ทำให้ history_id เป็น null; rating endpoint ไม่มี try/except (log ของ uvicorn อาจมี parameter รวม feedback); `print` เดิมใน handler ยังไม่ผ่าน `_print_safe` (ปัญหาเดิม ไม่เกี่ยวกับงานนี้)
+- ประวัติเดิม (design, ยังใช้ได้):
 - Spec (local, `docs/` gitignored): `docs/superpowers/specs/2026-09-29-personalization-data-capture-design.md`. ขั้นแรกของ personalization: เก็บข้อมูลจริงก่อน ส่วน taste profile / embedding retrieval / inject ลง prompt แยกเป็น spec ถัดไป. เป็น **in-context personalization** ห้ามเรียกว่าเทรน/พัฒนา LLM ต่อ user
 - ตัดสินใจแล้ว: (1) บันทึก history ทุกครั้งที่ generate สำเร็จ, personalization ใช้เฉพาะแถวที่มี rating (2) `/api/generate-recipe-text` ต้อง login และเขียน history เองหลัง validation + Nutrition Engine คืน `data.history_id` (null ถ้าบันทึกพัง สูตรไม่หาย) (3) ปุ่ม ♥ ขวาหัว CookingPage = favorite สูตรที่ generate (บันทึก DB) (4) Profile › Cooking History มีปุ่มกรอง ทั้งหมด/♥ รายการโปรด (5) ♥ เมนูพื้นฐานบน Home ไม่แตะ ยังอยู่ฝั่ง client (6) หน้า Favorites มีแท็บ เมนูพื้นฐาน / ✨ สูตรของฉัน (7) เพิ่ม `generate_history.recipe_data JSONB` เก็บ response เต็ม + คอลัมน์ typed เดิม; `ratings` เพิ่ม `tag`, `feedback` (≤240), `updated_at` (8) เทสต์ใช้ SQLite ผ่าน `.with_variant(...)`
-- API ใหม่ที่วางไว้: `GET /api/history`, `PUT /api/history/{id}/rating`, `PUT|DELETE /api/history/{id}/favorite` (ของคนอื่น → 404). Data contract ใน section ด้านล่างจะอัปเดตตอน implement เสร็จ
-- ถัดไป: implementation plan → checkpoint ขอ confirm รายการไฟล์ `/backend/` ก่อนแก้
+- API ใหม่: `GET /api/history`, `PUT /api/history/{id}/rating`, `PUT|DELETE /api/history/{id}/favorite` (ของคนอื่น → 404) — contract อยู่ใน section Data Contracts ด้านล่าง
+- ถัดไป: ให้ user รัน flow UI ตาม spec 6.2 ใน browser; แล้วค่อยทำ spec ถัดไปของ personalization (taste profile / embedding retrieval / inject ลง prompt — ยังไม่เริ่ม)
 
 **python-jose → PyJWT (2026-09-29, user อนุมัติ install + แก้ `/backend/`) — product envelope, ไม่ใช่ contribution:**
 - แก้ 3 ไฟล์: `backend/auth.py` (`import jwt`, `except jwt.PyJWTError`), `backend/tests/test_auth.py` (`import jwt`), `backend/requirements.txt` (`python-jose[cryptography]` → `PyJWT`). ติดตั้ง PyJWT 2.15.1 ใน `backend/venv`. `encode`/`decode` signature เดิม ไม่แก้ logic
@@ -472,7 +478,7 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 **Rating popup → draggable feedback sheet + cooking-history detail view (2026-09-25, frontend only, ไม่แก้ `/backend/`) — product envelope, ไม่ใช่ core contribution ที่ต้องมี KPI:**
 - โจทย์: rating popup เดิม (แค่ดาว 1-5 + submit/skip) เพิ่ม feedback tags (Delicious/Great/Tasty/Not Bad/Meh, single-select, English ตาม mockup) + textarea (placeholder "เช่น เผ็ด", maxLength 240, counter แบบ remaining/240) + รูปเมนู + title/subtitle ที่เปลี่ยนข้อความตามดาวที่เลือก
 - เปลี่ยน layout จาก centered modal (มี `bg-black/40` backdrop + ปุ่ม X) เป็น **draggable bottom sheet ไม่มี backdrop** — ใช้ pattern เดียวกับ bottom sheet เนื้อหาสูตรที่มีอยู่แล้วในหน้านี้เป๊ะ (`motion.div drag="y"`, `top:"45%" height:"90%"`, `dragConstraints={{top:-200,bottom:0}}`) ลากขึ้น/ลงเพื่อ expand/collapse เนื้อหา ปุ่ม X ตัดออก เหลือปุ่ม "ข้าม" เป็นทางออกเดียว
-- `submitRating()` ใน `frontend/src/pages/CookingPage.jsx` ยังไม่ส่งไป backend (ไม่มี rating-storage endpoint) — เก็บ stars/tag/feedback รวมกับ `cookingHistory` state ใน `App.jsx` ผ่าน callback `onRateRecipe`/`rateRecipe()` แทน (client-side only, หายเมื่อ refresh หน้า — เหมือน `cookingHistory` เดิมที่ไม่เคย persist อยู่แล้ว)
+- **[STALE ตั้งแต่ 2026-09-29 — แก้แล้ว ดูหัวข้อ "Personalization data capture": `submitRating()` ส่ง `PUT /api/history/{id}/rating` จริง และ history/rating/favorite persist ใน DB]** `submitRating()` ใน `frontend/src/pages/CookingPage.jsx` ยังไม่ส่งไป backend (ไม่มี rating-storage endpoint) — เก็บ stars/tag/feedback รวมกับ `cookingHistory` state ใน `App.jsx` ผ่าน callback `onRateRecipe`/`rateRecipe()` แทน (client-side only, หายเมื่อ refresh หน้า — เหมือน `cookingHistory` เดิมที่ไม่เคย persist อยู่แล้ว)
 - ผูก history entry กับ recipe ที่ generate ผ่าน `_historyId` (เก็บบน `generatedRecipe` ชั่วคราว, เทียบกับ `id` ของ history entry ตอน rate) — ไม่มี id จาก backend จริงเพราะ history ไม่เคยผ่าน DB
 - **ต่องานเพิ่ม (ในเซสชันเดียวกัน):** history entries เปลี่ยนจากเก็บแค่ `{id, recipe_name, image, diet_tags}` เป็นเก็บ `{...result.data, id, image}` เต็ม (nutrition/ingredients/instructions/servings/usage_time/safety_warning ครบ) เพื่อให้กดดู detail ย้อนหลังได้ — เพิ่มหน้าใหม่ `frontend/src/pages/HistoryDetail.jsx` (read-only, ไม่มีปุ่มเสร็จสิ้น/rating modal ซ้ำ, โชว์ rating ที่เคยให้ไว้เป็น banner ด้านบน) เปิดจากการกด card ใน `Profile.jsx` history list (`onOpenHistoryItem`)
 - **Refactor เพื่อลด duplication:** ดึง JSX เนื้อหาสูตร (nutrition cards/ingredients/instructions ~200 บรรทัด) ออกจาก `CookingPage.jsx` เป็น `frontend/src/components/RecipeContent.jsx` (`recipe` prop + `onDone` optional — ไม่ส่ง `onDone` = ซ่อนปุ่ม "เสร็จสิ้น" สำหรับ read-only view) ใช้ร่วมกันทั้ง `CookingPage.jsx` (2 ที่, ปุ่มเสร็จสิ้นโชว์) และ `HistoryDetail.jsx` (ไม่โชว์ปุ่ม)
@@ -481,11 +487,20 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 ## Data Contracts
 
-**`POST /api/generate-recipe-text`** (active contract):
+**`POST /api/generate-recipe-text`** (active contract, updated 2026-09-29 — **ต้อง login**: cookie `access_token` + Origin ที่ trusted, ไม่งั้น 401/403; เพิ่ม `history_id`):
 ```
 Request:  { recipe: {...base_recipe}, ingredients: [{id?, name}], preferences: { allergy, taste, equipment, extra } }
-Response: { status: "success"|"error", data: {recipe_name, servings, adjusted_ingredients[], diet_tags[], nutrition{basis:"per_serving",calories,protein_g,carbs_g,fat_g}, instructions[], safety_warning} }
+Response: { status: "success"|"error", data: {recipe_name, servings, adjusted_ingredients[], diet_tags[], nutrition{basis:"per_serving",calories,protein_g,carbs_g,fat_g}, instructions[], safety_warning, history_id: int|null} }
 ```
+`history_id` = แถวที่บันทึกใน `generate_history` ของ user ที่ login; `null` = สูตรผ่าน validation แล้วแต่บันทึก history ไม่สำเร็จ (สูตรยังคืนให้ user ตามปกติ). `user_id` มาจาก cookie เท่านั้น ไม่รับจาก body
+
+**`GET /api/history`** (added 2026-09-29, gated: current_user จาก cookie): ใหม่สุดก่อน (`created_at DESC, id DESC`) ไม่มี row cap
+```
+Response: { status: "success", data: [{ id, recipe_name, image: string|null, diet_tags[], created_at (ISO), rating: {stars, tag, feedback}|null, is_favorite: bool, recipe_data: {...full approved generate response, ไม่มี history_id} }] }
+```
+**`PUT /api/history/{id}/rating`** (gated + trusted Origin): body `{ stars: int 1-5 (strict), tag?: "Delicious"|"Great"|"Tasty"|"Not Bad"|"Meh", feedback?: string ≤240 (ว่าง/ช่องว่างล้วน → null) }`, `extra="forbid"` → `{status:"success", data:{stars, tag, feedback}}`; upsert ต่อ (user, history). id ที่ไม่ใช่ของ user หรือไม่มีอยู่ → 404; body ผิด → 422
+**`PUT /api/history/{id}/favorite`**, **`DELETE /api/history/{id}/favorite`** (gated + trusted Origin): idempotent → `{status:"success", data:{is_favorite: bool}}`; id ที่ไม่ใช่ของ user หรือไม่มีอยู่ → 404
+DB: `generate_history.recipe_data JSONB NOT NULL DEFAULT '{}'`, `ratings.tag/feedback/updated_at` (migration `d5e6f7a8b9c0`)
 Backend ยังรับ legacy ingredient strings/objects ที่มี metadata เพื่อ compatibility แต่ normalize เป็นชื่อเท่านั้นและ ignore `quantity`; FastAPI handler boundary ตรวจด้วย integration test ที่ mock `call_agentic_llm` แล้ว ไม่ใช่การทดสอบกับ live Gemini/network/server
 
 **`GET /api/user-ingredients`** (active presence-only contract, updated 2026-09-27 — expiry_date + nutrition_data + quantity_amount/quantity_unit):
