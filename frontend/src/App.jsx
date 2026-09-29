@@ -27,6 +27,17 @@ import { toPresenceIngredients } from "./utils/ingredientPayload";
 import { getTagColor } from "./utils/tagColors";
 import { useAuth } from "./context/AuthContext";
 
+const toHistoryItem = (row) => ({
+    ...row.recipe_data,
+    id: row.id,
+    image: row.image,
+    created_at: row.created_at,
+    is_favorite: row.is_favorite,
+    stars: row.rating?.stars ?? 0,
+    tag: row.rating?.tag ?? null,
+    feedback: row.rating?.feedback ?? null,
+});
+
 function App() {
     const { apiFetch } = useAuth();
 
@@ -37,6 +48,7 @@ function App() {
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
     const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+    const [historyReturnView, setHistoryReturnView] = useState("profile");
     const [cookingHistory, setCookingHistory] = useState([]);
     const [barcodePrefill, setBarcodePrefill] = useState(null);
     const [selectedIngredientDetail, setSelectedIngredientDetail] = useState(null);
@@ -61,12 +73,52 @@ function App() {
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
-    const rateRecipe = (historyId, rating) => {
-        setCookingHistory((prev) =>
-            prev.map((item) =>
-                item.id === historyId ? { ...item, ...rating } : item
-            )
-        );
+    const rateRecipe = async (historyId, rating) => {
+        try {
+            const response = await apiFetch(`/api/history/${historyId}/rating`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    stars: rating.stars,
+                    tag: rating.tag,
+                    feedback: rating.feedback,
+                }),
+            });
+            if (!response.ok) return false;
+            const result = await response.json();
+            if (result.status !== "success") return false;
+            setCookingHistory((prev) =>
+                prev.map((item) =>
+                    item.id === historyId ? { ...item, ...result.data } : item
+                )
+            );
+            return true;
+        } catch (error) {
+            console.error("Error saving rating:", error);
+            return false;
+        }
+    };
+
+    const toggleHistoryFavorite = async (historyId) => {
+        const current = cookingHistory.find((item) => item.id === historyId);
+        if (!current) return;
+        const next = !current.is_favorite;
+        const setFavorite = (value) =>
+            setCookingHistory((prev) =>
+                prev.map((item) =>
+                    item.id === historyId ? { ...item, is_favorite: value } : item
+                )
+            );
+        setFavorite(next);
+        try {
+            const response = await apiFetch(`/api/history/${historyId}/favorite`, {
+                method: next ? "PUT" : "DELETE",
+            });
+            if (!response.ok) setFavorite(!next);
+        } catch (error) {
+            console.error("Error toggling favorite:", error);
+            setFavorite(!next);
+        }
     };
     const [cookingSource, setCookingSource] = useState("create-recipe"); // "create-recipe" | "custom-cooking"
 
@@ -122,8 +174,22 @@ function App() {
             }
         };
 
+        const fetchHistory = async () => {
+            try {
+                const response = await apiFetch("/api/history");
+                if (!response.ok) return;
+                const result = await response.json();
+                if (result.status === "success") {
+                    setCookingHistory(result.data.map(toHistoryItem));
+                }
+            } catch (error) {
+                console.error("Error fetching cooking history:", error);
+            }
+        };
+
         fetchRecipes();
         fetchUserIngredients();
+        fetchHistory();
     }, [apiFetch]);
 
     const FILTER_TABS = [
@@ -347,7 +413,7 @@ function App() {
                     setGeneratedRecipe(null);
                     setIsGenerating(true);
                     try {
-                        const response = await fetch("/api/generate-recipe-text", {
+                        const response = await apiFetch("/api/generate-recipe-text", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
@@ -360,16 +426,22 @@ function App() {
                         });
                         const result = await response.json();
                         if (result.status === "success") {
-                            const historyId = Date.now();
+                            const historyId = result.data.history_id ?? null;
                             setGeneratedRecipe({ ...result.data, _historyId: historyId });
-                            setCookingHistory((prev) => [
-                                {
-                                    ...result.data,
-                                    id: historyId,
-                                    image: selectedRecipe?.image || null,
-                                },
-                                ...prev,
-                            ]);
+                            if (historyId !== null) {
+                                setCookingHistory((prev) => [
+                                    {
+                                        ...result.data,
+                                        id: historyId,
+                                        image: selectedRecipe?.image || null,
+                                        is_favorite: false,
+                                        stars: 0,
+                                        tag: null,
+                                        feedback: null,
+                                    },
+                                    ...prev,
+                                ]);
+                            }
                         } else {
                             console.error("Failed to generate:", result.message);
                         }
@@ -394,6 +466,12 @@ function App() {
                 onBack={() => setCurrentView(cookingSource)}
                 isCustom={cookingSource === "custom-cooking"}
                 onRateRecipe={rateRecipe}
+                historyItem={
+                    cookingHistory.find(
+                        (item) => item.id === generatedRecipe?._historyId
+                    ) || null
+                }
+                onToggleFavorite={toggleHistoryFavorite}
             />
         );
     }
@@ -510,7 +588,7 @@ function App() {
                     setGeneratedRecipe(null);
                     setIsGenerating(true);
                     try {
-                        const response = await fetch("/api/generate-recipe-text", {
+                        const response = await apiFetch("/api/generate-recipe-text", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
@@ -521,16 +599,22 @@ function App() {
                         });
                         const result = await response.json();
                         if (result.status === "success") {
-                            const historyId = Date.now();
+                            const historyId = result.data.history_id ?? null;
                             setGeneratedRecipe({ ...result.data, _historyId: historyId });
-                            setCookingHistory((prev) => [
-                                {
-                                    ...result.data,
-                                    id: historyId,
-                                    image: null,
-                                },
-                                ...prev,
-                            ]);
+                            if (historyId !== null) {
+                                setCookingHistory((prev) => [
+                                    {
+                                        ...result.data,
+                                        id: historyId,
+                                        image: null,
+                                        is_favorite: false,
+                                        stars: 0,
+                                        tag: null,
+                                        feedback: null,
+                                    },
+                                    ...prev,
+                                ]);
+                            }
                         } else {
                             console.error("Failed to generate:", result.message);
                         }
@@ -556,6 +640,7 @@ function App() {
                 }}
                 onOpenHistoryItem={(item) => {
                     setSelectedHistoryItem(item);
+                    setHistoryReturnView("profile");
                     setCurrentView("history-detail");
                 }}
             />
@@ -568,7 +653,7 @@ function App() {
                 item={selectedHistoryItem}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
-                onBack={() => setCurrentView("profile")}
+                onBack={() => setCurrentView(historyReturnView)}
             />
         );
     }

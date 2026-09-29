@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ChevronLeft, ChefHat, Star } from "lucide-react";
+import { ChevronLeft, ChefHat, Heart, Star } from "lucide-react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -14,6 +14,8 @@ export default function CookingPage({
   setActiveTab,
   isCustom,
   onRateRecipe,
+  historyItem,
+  onToggleFavorite,
 }) {
   console.log("CookingPage");
 
@@ -22,6 +24,9 @@ export default function CookingPage({
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedTag, setSelectedTag] = useState(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [favoritePending, setFavoritePending] = useState(false);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState("");
 
   const FEEDBACK_TAGS = ["Delicious", "Great", "Tasty", "Not Bad", "Meh"];
   const FEEDBACK_MAX_LEN = 240;
@@ -48,24 +53,27 @@ export default function CookingPage({
     setHoverRating(0);
     setSelectedTag(null);
     setFeedbackText("");
+    setRatingError("");
+    setRatingSubmitting(false);
     ratingSheetY.set(0);
     setShowRatingModal(true);
   };
 
-  const submitRating = () => {
-    // TODO: also send { recipe_name, stars, tag, feedback } to backend once a
-    // rating-storage endpoint exists. For now it's merged into cookingHistory
-    // (client-side only, lost on refresh) via onRateRecipe.
-    const rating = {
+  const submitRating = async () => {
+    const historyId = generatedRecipe?._historyId;
+    if (historyId == null || ratingSubmitting) return;
+    setRatingSubmitting(true);
+    setRatingError("");
+    const ok = await onRateRecipe?.(historyId, {
       stars: selectedRating,
       tag: selectedTag,
       feedback: feedbackText,
-    };
-    console.log("[RATING]", {
-      recipe_name: generatedRecipe?.recipe_name,
-      ...rating,
     });
-    onRateRecipe?.(generatedRecipe?._historyId, rating);
+    setRatingSubmitting(false);
+    if (!ok) {
+      setRatingError("บันทึกไม่สำเร็จ ลองอีกครั้ง");
+      return;
+    }
     setShowRatingModal(false);
     setActiveTab("home");
   };
@@ -73,6 +81,16 @@ export default function CookingPage({
   const skipRating = () => {
     setShowRatingModal(false);
     setActiveTab("home");
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!historyItem || favoritePending) return;
+    setFavoritePending(true);
+    try {
+      await onToggleFavorite?.(historyItem.id);
+    } finally {
+      setFavoritePending(false);
+    }
   };
 
   const sheetY = useMotionValue(0);
@@ -275,12 +293,24 @@ export default function CookingPage({
             </>
           )}
 
+          {generatedRecipe?._historyId == null && (
+            <p className="text-xs text-gray-400 text-center mb-2">
+              บันทึกคะแนนสำหรับสูตรนี้ไม่ได้
+            </p>
+          )}
+          {ratingError && (
+            <p className="text-sm text-red-600 text-center mb-2">{ratingError}</p>
+          )}
           <button
             onClick={submitRating}
-            disabled={selectedRating === 0}
+            disabled={
+              selectedRating === 0 ||
+              ratingSubmitting ||
+              generatedRecipe?._historyId == null
+            }
             className="bg-[#EF5A3A] text-white px-5 py-3 rounded-full text-base font-bold shadow-md w-full disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orange-600 transition"
           >
-            ส่งคะแนน
+            {ratingSubmitting ? "กำลังส่ง..." : "ส่งคะแนน"}
           </button>
           <button
             onClick={skipRating}
@@ -302,6 +332,14 @@ export default function CookingPage({
             className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
           >
             <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={handleToggleFavorite}
+            disabled={!historyItem || favoritePending}
+            aria-label={historyItem?.is_favorite ? "เอาออกจากสูตรที่ชอบ" : "บันทึกเป็นสูตรที่ชอบ"}
+            className="absolute right-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Heart className={`w-5 h-5 ${historyItem?.is_favorite ? "fill-current" : ""}`} />
           </button>
           <img src={logo} alt="HomeMade" className="h-18 object-contain" />
         </div>
