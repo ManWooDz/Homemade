@@ -11,6 +11,7 @@ import {
   Mail,
   ChefHat,
   Star,
+  Heart,
 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -120,6 +121,7 @@ export default function Profile({
   onOpenHistoryItem,
 }) {
   const [view, setView] = useState("main"); // main | history | language | preferences | helps
+  const [historyFilter, setHistoryFilter] = useState("all"); // all | favorites
 
   const [language, setLanguage] = useState("th");
 
@@ -227,20 +229,48 @@ export default function Profile({
     }
   };
 
+  const visibleHistory =
+    historyFilter === "favorites"
+      ? (cookingHistory || []).filter((item) => item.is_favorite)
+      : cookingHistory || [];
+
   if (view === "history") {
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
           <Header title="Cooking History" onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32">
+            <div className="flex gap-2 mb-4">
+              {[
+                { key: "all", label: "ทั้งหมด" },
+                { key: "favorites", label: "♥ รายการโปรด" },
+              ].map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={() => setHistoryFilter(chip.key)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                    historyFilter === chip.key
+                      ? "bg-[#EF5A3A] text-white border-[#EF5A3A]"
+                      : "bg-white text-[#EF5A3A] border-[#EF5A3A]"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
             {!cookingHistory || cookingHistory.length === 0 ? (
               <div className="text-center text-gray-400 mt-10">
                 <ChefHat className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                 <p>ยังไม่มีเมนูที่เคยสร้าง</p>
               </div>
+            ) : visibleHistory.length === 0 ? (
+              <div className="text-center text-gray-400 mt-10">
+                <Heart className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                <p>ยังไม่มีสูตรที่กด ♥ ไว้</p>
+              </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {cookingHistory.map((item) => (
+                {visibleHistory.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => onOpenHistoryItem?.(item)}
@@ -292,6 +322,9 @@ export default function Profile({
                         </div>
                       )}
                     </div>
+                    {item.is_favorite && (
+                      <Heart className="w-4 h-4 text-red-500 fill-current shrink-0" />
+                    )}
                   </div>
                 ))}
               </div>
