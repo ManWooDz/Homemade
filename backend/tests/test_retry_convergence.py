@@ -229,14 +229,14 @@ class MainGuardTests(unittest.TestCase):
         self.assertNotIn("floor_union_kg", partial)
         self.assertFalse(os.path.exists(out_path))
 
-    def test_errored_rows_still_write_report_then_exit_2_with_warning(self):
+    def test_errored_rows_still_write_report_then_exit_3_with_warning(self):
         out, err = io.StringIO(), io.StringIO()
         with self._env("12"), \
                 patch.object(retry_convergence, "_load_generator", return_value=erroring), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             with self.assertRaises(SystemExit) as ctx:
                 retry_convergence.main(["2", "c1"])
-        self.assertEqual(ctx.exception.code, 2)
+        self.assertEqual(ctx.exception.code, 3)
         parsed = json.loads(out.getvalue())
         self.assertEqual(parsed["floor_only"]["overall"]["errored"], 2)
         self.assertEqual(parsed["floor_only"]["overall"]["exhausted"], 0)

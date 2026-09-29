@@ -37,7 +37,13 @@ def floor_only(key: str, graph_status: str) -> ResolvedAllergen:
 
 def resolve_blocks_for_keys(db: Session, keys: list[str]) -> dict[str, ResolvedAllergen]:
     resolved = {}
+    db_failed = False
     for key in keys:
+        if db_failed:
+            # First failure this request: don't pay another connection
+            # timeout per remaining key -- floor only, immediately.
+            resolved[key] = floor_only(key, "unavailable")
+            continue
         try:
             closure = get_allergen_closure(db, key)
         except Exception:
@@ -45,7 +51,8 @@ def resolve_blocks_for_keys(db: Session, keys: list[str]) -> dict[str, ResolvedA
             try:
                 db.rollback()
             except Exception:
-                pass
+                log.warning("[allergen_kg] rollback after failed closure query for '%s' also failed", key, exc_info=True)
+            db_failed = True
             resolved[key] = floor_only(key, "unavailable")
             continue
 

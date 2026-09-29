@@ -11,7 +11,7 @@ Usage (from backend/):
 
 Progress output from the generation loop goes to stderr; only the JSON report
 goes to stdout (or to --out PATH). After arm 1, <PATH>.partial.json is written.
-Exit status 2 if any generation call returned an error dict (report still written).
+Exit status 3 if any generation call returned an error dict (report still written).
 """
 import argparse
 import contextlib
@@ -150,7 +150,7 @@ def main(argv=None):
             + "!" * 70,
             file=sys.stderr,
         )
-        raise SystemExit(2)
+        raise SystemExit(3)
     return report
 
 

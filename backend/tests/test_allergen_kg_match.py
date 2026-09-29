@@ -8,6 +8,7 @@ from allergen_kg.match import (
     head_contains_other_terms,
 )
 from allergen_kg.resolve import ResolvedAllergen, TermInfo, floor_only
+from allergen_kg.match import _norm
 from main import check_allergy, validate_recipe
 
 
@@ -59,6 +60,31 @@ class FindViolationTests(unittest.TestCase):
         v = find_allergy_violation(recipe("ครีม 50 มล."), {"allergy": "แพ้กุ้งและนม"}, blocks)
         self.assertEqual(v.allergen_key, "milk")
 
+    def test_latin_term_followed_by_combining_mark_still_matches(self):
+        # NFC folds "p" + U+0301 into one precomposed char, which would hide
+        # the floor term "shrimp" from a normalized-only matcher.
+        text = "clamSHRIMṕ"
+        self.assertNotIn("shrimp", _norm(text))
+        self.assertIn("shrimp", text.lower())
+        v = find_allergy_violation(recipe(text), {"allergy": "แพ้กุ้ง"}, {"shrimp": floor_only("shrimp", "ok")})
+        self.assertEqual(v, Violation("shrimp", "shrimp", "floor", None))
+
+    def test_matcher_never_misses_what_raw_lowercase_check_catches(self):
+        cases = [
+            ("shrimp", "clamSHRIMṕ"),
+            ("shrimp", "Fresh SHRIMP 200 g"),
+            ("กะปิ", "กะปิ 1 ช้อนชา"),
+            ("cheese", "Cheesé slice"),
+            ("นม", "นมสด 1 ถ้วย"),
+        ]
+        for term, text in cases:
+            with self.subTest(term=term, text=text):
+                self.assertIn(term.lower(), text.lower())
+                blocks = {"shrimp": ResolvedAllergen(terms={term: TermInfo("floor", None)}, graph_status="ok")}
+                v = find_allergy_violation(recipe(text), {}, blocks)
+                self.assertIsNotNone(v)
+                self.assertEqual(v.term, term)
+
     def test_no_violation(self):
         blocks = shrimp_with({"beta": TermInfo("kg", ("beta", "alpha"))})
         self.assertIsNone(find_allergy_violation(recipe("หมูสับ"), {"allergy": "แพ้กุ้ง"}, blocks))
@@ -69,6 +95,15 @@ class ReasonFormatTests(unittest.TestCase):
         reason = format_violation_reason(Violation("gamma", "shrimp", "kg", ("gamma", "beta", "alpha")))
         self.assertEqual(reason, "Allergy violation: 'gamma' → beta → alpha → กุ้ง (ผู้ใช้แพ้ shrimp)")
         self.assertEqual(reason.count("→"), 3)
+
+    def test_one_hop_kg_term_uses_floor_wording(self):
+        reason = format_violation_reason(Violation("กุ้ง", "shrimp", "kg", ("กุ้ง",)))
+        self.assertEqual(reason, "Allergy violation: พบ 'กุ้ง' ในสูตร (ผู้ใช้แพ้ shrimp)")
+        self.assertNotIn("→", reason)
+
+    def test_two_hop_kg_reason_arrow_count_equals_path_length(self):
+        reason = format_violation_reason(Violation("beta", "shrimp", "kg", ("beta", "alpha")))
+        self.assertEqual(reason.count("→"), 2)
 
     def test_floor_reason_unchanged_format(self):
         reason = format_violation_reason(Violation("กะปิ", "shrimp", "floor", None))

@@ -28,20 +28,24 @@ def _ordered_terms(resolved: ResolvedAllergen):
 
 
 def find_allergy_violation(recipe: dict, user_prefs, resolved_blocks: dict) -> Optional[Violation]:
-    text = _norm(" ".join(recipe["adjusted_ingredients"]))
+    raw_text = " ".join(recipe["adjusted_ingredients"]).lower()
+    text = _norm(raw_text)
     keys = list(detect_flagged_allergens(user_prefs))
     keys += [key for key in resolved_blocks if key not in keys]
 
     for key in keys:
         resolved = resolved_blocks.get(key) or floor_only(key, "unavailable")
         for term, info in _ordered_terms(resolved):
-            if _norm(term) in text:
+            # Matches on the raw lower-cased text too, so normalization can
+            # only ADD matches vs. the legacy raw check, never lose one
+            # (e.g. NFC folding a Latin letter + combining mark).
+            if term.lower() in raw_text or _norm(term) in text:
                 return Violation(term=term, allergen_key=key, matched_via=info.matched_via, path=info.path)
     return None
 
 
 def format_violation_reason(v: Violation) -> str:
-    if v.matched_via == "kg" and v.path:
+    if v.path and len(v.path) >= 2:
         chain = " → ".join([f"'{v.path[0]}'", *v.path[1:], ALLERGEN_LABELS[v.allergen_key]])
         return f"Allergy violation: {chain} (ผู้ใช้แพ้ {v.allergen_key})"
     return f"Allergy violation: พบ '{v.term}' ในสูตร (ผู้ใช้แพ้ {v.allergen_key})"

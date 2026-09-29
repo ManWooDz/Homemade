@@ -47,6 +47,23 @@ class ResolveTests(unittest.TestCase):
         self.assertEqual(resolved.graph_status, "unavailable")
         self.assertEqual(set(resolved.terms), set(FLOOR_BLOCKS["milk"]))
 
+    def test_first_query_failure_skips_db_for_remaining_keys(self):
+        with patch("allergen_kg.resolve.get_allergen_closure", side_effect=RuntimeError("db down")) as closure:
+            with self.assertLogs("allergen_kg", level="ERROR"):
+                resolved = resolve_blocks_for_keys(self.db, ["shrimp", "milk"])
+        self.assertEqual(closure.call_count, 1)
+        for key in ("shrimp", "milk"):
+            self.assertEqual(resolved[key].graph_status, "unavailable")
+            self.assertEqual(set(resolved[key].terms), set(FLOOR_BLOCKS[key]))
+            self.assertTrue(all(t.matched_via == "floor" for t in resolved[key].terms.values()))
+
+    def test_failing_rollback_logs_warning_and_does_not_raise(self):
+        with patch("allergen_kg.resolve.get_allergen_closure", side_effect=RuntimeError("db down")),                 patch.object(self.db, "rollback", side_effect=RuntimeError("rollback broke")):
+            with self.assertLogs("allergen_kg", level="WARNING") as logs:
+                resolved = resolve_blocks_for_keys(self.db, ["milk"])
+        self.assertEqual(resolved["milk"].graph_status, "unavailable")
+        self.assertTrue(any("rollback" in line.lower() for line in logs.output))
+
     def test_two_allergies_both_resolved(self):
         add_edges(self.db, [("alpha", "allergen:shrimp")])
         resolved = resolve_allergy_blocks(self.db, {"allergy": "แพ้กุ้งและนม"})
