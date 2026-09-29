@@ -50,6 +50,7 @@ from fridge_repository import delete_user_ingredient, insert_user_ingredient, li
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
 from history_repository import insert_generate_history, list_history, set_favorite, upsert_rating
+from base_favorites_repository import list_base_favorite_ids, set_base_favorite
 
 #
 #       uvicorn main:app --reload
@@ -698,12 +699,12 @@ async def get_history(
 
 # Postgres binds ids as INTEGER: anything above 2**31-1 would raise DataError
 # (a 500) if it reached the DB, so out-of-range ids are rejected as 422 here.
-HistoryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
+PositiveInt32Id = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
 
 @app.put("/api/history/{history_id}/rating", dependencies=[Depends(verify_same_origin)])
 async def put_history_rating(
-    history_id: HistoryId,
+    history_id: PositiveInt32Id,
     body: RatingRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -729,7 +730,7 @@ def _set_history_favorite(db, user, history_id, favorite):
 
 @app.put("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
 async def put_history_favorite(
-    history_id: HistoryId,
+    history_id: PositiveInt32Id,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -738,11 +739,43 @@ async def put_history_favorite(
 
 @app.delete("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
 async def delete_history_favorite(
-    history_id: HistoryId,
+    history_id: PositiveInt32Id,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     return _set_history_favorite(db, current_user, history_id, False)
+
+
+@app.get("/api/base-favorites")
+async def get_base_favorites(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return {"status": "success", "data": list_base_favorite_ids(db, current_user.id)}
+
+
+def _set_base_favorite(db, user, recipe_id, favorite):
+    if not set_base_favorite(db, user_id=user.id, base_recipe_id=recipe_id, favorite=favorite):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found")
+    return {"status": "success", "data": {"is_favorite": favorite}}
+
+
+@app.put("/api/base-favorites/{recipe_id}", dependencies=[Depends(verify_same_origin)])
+async def put_base_favorite(
+    recipe_id: PositiveInt32Id,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _set_base_favorite(db, current_user, recipe_id, True)
+
+
+@app.delete("/api/base-favorites/{recipe_id}", dependencies=[Depends(verify_same_origin)])
+async def delete_base_favorite(
+    recipe_id: PositiveInt32Id,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _set_base_favorite(db, current_user, recipe_id, False)
 
 
 def resolve_blocks_for_request(user_prefs):
