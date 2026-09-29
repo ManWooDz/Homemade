@@ -18,8 +18,10 @@ from sqlalchemy import (
     Integer,
     JSON,
     String,
+    Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -198,14 +200,29 @@ class GenerateHistory(Base):
     source: Mapped[str] = mapped_column(String, nullable=False)
     base_recipe_id: Mapped[int | None] = mapped_column(ForeignKey("base_recipes.id"), nullable=True)
     recipe_name: Mapped[str] = mapped_column(String, nullable=False)
-    # real Postgres arrays, not JSONB — spec.md:49-50 queries these with unnest()
-    adjusted_ingredients: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
-    diet_tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
-    instructions: Mapped[list] = mapped_column(JSONB, default=list)
-    nutrition: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # real Postgres arrays, not JSONB — spec.md:49-50 queries these with unnest().
+    # .with_variant(JSON(), "sqlite"): Postgres DDL unchanged; SQLite-backed
+    # unit tests can create the table (same pattern as BaseRecipe).
+    adjusted_ingredients: Mapped[list[str]] = mapped_column(
+        ARRAY(String).with_variant(JSON(), "sqlite"), default=list
+    )
+    diet_tags: Mapped[list[str]] = mapped_column(
+        ARRAY(String).with_variant(JSON(), "sqlite"), default=list
+    )
+    instructions: Mapped[list] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=list)
+    nutrition: Mapped[dict] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=dict)
+    # Full approved generate response, for rendering history detail exactly.
+    recipe_data: Mapped[dict] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"),
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'"),
+    )
     # verified dimension (spec.md RAG section) — must pass output_dimensionality=768
     # to embed_content() or this column gets a dimension mismatch on insert
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(768).with_variant(JSON(), "sqlite"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -230,7 +247,14 @@ class Rating(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     generate_history_id: Mapped[int] = mapped_column(ForeignKey("generate_history.id"), nullable=False)
     stars: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Allowed values are enforced at the API boundary (main.RatingRequest), not
+    # by a DB CHECK, so UI copy changes need no migration.
+    tag: Mapped[str | None] = mapped_column(String, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 
 class RefreshToken(Base):
