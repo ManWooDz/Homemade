@@ -128,38 +128,7 @@ BAD_FLAVOR_PAIRS = [
     ("chocolate", "garlic"),
 ]
 
-ALLERGEN_MAP = {
-    "shrimp":    {"triggers": ["shrimp", "prawn", "กุ้ง"],
-                  # "กะปิ" (shrimp paste) added as an interim single-entry
-                  # patch (2026-09-19) -- a real derived-ingredient block is
-                  # the Allergen Validation Knowledge Graph layer (spec.md),
-                  # not yet built. Do not treat this line as that KG.
-                  "blocks":   ["shrimp", "prawn", "กุ้ง", "กะปิ"]},
-    "peanut":    {"triggers": ["peanut", "peanuts", "ถั่วลิสง", "ถั่ว"],
-                  "blocks":   ["peanut", "peanuts", "ถั่วลิสง", "เนยถั่ว"]},
-    "milk":      {"triggers": ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม"],
-                  "blocks":   ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม"]},
-    "egg":       {"triggers": ["egg", "eggs", "ไข่"],
-                  "blocks":   ["egg", "eggs", "ไข่"]},
-    "gluten":    {"triggers": ["wheat", "flour", "gluten", "แป้งสาลี", "แป้ง"],
-                  "blocks":   ["wheat", "flour", "gluten", "แป้งสาลี", "แป้ง"]},
-    "shellfish": {"triggers": ["crab", "lobster", "clam", "oyster", "ปู", "หอย", "กั้ง"],
-                  "blocks":   ["crab", "lobster", "clam", "oyster", "ปู", "หอย", "กั้ง"]},
-    "fish":      {"triggers": ["fish", "ปลา"],
-                  "blocks":   ["fish", "ปลา"]},
-    # "ถั่ว" (generic Thai word, ambiguous between peanut/soy/other legumes)
-    # deliberately excluded here -- kept only under "peanut" below, since
-    # colloquial "แพ้ถั่ว" with no further qualifier most commonly means
-    # peanut allergy. Previously listed here too, causing a false-positive
-    # over-block: a soy-unrelated recipe containing "ซีอิ๊ว" (soy sauce) got
-    # blocked for a user who only said "แพ้ถั่ว" (peanut allergy) -- found
-    # and verified 2026-09-19 via the expanded eval fixtures.
-    "soy":       {"triggers": ["soy", "ถั่วเหลือง", "เต้าหู้"],
-                  "blocks":   ["soy sauce", "soy", "tofu", "เต้าหู้", "ถั่วเหลือง", "ซีอิ๊ว", "ซอสถั่วเหลือง"]},
-    "nut":       {"triggers": ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์"],
-                  "blocks":   ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์"]},
-}
-ALLERGY_TRIGGER_KEYWORDS = ["allergic to", "allergy", "แพ้", "ห้ามใส่", "ไม่ทาน"]
+from allergen_kg.floor import ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens
 
 # -------------------------------
 # 1. Ingredient Check (No hallucination)
@@ -253,33 +222,10 @@ def check_nutrition(recipe):
 # -------------------------------
 def check_allergy(recipe, user_prefs):
     ingredients_text = " ".join(recipe["adjusted_ingredients"]).lower()
-    
-    # ดึงเฉพาะ field 'allergy' จาก preferences
-    allergy_str = ""
-    if isinstance(user_prefs, dict):
-        allergy_str = user_prefs.get("allergy", "").lower().strip()
-    else:
-        allergy_str = str(user_prefs).lower()
-
-    # ถ้าไม่มีการระบุการแพ้อาหาร ผ่านทันที
-    if not allergy_str or allergy_str in ("", "none", "ไม่มี", "ไม่แพ้อาหาร", "no allergy"):
-        return True, "OK"
-
-    # ตรวจว่ามีคำที่บ่งบอกการแพ้ไหม
-    has_allergy_mention = any(kw in allergy_str for kw in ALLERGY_TRIGGER_KEYWORDS)
-    if not has_allergy_mention:
-        return True, "OK"
-
-    # ตรวจสอบด้วย triggers/blocks แยกกัน
-    for allergen_key, mapping in ALLERGEN_MAP.items():
-        # ใช้ triggers เพื่อ detect ว่า user แพ้กลุ่มนี้ไหม
-        user_is_allergic = any(trigger in allergy_str for trigger in mapping["triggers"])
-        if user_is_allergic:
-            # ใช้ blocks เพื่อตรวจว่ามีวัตถุดิบต้องห้ามใน recipe ไหม
-            for block_term in mapping["blocks"]:
-                if block_term in ingredients_text:
-                    return False, f"Allergy violation: พบ '{block_term}' ในสูตร (ผู้ใช้แพ้ {allergen_key})"
-
+    for allergen_key in detect_flagged_allergens(user_prefs):
+        for block_term in ALLERGEN_MAP[allergen_key]["blocks"]:
+            if block_term in ingredients_text:
+                return False, f"Allergy violation: พบ '{block_term}' ในสูตร (ผู้ใช้แพ้ {allergen_key})"
     return True, "OK"
 
 
