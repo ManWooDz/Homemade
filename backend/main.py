@@ -17,6 +17,7 @@ import uvicorn
 import json
 import os
 import re
+import sys
 import uuid
 import requests
 from dotenv import load_dotenv
@@ -130,6 +131,7 @@ BAD_FLAVOR_PAIRS = [
 
 from allergen_kg.floor import ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens
 from allergen_kg.match import find_allergy_violation, format_violation_reason
+from allergen_kg.resolve import resolve_allergy_blocks, unavailable_blocks
 
 # -------------------------------
 # 1. Ingredient Check (No hallucination)
@@ -668,6 +670,59 @@ async def remove_user_ingredient(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+def resolve_blocks_for_request(user_prefs):
+    # Resolved once per request, before the retry loop: prefs never change
+    # between attempts, and no DB session is held open across LLM calls.
+    if not detect_flagged_allergens(user_prefs):
+        return {}
+    if SessionLocal is None:
+        return unavailable_blocks(user_prefs)
+    try:
+        db = SessionLocal()
+        try:
+            return resolve_allergy_blocks(db, user_prefs)
+        finally:
+            db.close()
+    except Exception:
+        logging.getLogger("allergen_kg").exception("[allergen_kg] could not open a session -- floor only")
+        return unavailable_blocks(user_prefs)
+
+
+def _print_safe(message):
+    # Windows consoles on legacy codepages (cp874/cp1252) cannot encode the
+    # KG chain arrow in violation reasons; a log line must never crash the
+    # request, so degrade to backslash escapes instead of raising.
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(message.encode(encoding, errors="backslashreplace").decode(encoding))
+
+
+def run_generation_with_validation(generate_fn, ingredients, ingredients_name_only, user_prefs,
+                                   base_recipe, resolved_blocks, max_retries=3):
+    attempts_log = []
+    feedback = None
+    for attempt in range(1, max_retries + 1):
+        print(f"Generation Attempt: {attempt}/{max_retries}")
+        recipe = generate_fn(ingredients, user_prefs, base_recipe, feedback=feedback)
+
+        if isinstance(recipe, dict) and "error" in recipe:
+            attempts_log.append({"attempt": attempt, "status": "error", "reason": recipe["error"]})
+            return recipe, attempts_log
+
+        result = validate_recipe(recipe, ingredients_name_only, user_prefs, resolved_blocks=resolved_blocks)
+        if result["status"] == "fail":
+            feedback = result["reason"]
+            attempts_log.append({"attempt": attempt, "status": "fail", "reason": feedback})
+            _print_safe(f"Recipe rejected: {feedback}")
+        else:
+            attempts_log.append({"attempt": attempt, "status": "pass", "reason": None})
+            print("Recipe approved")
+            return recipe, attempts_log
+    return None, attempts_log
+
+
 class GenerateRecipeTextRequest(BaseModel):
     recipe: Dict[str, Any]
     ingredients: List[Any]
@@ -687,31 +742,16 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
         print(f"[2] Text Ingredients: {ingredients_list_for_llm}")
         print(f"[3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
 
-        max_retries = 3
-        attempt = 0
-        final_output = None
-        feedback = None
+        resolved_blocks = resolve_blocks_for_request(user_prefs)
+        final_output, _attempts_log = run_generation_with_validation(
+            call_agentic_llm,
+            ingredients_list_for_llm,
+            ingredients_name_only,
+            user_prefs,
+            base_recipe,
+            resolved_blocks,
+        )
 
-        while attempt < max_retries:
-            attempt += 1
-            print(f"Generation Attempt: {attempt}/{max_retries}")
-
-            recipe = call_agentic_llm(ingredients_list_for_llm, user_prefs, base_recipe, feedback=feedback)
-
-            if isinstance(recipe, dict) and "error" in recipe:
-                final_output = recipe
-                break
-
-            result = validate_recipe(recipe, ingredients_name_only, user_prefs)
-
-            if result["status"] == "fail":
-                feedback = result["reason"]
-                print(f"Recipe rejected: {feedback}")
-            else:
-                print("Recipe approved")
-                final_output = recipe
-                break
-                
         if not final_output:
              return {"status": "error", "message": "Failed to generate a valid recipe after multiple attempts due to validation failures."}
         elif isinstance(final_output, dict) and "error" in final_output:
