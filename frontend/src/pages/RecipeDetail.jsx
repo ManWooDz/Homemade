@@ -12,6 +12,8 @@ export default function RecipeDetail({
   onConfirm,
   activeTab,
   setActiveTab,
+  isFavorite,
+  onToggleFavorite,
 }) {
   const [ingredients, setIngredients] = useState(() => {
     if (recipe && recipe.ingredients) {
@@ -114,8 +116,18 @@ export default function RecipeDetail({
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <button className="text-gray-400 hover:text-red-500">
-            <Heart className="w-8 h-8" />
+          <button
+            onClick={() => onToggleFavorite?.(recipe?.id)}
+            disabled={recipe?.id == null}
+            aria-label={
+              isFavorite ? "เอาออกจากรายการโปรด" : "เพิ่มในรายการโปรด"
+            }
+            aria-pressed={!!isFavorite}
+            className={
+              isFavorite ? "text-red-500" : "text-gray-400 hover:text-red-500"
+            }
+          >
+            <Heart className={`w-8 h-8 ${isFavorite ? "fill-current" : ""}`} />
           </button>
         </div>
 

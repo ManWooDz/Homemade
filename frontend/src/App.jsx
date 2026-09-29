@@ -69,6 +69,9 @@ function App() {
     const [selectedOccasion, setSelectedOccasion] = useState([]);
     const searchBarRef = useRef(null);
     const contentRef = useRef(null);
+    // One app-wide set of base-recipe ids whose favorite request is in flight
+    // (Home card, Favorites base tab and RecipeDetail all share toggleFavorite).
+    const favoritePendingRef = useRef(new Set());
     const [filterPanelTop, setFilterPanelTop] = useState(0);
 
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
@@ -188,9 +191,23 @@ function App() {
             }
         };
 
+        const fetchBaseFavorites = async () => {
+            try {
+                const response = await apiFetch("/api/base-favorites");
+                if (!response.ok) return;
+                const result = await response.json();
+                if (result.status === "success") {
+                    setFavoriteRecipeIds(result.data);
+                }
+            } catch (error) {
+                console.error("Error fetching base favorites:", error);
+            }
+        };
+
         fetchRecipes();
         fetchUserIngredients();
         fetchHistory();
+        fetchBaseFavorites();
     }, [apiFetch]);
 
     const FILTER_TABS = [
@@ -314,12 +331,41 @@ function App() {
         setFilterIngredientQuery("");
     };
 
-    const toggleFavorite = (recipeId) => {
-        setFavoriteRecipeIds((prev) =>
-            prev.includes(recipeId)
-                ? prev.filter((id) => id !== recipeId)
-                : [...prev, recipeId],
-        );
+    // Optimistic, persisted toggle for base-recipe favorites. Ignores taps while
+    // a request for the same id is in flight; on failure restores the id's
+    // previous membership (not a blind flip).
+    const toggleFavorite = async (recipeId) => {
+        if (favoritePendingRef.current.has(recipeId)) return;
+        const wasFavorite = favoriteRecipeIds.includes(recipeId);
+        favoritePendingRef.current.add(recipeId);
+
+        const setMembership = (isMember) => {
+            setFavoriteRecipeIds((prev) => {
+                const without = prev.filter((id) => id !== recipeId);
+                return isMember ? [...without, recipeId] : without;
+            });
+        };
+
+        setMembership(!wasFavorite);
+        try {
+            const response = await apiFetch(
+                "/api/base-favorites/" + recipeId,
+                { method: wasFavorite ? "DELETE" : "PUT" },
+            );
+            if (!response.ok) {
+                setMembership(wasFavorite);
+                return;
+            }
+            const result = await response.json();
+            if (result.status !== "success") {
+                setMembership(wasFavorite);
+            }
+        } catch (error) {
+            console.error("Error toggling base favorite:", error);
+            setMembership(wasFavorite);
+        } finally {
+            favoritePendingRef.current.delete(recipeId);
+        }
     };
 
     const selectedTagFilters = [
@@ -384,6 +430,8 @@ function App() {
         return (
             <RecipeDetail
                 recipe={selectedRecipe}
+                isFavorite={favoriteRecipeIds.includes(selectedRecipe?.id)}
+                onToggleFavorite={toggleFavorite}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => {
