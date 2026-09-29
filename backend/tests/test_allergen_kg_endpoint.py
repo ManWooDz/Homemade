@@ -1,6 +1,7 @@
 # backend/tests/test_allergen_kg_endpoint.py
 import unittest
 from copy import deepcopy
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from sqlalchemy.exc import OperationalError
@@ -110,6 +111,10 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+        history_patcher = patch("main.save_generate_history", return_value=101)
+        history_patcher.start()
+        self.addCleanup(history_patcher.stop)
+
     async def test_endpoint_feeds_kg_chain_reason_back_to_generator(self):
         db = make_memory_db()
         add_edges(db, [("alpha", "allergen:shrimp"), ("beta", "alpha")])
@@ -121,7 +126,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             return outputs.pop(0)
 
         with patch("main.SessionLocal", lambda: db), patch("main.call_agentic_llm", side_effect=fake):
-            response = await generate_recipe_text(request("แพ้กุ้ง"))
+            response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=object())
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(feedbacks[1], "Allergy violation: 'beta' → alpha → กุ้ง (ผู้ใช้แพ้ shrimp)")
@@ -135,7 +140,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             return outputs.pop(0)
 
         with patch("main.SessionLocal", None), patch("main.call_agentic_llm", side_effect=fake):
-            response = await generate_recipe_text(request("แพ้กุ้ง"))
+            response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=object())
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(feedbacks[1], "Allergy violation: พบ 'กุ้ง' ในสูตร (ผู้ใช้แพ้ shrimp)")

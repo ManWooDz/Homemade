@@ -769,6 +769,22 @@ def _print_safe(message):
         print(message.encode(encoding, errors="backslashreplace").decode(encoding))
 
 
+def save_generate_history(db, user, request, final_output):
+    # A recipe that already passed validation must never be lost because the
+    # history write failed — swallow, roll back, log safely, return None.
+    try:
+        return insert_generate_history(
+            db, user_id=user.id, request_recipe=request.recipe, final_output=final_output
+        )
+    except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        _print_safe(f"[History] could not save generate history: {e!r}")
+        return None
+
+
 def run_generation_with_validation(generate_fn, ingredients, ingredients_name_only, user_prefs,
                                    base_recipe, resolved_blocks, max_retries=3):
     attempts_log = []
@@ -799,8 +815,12 @@ class GenerateRecipeTextRequest(BaseModel):
     preferences: Dict[str, str]
 
 # generate recipe text from base recipe and user ingredients
-@app.post("/api/generate-recipe-text")
-async def generate_recipe_text(request: GenerateRecipeTextRequest):
+@app.post("/api/generate-recipe-text", dependencies=[Depends(verify_same_origin)])
+async def generate_recipe_text(
+    request: GenerateRecipeTextRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         user_prefs = request.preferences
         ingredients_list_for_llm = ingredient_names(request.ingredients)
@@ -838,17 +858,19 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
         # recipe that already passed validation.
         llm_estimated_nutrition = final_output.get("nutrition")
         try:
-            db = SessionLocal()
+            # Named nutrition_db so it never shadows the request-scoped `db`
+            # parameter that save_generate_history uses below.
+            nutrition_db = SessionLocal()
             try:
                 nutrition_result = compute_recipe_nutrition(
-                    db=db,
+                    db=nutrition_db,
                     adjusted_ingredients=final_output.get("adjusted_ingredients", []),
                     instructions=final_output.get("instructions", []),
                     servings=final_output.get("servings", 1),
                     llm_estimator=NutritionLLMEstimator(),
                 )
             finally:
-                db.close()
+                nutrition_db.close()
 
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
             final_output["computed_nutrition"] = nutrition_result.nutrition
@@ -881,9 +903,11 @@ async def generate_recipe_text(request: GenerateRecipeTextRequest):
 
         print(f"[4] Final Output: {json.dumps(final_output, ensure_ascii=False, indent=2)}")
 
+        history_id = save_generate_history(db, current_user, request, final_output)
+
         return {
             "status": "success",
-            "data": final_output
+            "data": {**final_output, "history_id": history_id},
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}

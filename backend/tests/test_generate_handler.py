@@ -1,13 +1,14 @@
 import unittest
 from copy import deepcopy
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from main import (
     GenerateRecipeTextRequest,
     call_agentic_llm,
     check_nutrition,
     generate_recipe_text,
+    save_generate_history,
     validate_recipe,
 )
 from nutrition.calculator import NutritionResult
@@ -42,12 +43,23 @@ VALID_RECIPE = {
     "safety_warning": "ระวังความร้อนขณะประกอบอาหาร",
 }
 
+TEST_USER = SimpleNamespace(id=7)
+TEST_DB = object()
+
+
+async def call_handler(request):
+    return await generate_recipe_text(request, current_user=TEST_USER, db=TEST_DB)
+
 
 class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         patcher = patch("main.compute_recipe_nutrition", return_value=_STUB_NUTRITION_RESULT)
         self.mock_compute_nutrition = patcher.start()
         self.addCleanup(patcher.stop)
+
+        history_patcher = patch("main.save_generate_history", return_value=101)
+        self.mock_save_history = history_patcher.start()
+        self.addCleanup(history_patcher.stop)
 
     @staticmethod
     def make_request():
@@ -66,7 +78,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
             return responses.pop(0)
 
         with patch("main.call_agentic_llm", side_effect=fake_llm) as mock_llm:
-            response = await generate_recipe_text(self.make_request())
+            response = await call_handler(self.make_request())
 
         return response, mock_llm, feedbacks
 
@@ -91,7 +103,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         )
 
         with patch("main.call_agentic_llm", side_effect=fake_llm) as mock_llm:
-            response = await generate_recipe_text(request)
+            response = await call_handler(request)
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(captured["ingredients"], ["minced pork"])
@@ -241,7 +253,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_final_output_nutrition_is_replaced_by_computed_value(self):
         with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
-            response = await generate_recipe_text(self.make_request())
+            response = await call_handler(self.make_request())
 
         self.assertEqual(response["data"]["nutrition"], _STUB_NUTRITION_RESULT.nutrition)
         self.assertEqual(response["data"]["llm_estimated_nutrition"], VALID_RECIPE["nutrition"])
@@ -257,7 +269,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_compute_nutrition.return_value = partial
         with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
-            response = await generate_recipe_text(self.make_request())
+            response = await call_handler(self.make_request())
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(response["data"]["nutrition"], VALID_RECIPE["nutrition"])
@@ -276,7 +288,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
                 )
                 self.mock_compute_nutrition.return_value = insane
                 with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
-                    response = await generate_recipe_text(self.make_request())
+                    response = await call_handler(self.make_request())
 
                 self.assertEqual(response["status"], "success")
                 self.assertEqual(response["data"]["nutrition_partially_estimated"], True)
@@ -286,7 +298,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_engine_failure_keeps_llm_guess_and_flags_instead_of_erroring(self):
         self.mock_compute_nutrition.side_effect = RuntimeError("db exploded")
         with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
-            response = await generate_recipe_text(self.make_request())
+            response = await call_handler(self.make_request())
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(response["data"]["nutrition"], VALID_RECIPE["nutrition"])
@@ -300,8 +312,61 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         # main.py doesn't mutate it in place.
         original_nutrition = deepcopy(VALID_RECIPE["nutrition"])
         with patch("main.call_agentic_llm", side_effect=[VALID_RECIPE]):
-            await generate_recipe_text(self.make_request())
+            await call_handler(self.make_request())
         self.assertEqual(VALID_RECIPE["nutrition"], original_nutrition)
+
+    async def test_history_writer_gets_approved_output_and_id_is_returned(self):
+        request = self.make_request()
+        with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
+            response = await generate_recipe_text(request, current_user=TEST_USER, db=TEST_DB)
+
+        self.assertEqual(response["status"], "success")
+        self.assertEqual(response["data"]["history_id"], 101)
+        self.mock_save_history.assert_called_once()
+        db, user, passed_request, final_output = self.mock_save_history.call_args.args
+        self.assertIs(db, TEST_DB)
+        self.assertIs(user, TEST_USER)
+        self.assertIs(passed_request, request)
+        expected = dict(response["data"])
+        expected.pop("history_id")
+        self.assertEqual(final_output, expected)
+        self.assertNotIn("history_id", final_output)
+
+    async def test_history_write_failure_still_returns_recipe(self):
+        self.mock_save_history.return_value = None
+        with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
+            response = await call_handler(self.make_request())
+        self.assertEqual(response["status"], "success")
+        self.assertIsNone(response["data"]["history_id"])
+        self.assertEqual(response["data"]["recipe_name"], VALID_RECIPE["recipe_name"])
+
+    async def test_history_not_written_when_generation_fails(self):
+        with patch("main.call_agentic_llm", return_value=None):
+            response = await call_handler(self.make_request())
+        self.assertEqual(response["status"], "error")
+        self.mock_save_history.assert_not_called()
+
+
+class SaveGenerateHistoryTests(unittest.TestCase):
+    def test_swallows_db_errors_and_logs_safely(self):
+        db = MagicMock()
+        with patch("main.insert_generate_history", side_effect=RuntimeError("บันทึกไม่ได้ → 🌶️")), \
+                patch("main._print_safe") as print_safe:
+            # request must have .recipe, so the failure comes from the insert,
+            # not from an AttributeError before it.
+            result = save_generate_history(db, TEST_USER, SimpleNamespace(recipe={}), {"recipe_name": "X"})
+        self.assertIsNone(result)
+        db.rollback.assert_called_once()
+        print_safe.assert_called_once()
+
+    def test_returns_inserted_id(self):
+        with patch("main.insert_generate_history", return_value=55) as insert:
+            request = SimpleNamespace(recipe={"id": 5})
+            result = save_generate_history(TEST_DB, TEST_USER, request, {"recipe_name": "X"})
+        self.assertEqual(result, 55)
+        insert.assert_called_once_with(
+            TEST_DB, user_id=7, request_recipe={"id": 5}, final_output={"recipe_name": "X"}
+        )
 
 
 if __name__ == "__main__":

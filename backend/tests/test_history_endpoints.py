@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 from copy import deepcopy
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -22,6 +23,7 @@ from database.models import (
 )
 from history_repository import insert_generate_history
 from main import app
+from nutrition.calculator import NutritionResult
 
 APPROVED = {
     "recipe_name": "Thai Basil Pork",
@@ -172,6 +174,94 @@ class HistoryEndpointTests(HistoryEndpointTestCase):
         self.assertEqual(res.status_code, 403)
         res = self.alice.delete(f"/api/history/{self.alice_history}/favorite")
         self.assertEqual(res.status_code, 403)
+
+
+_STUB_NUTRITION = NutritionResult(
+    nutrition={"basis": "per_serving", "calories": 1.0, "protein_g": 1.0, "carbs_g": 1.0, "fat_g": 1.0},
+    partially_estimated=False,
+    partially_estimated_reasons=[],
+)
+
+
+# Copied verbatim from test_generate_handler.VALID_RECIPE: this recipe paired
+# with the "minced pork" request below is proven to pass all six validation
+# steps, so a failure here is about history, not validation.
+GENERATED = {
+    "recipe_name": "Thai Basil Pork",
+    "servings": 2,
+    "adjusted_ingredients": [
+        "หมูสับ 200 กรัม",
+        "ใบกะเพรา 1 ถ้วย",
+        "น้ำมัน 1 ช้อนโต๊ะ",
+    ],
+    "diet_tags": ["Thai"],
+    "nutrition": {
+        "basis": "per_serving",
+        "calories": 420,
+        "protein_g": 28,
+        "carbs_g": 18,
+        "fat_g": 24,
+    },
+    "instructions": [
+        "1. ตั้งกระทะใส่น้ำมันแล้วผัดหมูให้สุก",
+        "2. ใส่ใบกะเพรา",
+    ],
+    "safety_warning": "ระวังความร้อนขณะประกอบอาหาร",
+}
+
+
+class GenerateWritesHistoryEndToEndTests(HistoryEndpointTestCase):
+    """Deviation from the spec's wording ("a stand-in that fails the test if
+    called"): the Nutrition Engine block legitimately calls SessionLocal()
+    and swallows every exception, so a raising stand-in would be silently
+    caught and prove nothing. A MagicMock gives the same guarantee — no
+    connection to the dev Postgres — without that false signal.
+
+    The history writer is NOT patched here. Empty allergy prefs mean
+    resolve_blocks_for_request returns before touching SessionLocal
+    (main.py:676); the Nutrition Engine block still calls SessionLocal(),
+    so it is replaced with a MagicMock to guarantee nothing reaches the dev
+    Postgres. compute_recipe_nutrition is patched, so the mock session is
+    never queried."""
+
+    def generate(self, client, extra_body=None, headers=None):
+        body = {
+            "recipe": {"name": "Custom Recipe from Fridge"},
+            "ingredients": [{"id": 1, "name": "minced pork"}],
+            "preferences": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
+        }
+        body.update(extra_body or {})
+        with patch("main.call_agentic_llm", return_value=deepcopy(GENERATED)), \
+                patch("main.compute_recipe_nutrition", return_value=_STUB_NUTRITION), \
+                patch("main.SessionLocal", MagicMock()):
+            return client.post(
+                "/api/generate-recipe-text",
+                json=body,
+                headers=self.origin if headers is None else headers,
+            )
+
+    def test_history_row_belongs_to_cookie_user(self):
+        alice = self.login("alice@example.com")
+        bob = self.login("bob@example.com")
+
+        # A spoofed user_id in the body must be ignored.
+        res = self.generate(alice, extra_body={"user_id": self.user_id("bob@example.com")})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()["data"]
+        self.assertIsInstance(data["history_id"], int)
+
+        alice_rows = alice.get("/api/history").json()["data"]
+        self.assertEqual([row["id"] for row in alice_rows], [data["history_id"]])
+        self.assertEqual(alice_rows[0]["recipe_name"], "Thai Basil Pork")
+        self.assertNotIn("history_id", alice_rows[0]["recipe_data"])
+        self.assertEqual(bob.get("/api/history").json()["data"], [])
+
+    def test_generate_requires_login(self):
+        self.assertEqual(self.generate(TestClient(app)).status_code, 401)
+
+    def test_generate_requires_trusted_origin(self):
+        alice = self.login("alice@example.com")
+        self.assertEqual(self.generate(alice, headers={}).status_code, 403)
 
 
 if __name__ == "__main__":
