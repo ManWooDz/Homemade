@@ -48,6 +48,7 @@ from email_sender import send_otp_email
 import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
+from image_urls import public_image_url
 
 #
 #       uvicorn main:app --reload
@@ -407,9 +408,7 @@ async def get_all_recipes(db: Session = Depends(get_db)):
                     "image": img_url
                 })
 
-            image_val = recipe.image
-            if image_val and not image_val.startswith("http"):
-                image_val = f"http://localhost:8000/{image_val}"
+            image_val = public_image_url(recipe.image)
 
             recipes.append({
                 "id": recipe.id,
