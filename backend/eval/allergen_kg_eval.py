@@ -77,9 +77,12 @@ def score_pairs(items, resolver, exclude_public: bool) -> dict:
     Extra breakdowns (so one seed edge or one allergen cannot pass for broad coverage):
       by_key                 -- the same strata per allergen key
       caught_by_head_edge    -- "<key>|<path joined ' -> '>" -> derived-only pairs caught via it
-      spelling_note_items    -- note-bearing positive pairs: {"id", "caught"} (spelling-variant
+      spelling_note_items    -- note-bearing positive pairs: {"id", "key", "caught"} (spelling-variant
                                 misses are separable from compositional misses)
-      floor_false_positives  -- labeled-negative pairs the checker flagged: {"id", "key"}
+      flagged_negatives      -- labeled-negative pairs the checker flagged, in whichever arm is
+                                being scored (floor or floor+KG): {"id", "key"}
+    NOTE: caught_2plus_hop / caught_by_head_edge mean "reported via the longest matching path",
+    not "only catchable in 2+ hops" -- a shorter path may also have matched the string.
     """
     scores = {
         "literal": {"positives": 0, "caught": 0, "caught_2plus_hop": 0},
@@ -88,7 +91,7 @@ def score_pairs(items, resolver, exclude_public: bool) -> dict:
         "by_key": _empty_by_key(),
         "caught_by_head_edge": {},
         "spelling_note_items": [],
-        "floor_false_positives": [],
+        "flagged_negatives": [],
     }
     # One resolution per key (a closure query each), reused for every string.
     resolved_by_key = {key: resolver([key]) for key in ALLERGEN_MAP}
@@ -115,37 +118,56 @@ def score_pairs(items, resolver, exclude_public: bool) -> dict:
                         edge = f"{key}|{' -> '.join(v.path) if v.path else 'floor'}"
                         scores["caught_by_head_edge"][edge] = scores["caught_by_head_edge"].get(edge, 0) + 1
                 if item.get("note"):
-                    scores["spelling_note_items"].append({"id": item["id"], "caught": v is not None})
+                    scores["spelling_note_items"].append(
+                        {"id": item["id"], "key": key, "caught": v is not None})
             else:
                 scores["negatives"]["total"] += 1
                 key_scores["negatives"]["total"] += 1
                 if v is not None:
                     scores["negatives"]["flagged"] += 1
                     key_scores["negatives"]["flagged"] += 1
-                    scores["floor_false_positives"].append({"id": item["id"], "key": key})
+                    scores["flagged_negatives"].append({"id": item["id"], "key": key})
     return scores
 
 
-def collision_scan(inmu_names, pool_strings):
-    db = make_memory_db()
-    seed_allergen_graph(db)
-    floor_terms = {t for terms in FLOOR_BLOCKS.values() for t in terms}
-    hits = []
+def collision_scan(inmu_names, pool_strings, pool_public=frozenset(), db=None):
+    """KG-introduced substring hits on strings that are not (only) allergen ingredients.
+
+    Skips a node only when it is a floor term of the SAME key it is scanned for: a floor term of
+    another key that reaches this key through a KG edge is a KG-introduced match and is scanned.
+    Rows are deduped on (node, allergen, matched_string); `sources` is a sorted list of the
+    sources ("inmu", "pool") that contain the string; `public` is True iff the string is a pool
+    string in `pool_public` (INMU-only strings are never public).
+    `db` defaults to a freshly seeded in-memory graph; pass a tiny graph to test.
+    """
+    if db is None:
+        db = make_memory_db()
+        seed_allergen_graph(db)
+    rows = {}
     for key in ALLERGEN_MAP:
         for entry in get_allergen_closure(db, key):
-            if entry.name in floor_terms:
+            if entry.name in FLOOR_BLOCKS[key]:
                 continue
             node = _norm(entry.name)
             for source, strings in (("inmu", inmu_names), ("pool", pool_strings)):
                 for s in strings:
                     if node in _norm(s):
-                        hits.append({"node": entry.name, "allergen": key, "matched_string": s, "source": source})
-    return hits
+                        row = rows.setdefault((entry.name, key, s), {
+                            "node": entry.name, "allergen": key, "matched_string": s,
+                            "sources": set(), "public": False,
+                        })
+                        row["sources"].add(source)
+                        if source == "pool" and s in pool_public:
+                            row["public"] = True
+    return [dict(r, sources=sorted(r["sources"])) for r in rows.values()]
 
 
 def main():
-    labels = json.load(open(LABELS_PATH, encoding="utf-8"))
+    with open(LABELS_PATH, encoding="utf-8") as f:
+        labels = json.load(f)
     items = labels["items"]
+    if not items:
+        raise RuntimeError(f"no label items in {LABELS_PATH}")
     floor_arm, kg_arm = empty_resolver(), seeded_resolver()
     assert_graph_status(floor_arm, "empty")
     assert_graph_status(kg_arm, "ok")
@@ -162,7 +184,12 @@ def main():
         }
     with open(INMU_PATH, encoding="utf-8") as f:
         inmu_names = [row["Thai_Name"] for row in csv.DictReader(f) if row.get("Thai_Name")]
-    report["collision_hits"] = collision_scan(inmu_names, [i["string"] for i in items])
+    if not inmu_names:
+        raise RuntimeError(f"no INMU names read from {INMU_PATH}")
+    report["collision_hits"] = collision_scan(
+        inmu_names, [i["string"] for i in items],
+        pool_public={i["string"] for i in items if i["public"]},
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return report
 

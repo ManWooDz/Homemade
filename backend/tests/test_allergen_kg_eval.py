@@ -10,8 +10,11 @@ from eval.build_allergen_label_pool import canonical_sha256
 
 class LabelsIntegrityTests(unittest.TestCase):
     def test_labels_match_the_hash_committed_before_the_seed(self):
-        labels = json.load(open("eval/fixtures/allergen_kg_labels.json", encoding="utf-8"))
-        self.assertEqual(canonical_sha256(labels), open("eval/fixtures/allergen_kg_labels.sha256").read().strip())
+        with open("eval/fixtures/allergen_kg_labels.json", encoding="utf-8") as f:
+            labels = json.load(f)
+        with open("eval/fixtures/allergen_kg_labels.sha256") as f:
+            committed = f.read().strip()
+        self.assertEqual(canonical_sha256(labels), committed)
 
 
 class GraphStatusGuardTests(unittest.TestCase):
@@ -123,16 +126,30 @@ class ScorePairsBreakdownTests(unittest.TestCase):
 
     def test_spelling_note_items_report_caught_flag(self):
         notes = sorted(self.scores["spelling_note_items"], key=lambda r: r["id"])
-        self.assertEqual(notes, [{"id": "miss", "caught": False}, {"id": "two_hop", "caught": True}])
+        self.assertEqual(notes, [
+            {"id": "miss", "key": "shrimp", "caught": False},
+            {"id": "two_hop", "key": "shrimp", "caught": True},
+        ])
 
-    def test_floor_false_positives_lists_flagged_negatives(self):
-        self.assertEqual(self.scores["floor_false_positives"], [{"id": "neg", "key": "gluten"}])
+    def test_flagged_negatives_lists_flagged_negatives(self):
+        self.assertEqual(self.scores["flagged_negatives"], [{"id": "neg", "key": "gluten"}])
+        self.assertNotIn("floor_false_positives", self.scores)
 
     def test_public_items_excluded_from_new_fields_too(self):
         items = [dict(i, public=True) if i["id"] == "two_hop" else i for i in self.ITEMS]
         scores = score_pairs(items, _synthetic_resolver(self.EDGES), exclude_public=True)
         self.assertEqual(scores["caught_by_head_edge"]["shrimp|betachild -> alphaparent"], 1)
         self.assertEqual([r["id"] for r in scores["spelling_note_items"]], ["miss"])
+        # by_key and flagged_negatives must also drop public items.
+        self.assertEqual(scores["by_key"]["shrimp"]["derived_only"],
+                         {"positives": 3, "caught": 2, "caught_2plus_hop": 1})
+        self.assertEqual(scores["by_key"]["shrimp"]["literal"], {"positives": 1, "caught": 1})
+        neg_public = [dict(i, public=True) if i["id"] == "neg" else i for i in self.ITEMS]
+        scores = score_pairs(neg_public, _synthetic_resolver(self.EDGES), exclude_public=True)
+        self.assertEqual(scores["flagged_negatives"], [])
+        self.assertEqual(scores["by_key"]["gluten"]["negatives"], {"total": 5, "flagged": 0})
+        # 5 non-public shrimp-positive items, each a negative for the other 8 keys.
+        self.assertEqual(scores["negatives"], {"total": 40, "flagged": 0})
 
 
 def _all_keys():
@@ -141,24 +158,61 @@ def _all_keys():
 
 
 class CollisionScanTests(unittest.TestCase):
+    def _seeded_kg_only_gluten_node(self):
+        from allergen_kg.floor import FLOOR_BLOCKS
+        from allergen_kg.graph import get_allergen_closure
+        from database.seed_allergen_graph import seed_allergen_graph
+        floor_terms = {t for terms in FLOOR_BLOCKS.values() for t in terms}
+        db = make_memory_db()
+        seed_allergen_graph(db)
+        return next(e for e in get_allergen_closure(db, "gluten") if e.name not in floor_terms)
+
     def test_no_hits_on_empty_inputs(self):
         self.assertEqual(collision_scan([], []), [])
 
-    def test_kg_only_node_found_in_pool_string_is_reported_with_source(self):
-        from allergen_kg.floor import FLOOR_BLOCKS
-        from allergen_kg.graph import get_allergen_closure
-        floor_terms = {t for terms in FLOOR_BLOCKS.values() for t in terms}
-        db = make_memory_db()
-        from database.seed_allergen_graph import seed_allergen_graph
-        seed_allergen_graph(db)
-        entry = next(e for e in get_allergen_closure(db, "gluten") if e.name not in floor_terms)
+    def test_kg_only_node_found_in_pool_string_is_reported_with_sources(self):
+        entry = self._seeded_kg_only_gluten_node()
         hits = collision_scan([], ["prefix " + entry.name + " suffix"])
         matching = [h for h in hits if h["node"] == entry.name and h["allergen"] == "gluten"]
         self.assertTrue(matching)
-        self.assertEqual(set(matching[0]), {"node", "allergen", "matched_string", "source"})
-        self.assertEqual(matching[0]["source"], "pool")
+        self.assertEqual(set(matching[0]), {"node", "allergen", "matched_string", "sources", "public"})
+        self.assertEqual(matching[0]["sources"], ["pool"])
+        self.assertFalse(matching[0]["public"])
         hits_inmu = collision_scan(["prefix " + entry.name], [])
-        self.assertTrue(any(h["source"] == "inmu" and h["node"] == entry.name for h in hits_inmu))
+        row = next(h for h in hits_inmu if h["node"] == entry.name and h["allergen"] == "gluten")
+        self.assertEqual(row["sources"], ["inmu"])
+        self.assertFalse(row["public"])
+
+    def test_same_string_in_both_sources_is_deduped_with_sorted_sources(self):
+        entry = self._seeded_kg_only_gluten_node()
+        s = "x " + entry.name
+        hits = collision_scan([s], [s])
+        rows = [h for h in hits if h["node"] == entry.name and h["allergen"] == "gluten" and h["matched_string"] == s]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["sources"], ["inmu", "pool"])
+
+    def test_public_flag_set_only_for_public_pool_strings(self):
+        entry = self._seeded_kg_only_gluten_node()
+        s = "x " + entry.name
+        hits = collision_scan([], [s], pool_public={s})
+        row = next(h for h in hits if h["node"] == entry.name and h["allergen"] == "gluten")
+        self.assertTrue(row["public"])
+        # An INMU-only string is never public even if the same text is not in the pool.
+        row = next(h for h in collision_scan([s], [], pool_public={s})
+                   if h["node"] == entry.name and h["allergen"] == "gluten")
+        self.assertFalse(row["public"])
+
+    def test_floor_term_of_another_key_is_still_scanned_for_the_key_it_reaches_via_kg(self):
+        from allergen_kg.floor import FLOOR_BLOCKS
+        term = next(t for t in FLOOR_BLOCKS["soy"] if t not in FLOOR_BLOCKS["gluten"])
+        db = make_memory_db()
+        add_edges(db, [(term, "zzintermediate"), ("zzintermediate", "allergen:gluten")])
+        hits = collision_scan([], ["prefix " + term + " suffix"], db=db)
+        self.assertIn(("gluten", term), {(h["allergen"], h["node"]) for h in hits})
+        # ... but a term that IS a floor term of the key it is scanned for is skipped.
+        add_edges(db, [(term, "allergen:soy")])
+        hits = collision_scan([], ["prefix " + term + " suffix"], db=db)
+        self.assertNotIn(("soy", term), {(h["allergen"], h["node"]) for h in hits})
 
 
 class RunCaseWiringTests(unittest.TestCase):
