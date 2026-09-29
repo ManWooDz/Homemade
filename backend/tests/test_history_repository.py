@@ -90,6 +90,102 @@ class HistorySchemaTests(unittest.TestCase):
         self.assertEqual(rating.feedback, "เผ็ดกำลังดี")
         self.assertIsNotNone(rating.updated_at)
 
+from copy import deepcopy
+
+APPROVED = {
+    "recipe_name": "Thai Basil Pork",
+    "servings": 2,
+    "adjusted_ingredients": ["หมูสับ 200 กรัม", "น้ำมัน 1 ช้อนโต๊ะ"],
+    "diet_tags": ["Thai"],
+    "nutrition": {"basis": "per_serving", "calories": 1.0, "protein_g": 1.0, "carbs_g": 1.0, "fat_g": 1.0},
+    "instructions": ["1. ผัดหมู"],
+    "safety_warning": "ระวังความร้อน",
+    "computed_nutrition": {"basis": "per_serving", "calories": 1.0},
+    "nutrition_partially_estimated": False,
+}
+
+
+class InsertGenerateHistoryTests(unittest.TestCase):
+    def setUp(self):
+        self.db = make_session()
+        self.user = make_user(self.db, "writer@example.com")
+        self.db.add(BaseRecipe(id=5, name="กะเพรา", image="images/kaprao.png", tags=[], ingredients=[], nutrition={}, instructions=[]))
+        self.db.commit()
+
+    def tearDown(self):
+        self.db.close()
+
+    def _insert(self, request_recipe):
+        from history_repository import insert_generate_history
+        return insert_generate_history(
+            self.db, user_id=self.user.id, request_recipe=request_recipe, final_output=deepcopy(APPROVED)
+        )
+
+    def test_existing_base_recipe_id_is_linked(self):
+        row = self.db.get(GenerateHistory, self._insert({"id": 5, "name": "กะเพรา"}))
+        self.assertEqual(row.base_recipe_id, 5)
+        self.assertEqual(row.source, "generated")
+
+    def test_unusable_base_recipe_ids_become_null(self):
+        for recipe in ({"name": "Custom Recipe from Fridge"}, {"id": 999}, {"id": "5"}, {"id": True}):
+            with self.subTest(recipe=recipe):
+                row = self.db.get(GenerateHistory, self._insert(recipe))
+                self.assertIsNone(row.base_recipe_id)
+
+    def test_copies_approved_output(self):
+        row = self.db.get(GenerateHistory, self._insert({"name": "Custom"}))
+        self.assertEqual(row.user_id, self.user.id)
+        self.assertEqual(row.recipe_name, "Thai Basil Pork")
+        self.assertEqual(row.adjusted_ingredients, APPROVED["adjusted_ingredients"])
+        self.assertEqual(row.diet_tags, ["Thai"])
+        self.assertEqual(row.instructions, ["1. ผัดหมู"])
+        self.assertEqual(row.nutrition, APPROVED["nutrition"])
+        self.assertEqual(row.recipe_data, APPROVED)
+
+
+class ListHistoryTests(unittest.TestCase):
+    def setUp(self):
+        from history_repository import insert_generate_history
+        self.db = make_session()
+        self.alice = make_user(self.db, "alice@example.com")
+        self.bob = make_user(self.db, "bob@example.com")
+        self.db.add(BaseRecipe(id=5, name="กะเพรา", image="images/kaprao.png", tags=[], ingredients=[], nutrition={}, instructions=[]))
+        self.db.commit()
+        self.first = insert_generate_history(self.db, user_id=self.alice.id, request_recipe={"id": 5}, final_output=deepcopy(APPROVED))
+        self.second = insert_generate_history(self.db, user_id=self.alice.id, request_recipe={"name": "Custom"}, final_output=deepcopy(APPROVED))
+        self.bobs = insert_generate_history(self.db, user_id=self.bob.id, request_recipe={"name": "Custom"}, final_output=deepcopy(APPROVED))
+
+    def tearDown(self):
+        self.db.close()
+
+    def test_lists_only_own_rows_newest_first(self):
+        from history_repository import list_history
+        ids = [row["id"] for row in list_history(self.db, self.alice.id)]
+        # Same-second created_at on SQLite: the id DESC tiebreak decides.
+        self.assertEqual(ids, [self.second, self.first])
+
+    def test_row_shape_image_rating_and_favorite(self):
+        from history_repository import list_history
+        self.db.add(Rating(user_id=self.alice.id, generate_history_id=self.first, stars=4,
+                           tag="Tasty", feedback="เผ็ดไป 🌶️ → ลดพริก"))
+        self.db.add(Favorite(user_id=self.alice.id, generate_history_id=self.first))
+        self.db.commit()
+
+        rows = {row["id"]: row for row in list_history(self.db, self.alice.id)}
+        first, second = rows[self.first], rows[self.second]
+
+        self.assertEqual(first["image"], "http://localhost:8000/images/kaprao.png")
+        self.assertEqual(first["rating"], {"stars": 4, "tag": "Tasty", "feedback": "เผ็ดไป 🌶️ → ลดพริก"})
+        self.assertTrue(first["is_favorite"])
+        self.assertEqual(first["recipe_data"], APPROVED)
+        self.assertEqual(first["diet_tags"], ["Thai"])
+        self.assertEqual(first["recipe_name"], "Thai Basil Pork")
+        self.assertIsInstance(first["created_at"], str)
+
+        self.assertIsNone(second["image"])
+        self.assertIsNone(second["rating"])
+        self.assertFalse(second["is_favorite"])
+
 
 if __name__ == "__main__":
     unittest.main()
