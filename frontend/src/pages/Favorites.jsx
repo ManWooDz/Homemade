@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, Heart, Plus, Search } from "lucide-react";
+import { ChevronLeft, Heart, Plus, Search, Sparkles, Star } from "lucide-react";
 import { BiSolidFoodMenu } from "react-icons/bi";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -14,6 +14,9 @@ export default function Favorites({
     onSelectRecipe,
     activeTab,
     setActiveTab,
+    historyFavorites = [],
+    onToggleHistoryFavorite,
+    onOpenHistoryItem,
 }) {
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
@@ -36,6 +39,28 @@ export default function Favorites({
                   .includes(searchQuery.trim().toLowerCase()),
           )
         : categoryFilteredRecipes;
+
+    const [tab, setTab] = useState("base"); // base | mine
+    const [pendingHistoryIds, setPendingHistoryIds] = useState([]);
+
+    const query = searchQuery.trim().toLowerCase();
+    const myRecipes = query
+        ? historyFavorites.filter((item) =>
+              (item.recipe_name || "").toLowerCase().includes(query),
+          )
+        : historyFavorites;
+
+    const unfavoriteHistory = async (historyId) => {
+        if (pendingHistoryIds.includes(historyId)) return;
+        setPendingHistoryIds((prev) => [...prev, historyId]);
+        try {
+            await onToggleHistoryFavorite?.(historyId);
+        } finally {
+            setPendingHistoryIds((prev) => prev.filter((id) => id !== historyId));
+        }
+    };
+
+    const HISTORY_PLACEHOLDER = "http://localhost:8000/images/No-image-available.png";
 
     return (
         <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
@@ -61,8 +86,27 @@ export default function Favorites({
                             Favorites
                         </h2>
                         <span className="text-sm font-medium text-gray-500">
-                            {favoriteRecipes.length} Items
+                            {tab === "base" ? favoriteRecipes.length : myRecipes.length} Items
                         </span>
+                    </div>
+
+                    <div className="px-5 mb-4 flex gap-2">
+                        {[
+                            { key: "base", label: "เมนูพื้นฐาน" },
+                            { key: "mine", label: "✨ สูตรของฉัน" },
+                        ].map((t) => (
+                            <button
+                                key={t.key}
+                                onClick={() => setTab(t.key)}
+                                className={`flex-1 py-2 rounded-full text-sm font-medium border transition ${
+                                    tab === t.key
+                                        ? "bg-[#EF5A3A] text-white border-[#EF5A3A]"
+                                        : "bg-white text-[#EF5A3A] border-[#EF5A3A]"
+                                }`}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Search Bar */}
@@ -81,6 +125,8 @@ export default function Favorites({
                         </div>
                     </div>
 
+                    {tab === "base" && (
+                    <>
                     {/* Categories Strip */}
                     <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide mb-4 px-5">
                         {categories.map((cat, index) => (
@@ -160,6 +206,69 @@ export default function Favorites({
                             ))}
                         </div>
                     )}
+                    </>
+                    )}
+
+                    {tab === "mine" &&
+                        (historyFavorites.length === 0 ? (
+                            <div className="flex flex-col items-center text-center text-gray-400 mt-10">
+                                <Sparkles className="w-12 h-12 mb-3" />
+                                <p>ยังไม่มีสูตรที่กด ♥ ไว้</p>
+                            </div>
+                        ) : myRecipes.length === 0 ? (
+                            <div className="text-center text-gray-400 mt-10">
+                                <p>ไม่พบสูตรที่ค้นหา</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 px-5">
+                                {myRecipes.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="bg-white border border-gray-100 rounded-3xl p-3 shadow-sm relative cursor-pointer"
+                                        onClick={() => onOpenHistoryItem?.(item)}
+                                    >
+                                        <span className="absolute top-4 left-4 z-10 bg-white/90 text-[#EF5A3A] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                            <Sparkles className="w-3 h-3" /> AI
+                                        </span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                unfavoriteHistory(item.id);
+                                            }}
+                                            disabled={pendingHistoryIds.includes(item.id)}
+                                            aria-label="เอาออกจากสูตรที่ชอบ"
+                                            className="absolute top-4 right-4 text-red-500 hover:text-gray-300 z-10 disabled:opacity-40"
+                                        >
+                                            <Heart className="w-6 h-6 fill-current" />
+                                        </button>
+                                        <div className="w-full aspect-square bg-gray-100 rounded-full mb-3 overflow-hidden">
+                                            <img
+                                                src={item.image || HISTORY_PLACEHOLDER}
+                                                alt={item.recipe_name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <h4 className="font-bold text-gray-800 mb-2 truncate">
+                                            {item.recipe_name}
+                                        </h4>
+                                        {item.stars > 0 && (
+                                            <div className="flex items-center gap-0.5">
+                                                {[1, 2, 3, 4, 5].map((n) => (
+                                                    <Star
+                                                        key={n}
+                                                        className={`w-3.5 h-3.5 ${
+                                                            n <= item.stars
+                                                                ? "text-orange-400 fill-orange-400"
+                                                                : "text-gray-200"
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
                 </div>
 
                 {/* === Bottom Navigation === */}

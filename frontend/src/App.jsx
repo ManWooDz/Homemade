@@ -555,6 +555,13 @@ function App() {
                     setActiveTab("cooking");
                     setCurrentView("recipe-detail");
                 }}
+                historyFavorites={cookingHistory.filter((item) => item.is_favorite)}
+                onToggleHistoryFavorite={toggleHistoryFavorite}
+                onOpenHistoryItem={(item) => {
+                    setSelectedHistoryItem(item);
+                    setHistoryReturnView("favorites");
+                    setCurrentView("history-detail");
+                }}
             />
         );
     }
