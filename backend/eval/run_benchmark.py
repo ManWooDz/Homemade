@@ -23,6 +23,8 @@ Usage (from backend/, with .env configured):
 import json
 import time
 
+from allergen_kg.floor import detect_flagged_allergens
+from eval.allergen_kg_eval import assert_graph_status, seeded_resolver
 from eval.metrics import check_ingredient_hallucination, check_schema_and_constraints, summarize_run
 from generators.gemini_generator import GeminiGenerator
 from generators.local_generator import LocalLLMGenerator
@@ -35,7 +37,7 @@ def load_cases():
         return json.load(f)
 
 
-def run_case(generator, case):
+def run_case(generator, case, resolve=None):
     ingredients_name_only = [i["name"] for i in case["ingredients"]]
     input_snapshot = {
         "ingredients": ingredients_name_only,
@@ -49,7 +51,8 @@ def run_case(generator, case):
     if isinstance(recipe, dict) and "error" in recipe:
         return {"case_id": case["case_id"], "valid": False, "hallucinated": True, "latency_seconds": latency, "reason": recipe["error"], "recipe": recipe, "input": input_snapshot}
 
-    schema_result = check_schema_and_constraints(recipe, ingredients_name_only, case["user_prefs"])
+    resolved_blocks = resolve(detect_flagged_allergens(case["user_prefs"])) if resolve else None
+    schema_result = check_schema_and_constraints(recipe, ingredients_name_only, case["user_prefs"], resolved_blocks)
     hallucination_result = check_ingredient_hallucination(recipe, ingredients_name_only)
 
     return {
@@ -66,6 +69,8 @@ def run_case(generator, case):
 
 def run_benchmark():
     cases = load_cases()
+    resolve = seeded_resolver()
+    assert_graph_status(resolve, "ok")
     # NOTE — prompt asymmetry: GeminiGenerator always calls build_recipe_prompt()
     # with include_example=False, while LocalLLMGenerator (both Qwen candidates)
     # always uses include_example=True (see generators/local_generator.py) —
@@ -84,7 +89,7 @@ def run_benchmark():
 
     report = {}
     for name, generator in candidates.items():
-        per_case = [run_case(generator, case) for case in cases]
+        per_case = [run_case(generator, case, resolve) for case in cases]
         report[name] = {"per_case": per_case, "summary": summarize_run(per_case)}
 
     print(json.dumps(report, ensure_ascii=False, indent=2))

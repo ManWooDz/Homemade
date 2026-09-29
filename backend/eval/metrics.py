@@ -24,14 +24,19 @@ def _normalize_thai(s: str) -> str:
 _PANTRY_STAPLES = ["เกลือ", "พริกไทย", "น้ำมัน", "น้ำปลา", "ซีอิ๊ว", "น้ำตาล", "น้ำเปล่า"]
 
 
-def check_schema_and_constraints(recipe: dict, ingredients_name_only: list, user_prefs: dict) -> dict:
+def check_schema_and_constraints(recipe: dict, ingredients_name_only: list, user_prefs: dict,
+                                 resolved_blocks=None) -> dict:
     """Thin wrapper around the existing validate_recipe() 6-stage pipeline
     (imported read-only from main.py — main.py is not modified by this
     plan). Named distinctly from the design doc's Evaluation 2 (hidden/
     indirect allergen detection, not built this milestone) so a report
     never conflates the two: this covers explicit/known-allergen and
-    schema/constraint failures only."""
-    result = validate_recipe(recipe, ingredients_name_only, user_prefs)
+    schema/constraint failures only.
+
+    Pass resolved_blocks to use the allergen KG path; generator-benchmark
+    numbers produced this way are a new baseline (2026-09) and are not
+    comparable to earlier spec.md rows."""
+    result = validate_recipe(recipe, ingredients_name_only, user_prefs, resolved_blocks=resolved_blocks)
     if result["status"] == "pass":
         return {"valid": True, "reason": None}
     return {"valid": False, "reason": result["reason"]}

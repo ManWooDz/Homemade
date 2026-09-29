@@ -1,0 +1,2765 @@
+{
+  "pool_rule": "Benchmark strings: every adjusted_ingredients string from the listed benchmark JSON files, cleaned with clean_string() (normalize_thai(strip()) with zero-width characters U+200B/U+200C/U+200D/U+FEFF removed) and deduplicated; strings matched by is_garbled() are excluded; if BENCHMARK_SAMPLE is set, a random.Random(42) sample of that many of the sorted surviving strings. Then every MOCK_RECIPES ingredient string in database/seed_postgres.py that is not already in the pool. Then INMU rows with a non-empty Thai_Name from nutrition/data/inmu_nutrition_dataset.csv, sampled with random.Random(42) from the CSV rows in file order (INMU_N rows), deduplicated against everything already in the pool, so INMU may yield fewer than INMU_N items. Source attribution priority is benchmark > base_recipe > inmu. Stored strings are in normalize_thai form.",
+  "edge_semantics": "A → B means a typical preparation of A contains B",
+  "inmu_n": 120,
+  "benchmark_sample": 100,
+  "random_seed": 42,
+  "excluded": [
+    {
+      "string": "น้ํามันพืช 1 ขditoเลculatorl",
+      "reason": "token mixes Thai and lowercase Latin letters: 'ขditoเลculatorl'",
+      "source": "benchmark-4b-15case.json"
+    },
+    {
+      "string": "พืชผักicidioร 1 ถ้วย",
+      "reason": "token mixes Thai and lowercase Latin letters: 'พืชผักicidioร'",
+      "source": "benchmark-4b-15case.json"
+    },
+    {
+      "string": "ซุปwow หรือ justify ช้า 2 แคปซูล",
+      "reason": "token mixes Thai and lowercase Latin letters: 'ซุปwow'",
+      "source": "benchmark-4b-15case.json"
+    },
+    {
+      "string": "กะทิ (ตระกูลมะระปลาแซPackageNameแท้)หิ้งบีบ 50 มล.",
+      "reason": "token mixes Thai and lowercase Latin letters: 'ตระกูลมะระปลาแซPackageNameแท้'",
+      "source": "benchmark-4b-8case-retest.json"
+    },
+    {
+      "string": "เนื้อ Febru่ดิบ (บดละเอียดสําหรับทําสะเต๊ะ) 250 กรัม",
+      "reason": "Thai combining mark attached to a non-Thai character",
+      "source": "benchmark-4b-8case-retest.json"
+    },
+    {
+      "string": "กะperi 3 ช้อนโต๊ะ",
+      "reason": "token mixes Thai and lowercase Latin letters: 'กะperi'",
+      "source": "benchmark-4b-finalretest.json"
+    },
+    {
+      "string": "พริกไทยขาวnung หมัก ปลายา 1/4 ช้อนชา",
+      "reason": "token mixes Thai and lowercase Latin letters: 'พริกไทยขาวnung'",
+      "source": "benchmark-9b-15case.json"
+    },
+    {
+      "string": "ซุปwow หรือ น้ําสต็อก 20 กรัม",
+      "reason": "token mixes Thai and lowercase Latin letters: 'ซุปwow'",
+      "source": "benchmark-9b-15case.json"
+    },
+    {
+      "string": "เกลือDecoder 1/2 ช้อนชา",
+      "reason": "token mixes Thai and lowercase Latin letters: 'เกลือDecoder'",
+      "source": "benchmark-9b-8case.json"
+    }
+  ],
+  "items": [
+    {
+      "string": "เนื้อถั่วรีด (เพื่อเพิ่มเนื้อสัมผัสและโปรตีน) 30 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 0,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวสาร 150 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 1,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กระเทียมสับ 20 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 2,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ํามะนาว 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 3,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาลปี๊บ 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 4,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาลทราย 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 5,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊ว 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case.json",
+      "id": 6,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ข้าวสวย 2 ถ้วยตวง",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 7,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "แตงกวา 1 ลูก เม็ดเล็ก 6 ชิ้น",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 8,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หอมแดงด่าง 2 ช้อนกลาง",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 9,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้ันลอยดิน 3-4 เมล็ด",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 10,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "อ้ําปลา 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 11,
+      "allergens": [
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยดํา 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case.json",
+      "id": 12,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กระเทียมไทย 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 13,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กระเทียมแก่ทุบ 3 กลีบ",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 14,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวขาว 1 ถ้วย (สําหรับกัน 2 คน ตัดครึ่ง ถึ่งข้าวปัด)",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 15,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาล 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 16,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาลทราย 3 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 17,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะเขือเทศหั่นเสี้ยว 2 ลูก",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 18,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เกลือป่น 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 19,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กระเทียมสับขนาด 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-finalretest.json",
+      "id": 20,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หัวหอมใหญ่ 1 พื้นที่",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 21,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วลิสง บด 1/4 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 22,
+      "allergens": [
+        "peanut"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เนื้อวัวส่วนเนื้อแดงหั่นชิ้น 300 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 23,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ใบโหระพา 1 ใบใหญ่",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 24,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยขาว 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 25,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาล 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 26,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยป่น 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 27,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "อลิม่วง 1 ปลี",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 28,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามะนาว 3 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-full-recipe.json",
+      "id": 29,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "กระเทียม 1 ใต้ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 30,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วขาว 1 ช้อนชา (เพื่อปรับรสชาติใหม่)",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case.json",
+      "id": 31,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ใบมะกรูดหั่นฝอย 1/2 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 32,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําเปล่า 3 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 33,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เห็ดฟาง 250 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 34,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วขาว 1 ช้อนชา (ปรับรสชาติแทนน้ําจิ้มถั่ว)",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 35,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําซุปผัก 800 มิลลิลิตร",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 36,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําเปล่า 2 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 37,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ใบโหระพา หรือผักใบเขียว 1 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case.json",
+      "id": 38,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ใบมะกรูดฉีก 5 ใบ",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 39,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ปลาหมึก 200 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 40,
+      "allergens": [
+        "shellfish"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ข้าวสวย 1 ถ้วยตวง",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 41,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําเปล่าเล็กน้อย",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case.json",
+      "id": 42,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําเปล่า 4 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 43,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เกลือป่น 1/4 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 44,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําปลา 1.5 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 45,
+      "allergens": [
+        "fish"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "กะทิ 250 มิลลิลิตร",
+      "source": "benchmark",
+      "file": "benchmark-4b-finalretest.json",
+      "id": 46,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยป่นตามชอบ",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 47,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หมูสับ 200 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 48,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "งั่วกะปิ 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 49,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ปลาป่น 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case-retest.json",
+      "id": 50,
+      "allergens": [
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ขิงสับ 1 ตัวเล็ก",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 51,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หอมใหญ่ 1 หัว หั่นเสี้ยว",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 52,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามันพืช 2 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 53,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เครื่องปรุงพื้นฐานตามสูตรแกงเลียง (พริกไทย, หอมแดง, น้ําปลา, น้ําตาล, ซีอิ๊วขาว) และเครื่องแกง",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 54,
+      "allergens": [
+        "fish",
+        "gluten",
+        "shrimp",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "บรอกโคลี 1 หัว",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 55,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "อกไก่สับ 400 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 56,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ต้นหอม 2 ต้น",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 57,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กะเพรา 1 ถ้วยคัปเปอร์",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 58,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กะปิ 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 59,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาลทราย 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 60,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามันพืช 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 61,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เต้าหู้ขาวแข็ง 400 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 62,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ใบมะกรูด 3 ใบ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 63,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวสวย 150 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-promptfix.json",
+      "id": 64,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เนื้อสะโพกไก่หั่นชิ้นพอดีคํา 300 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 65,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เพสเด็ดยิงตาลกระดูก 1/2 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case.json",
+      "id": 66,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยป่น ปริมาณตามชอบ",
+      "source": "benchmark",
+      "file": "benchmark-4b-finalretest.json",
+      "id": 67,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "บรอกโคลี 100 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case.json",
+      "id": 68,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วขาว 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 69,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "บรอกโคลี 200 กรัม (หั่นชิ้น)",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case.json",
+      "id": 70,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําเปล่า เล็กน้อย",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 71,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําจิ้มสะเต๊ะ 1/2 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 72,
+      "allergens": [
+        "peanut",
+        "shrimp"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําปลา 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case-retest.json",
+      "id": 73,
+      "allergens": [
+        "fish"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ขด 300 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-promptfix.json",
+      "id": 74,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วขาว 3 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 75,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "หมูสับ 150 กรัม (สําหรับเสิร์ฟ 2 คน)",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case-retest.json",
+      "id": 76,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ไข่ง่า 2 ฟอง",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case-retest.json",
+      "id": 77,
+      "allergens": [
+        "egg"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เกลือ 1/2 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 78,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยป่นสับ 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 79,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เนื้อวัว 400 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 80,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามะขามเปียก 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-promptfix.json",
+      "id": 81,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หอมใหญ่หั่นชิ้น 1 หัว",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 82,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แตงกวา 2 ลูก (หั่นชิ้นพอดีคํา)",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 83,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําเปล่า 1/2 ถ้วย",
+      "source": "benchmark",
+      "file": "benchmark-9b-full-recipe.json",
+      "id": 84,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "กะปิ 1 ช้อนโต๊ะ (ตรวจสอบฉลากให้แน่ใจว่าไม่มีส่วนผสมของกุ้งหรือใช้กะปิเจที่ทําจากเห็ดหรือถั่ว)",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 85,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "น้ําตาลทราย 1/2 ถ้วยตวง",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 86,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ใบมะกรูดสับ 1 ชDLL",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 87,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําเคี้ยว 1 ช้อนชา",
+      "source": "benchmark",
+      "file": "benchmark-4b-finalretest.json",
+      "id": 88,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกชี้่มแดง 2 เมองคั่วกลีบ",
+      "source": "benchmark",
+      "file": "benchmark-4b-finalretest.json",
+      "id": 89,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําปลา 2 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 90,
+      "allergens": [
+        "fish"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "กะปิอย่างดี (ตรวจสอบฉลากว่าไม่มีส่วนผสมของกุ้งหรือใช้กะปิเจที่ทําจากเห็ด) 1 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-9b-8case-retest.json",
+      "id": 91,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําจิ้มสะเต๊ะ 2 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-8case-retest.json",
+      "id": 92,
+      "allergens": [
+        "peanut",
+        "shrimp"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "หัวคะน้า (หรือผักกาดขาว) 100 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 93,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เต้าหู้ขาว 300 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 94,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะละกอสุก 1 แว้ว (ประมาณ 400 กรัม)",
+      "source": "benchmark",
+      "file": "benchmark-9b-15case.json",
+      "id": 95,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกขี้หนูสด 5 เม็ด",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 96,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกไทยป่น เล็กน้อย",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 97,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วขาว (ปราศจากกลูเตน) 1.5 ช้อนโต๊ะ",
+      "source": "benchmark",
+      "file": "benchmark-4b-finalretest.json",
+      "id": 98,
+      "allergens": [
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "เนื้อวัว 200 กรัม",
+      "source": "benchmark",
+      "file": "benchmark-4b-15case.json",
+      "id": 99,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "kale",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Superfood Veggie",
+      "id": 100,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "quinoa",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Superfood Veggie",
+      "id": 101,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "avocado",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Superfood Veggie",
+      "id": 102,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "cherry tomatoes",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Superfood Veggie",
+      "id": 103,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "pumpkin seeds",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Superfood Veggie",
+      "id": 104,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "spinach",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Fresh Power Salad",
+      "id": 105,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "cucumber",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Fresh Power Salad",
+      "id": 106,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "bell pepper",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Fresh Power Salad",
+      "id": 107,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "red onion",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Fresh Power Salad",
+      "id": 108,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "feta cheese",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Fresh Power Salad",
+      "id": 109,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "balsamic vinaigrette",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Fresh Power Salad",
+      "id": 110,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "purple cabbage",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Rainbow Healthy",
+      "id": 111,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "carrot",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Rainbow Healthy",
+      "id": 112,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "edamame",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Rainbow Healthy",
+      "id": 113,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "yellow bell pepper",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Rainbow Healthy",
+      "id": 114,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "sesame dressing",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Rainbow Healthy",
+      "id": 115,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ramen noodles",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 116,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "pork belly (chashu)",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 117,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "tonkotsu broth",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 118,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "soft-boiled egg",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 119,
+      "allergens": [
+        "egg"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "green onion",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 120,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "nori seaweed",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 121,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "soy sauce",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Chashu Ramen",
+      "id": 122,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "rice noodles",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 123,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "shrimp",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 124,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "egg",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 125,
+      "allergens": [
+        "egg"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "bean sprouts",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 126,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "chives",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 127,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "tofu",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 128,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "tamarind paste",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 129,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "fish sauce",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 130,
+      "allergens": [
+        "fish"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "palm sugar",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 131,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "peanuts",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Padthai with shrimps",
+      "id": 132,
+      "allergens": [
+        "peanut"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "minced pork",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 133,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "holy basil leaves",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 134,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "garlic",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 135,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "bird's eye chilies",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 136,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "oyster sauce",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 137,
+      "allergens": [
+        "gluten",
+        "shellfish",
+        "soy"
+      ],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "sugar",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 138,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "vegetable oil",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Stir-Fried Basil with pork",
+      "id": 139,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "kalamata olives",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Greek Salad",
+      "id": 140,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "olive oil",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Greek Salad",
+      "id": 141,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "oregano",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Greek Salad",
+      "id": 142,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "beef steak",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Grilled Steak",
+      "id": 143,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "rosemary",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Grilled Steak",
+      "id": 144,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "butter",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Grilled Steak",
+      "id": 145,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "black pepper",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Grilled Steak",
+      "id": 146,
+      "allergens": [],
+      "public": true,
+      "note": ""
+    },
+    {
+      "string": "salt",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Grilled Steak",
+      "id": 147,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "lemongrass",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 148,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "galangal",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 149,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "kaffir lime leaves",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 150,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "lime juice",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 151,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "mushrooms",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 152,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "cilantro",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 153,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "chili paste",
+      "source": "base_recipe",
+      "file": "seed_postgres.py:Tom Yum Kung",
+      "id": 154,
+      "allergens": [
+        "fish",
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามันรําข้าว",
+      "source": "inmu",
+      "file": "INMU:K42",
+      "id": 155,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เกาลัด, ลูกใหญ่, ดิบ",
+      "source": "inmu",
+      "file": "INMU:C127",
+      "id": 156,
+      "allergens": [
+        "nut"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวเหนียวดํา, ดิบ",
+      "source": "inmu",
+      "file": "INMU:A24",
+      "id": 157,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "นมถั่วเหลือง, ยูเอชที, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:Q10",
+      "id": 158,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ลูกท้อ, ดอง",
+      "source": "inmu",
+      "file": "INMU:E112",
+      "id": 159,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกหนุ่ม, สด",
+      "source": "inmu",
+      "file": "INMU:D339",
+      "id": 160,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ผักกาด, ดอง, ปรุงรส",
+      "source": "inmu",
+      "file": "INMU:D271",
+      "id": 161,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วลาย, เมล็ดแห้ง, ทั้งเปลือกหุ้ม, ดิบ",
+      "source": "inmu",
+      "file": "INMU:C35",
+      "id": 162,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ขมิ้นขาว",
+      "source": "inmu",
+      "file": "INMU:N9",
+      "id": 163,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วฝักยาว, เมล็ดแห้ง, ดิบ",
+      "source": "inmu",
+      "file": "INMU:C11",
+      "id": 164,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซอสหอยนางรม สูตรผสมกระเทียม",
+      "source": "inmu",
+      "file": "INMU:N132",
+      "id": 165,
+      "allergens": [
+        "gluten",
+        "shellfish",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําพริกแกงเหลือง",
+      "source": "inmu",
+      "file": "INMU:N99",
+      "id": 166,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ตั๊กแตนปาทังก้า, ทอด",
+      "source": "inmu",
+      "file": "INMU:U32",
+      "id": 167,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไข่ไก่อ่อน, ต้ม",
+      "source": "inmu",
+      "file": "INMU:H20",
+      "id": 168,
+      "allergens": [
+        "egg"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แก่นตะวัน, ปอกเปลือก, สด",
+      "source": "inmu",
+      "file": "INMU:B26",
+      "id": 169,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "นมพาสเจอร์ไรส์, รสช็อกโกแลต, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:J40",
+      "id": 170,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "วัว, เนื้อ, ดิบ",
+      "source": "inmu",
+      "file": "INMU:F59",
+      "id": 171,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวเหนียว, ข้าวกล้อง, ดิบ",
+      "source": "inmu",
+      "file": "INMU:A31",
+      "id": 172,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "บะหมี่กึ่งสําเร็จรูป, พร้อมเครื่องปรุง, ไม่ระบุรส",
+      "source": "inmu",
+      "file": "INMU:A29",
+      "id": 173,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มันเทศ, เนื้อสีเหลือง, นึ่ง",
+      "source": "inmu",
+      "file": "INMU:B9",
+      "id": 174,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หัวผักกาด, แห้ง, หวาน",
+      "source": "inmu",
+      "file": "INMU:D259",
+      "id": 175,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เห็ดหูหนูขาว, สด, ดิบ",
+      "source": "inmu",
+      "file": "INMU:D309",
+      "id": 176,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แพนกาเซียส (ปลาดอลลี่), เฉพาะเนื้อ, ไม่รวมหนัง, แช่แข็ง",
+      "source": "inmu",
+      "file": "INMU:G256",
+      "id": 177,
+      "allergens": [
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "โยเกิร์ต, รสต่างๆ, ค่าเฉลี่ย",
+      "source": "inmu",
+      "file": "INMU:J60",
+      "id": 178,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "โจ๊กกึ่งสําเร็จรูป, พร้อมเครื่องปรุง",
+      "source": "inmu",
+      "file": "INMU:A26",
+      "id": 179,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไข่ไก่, เจียว (เติมน้ําปลา)",
+      "source": "inmu",
+      "file": "INMU:H4",
+      "id": 180,
+      "allergens": [
+        "egg",
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "สายบัว, ดิบ",
+      "source": "inmu",
+      "file": "INMU:D146",
+      "id": 181,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "สะระแหน่, ใบ",
+      "source": "inmu",
+      "file": "INMU:N40",
+      "id": 182,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เนยสด, ชนิดจืด",
+      "source": "inmu",
+      "file": "INMU:K7",
+      "id": 183,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ผักชี, ราก",
+      "source": "inmu",
+      "file": "INMU:N20",
+      "id": 184,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เปเปอร์ ติน แครกเกอร์ รสงา, มายช้อยส์",
+      "source": "inmu",
+      "file": "INMU:Z060068",
+      "id": 185,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แหนม, เนื้อ",
+      "source": "inmu",
+      "file": "INMU:F53",
+      "id": 186,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ดอกไม้จีน (ดอกพระจันทร์), ดิบ",
+      "source": "inmu",
+      "file": "INMU:D267",
+      "id": 187,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ปลาร้า, ปลากระดี่",
+      "source": "inmu",
+      "file": "INMU:G105",
+      "id": 188,
+      "allergens": [
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "นมข้น, แปลงไขมัน, สูตรน้ํามันปาล์มผสมมันเนย, รสหวาน",
+      "source": "inmu",
+      "file": "INMU:J4",
+      "id": 189,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ส้ม, จุก",
+      "source": "inmu",
+      "file": "INMU:E116",
+      "id": 190,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ลูกตาล, เชื่อม",
+      "source": "inmu",
+      "file": "INMU:T151",
+      "id": 191,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซุปฟัก",
+      "source": "inmu",
+      "file": "INMU:T71",
+      "id": 192,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แป้งสาลี โฮลมีล",
+      "source": "inmu",
+      "file": "INMU:A120",
+      "id": 193,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําฝรั่ง 25%, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:Q48",
+      "id": 194,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ตะโก้แห้ว",
+      "source": "inmu",
+      "file": "INMU:T140",
+      "id": 195,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เต้าหู้เหลือง, แห้ง, ทอด",
+      "source": "inmu",
+      "file": "INMU:C57",
+      "id": 196,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ขิง, แก่",
+      "source": "inmu",
+      "file": "INMU:N16",
+      "id": 197,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พัฟฟ์แซนวิชแคร็กเกอร์สอดไส้ครีมกลิ่นโยเกิร์ตสตรอเบอร์รี่ ผสมสตรอเบอร์รี่คริสตัลบีดส์, Yodutch",
+      "source": "inmu",
+      "file": "INMU:Z060065",
+      "id": 198,
+      "allergens": [
+        "gluten",
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะม่วงพิมเสนมัน, ดิบ",
+      "source": "inmu",
+      "file": "INMU:E70",
+      "id": 199,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แครกเกอร์ข้าวโอ๊ตกับลูกเกด, ไอเคโอ",
+      "source": "inmu",
+      "file": "INMU:Z060046",
+      "id": 200,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เต้าหู้ขาว, ชนิดอ่อน, บรรจุแบบหลอด",
+      "source": "inmu",
+      "file": "INMU:C51",
+      "id": 201,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ผักแป๋, ดิบ",
+      "source": "inmu",
+      "file": "INMU:D227",
+      "id": 202,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํารากบัว, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:Q52",
+      "id": 203,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะม่วงตับเป็ด, สุก",
+      "source": "inmu",
+      "file": "INMU:E65",
+      "id": 204,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "โซอ์ แครกเกอร์ แครกเกอร์ถั่วเหลือง, มิซูร่า",
+      "source": "inmu",
+      "file": "INMU:Z060072",
+      "id": 205,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มันแกว, ดิบ",
+      "source": "inmu",
+      "file": "INMU:B8",
+      "id": 206,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กุนเชียง, หมู, ทอด",
+      "source": "inmu",
+      "file": "INMU:F150",
+      "id": 207,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แป้งถั่วเขียว",
+      "source": "inmu",
+      "file": "INMU:C101",
+      "id": 208,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หมู, สับ, ดิบ",
+      "source": "inmu",
+      "file": "INMU:F101",
+      "id": 209,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เส้นหมี่, ผัดซีอิ้ว",
+      "source": "inmu",
+      "file": "INMU:T312",
+      "id": 210,
+      "allergens": [
+        "egg",
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": "spelling variant: pool has the soy-sauce word spelled with a different tone-mark order than the floor term; a floor miss here is spelling, not composition"
+    },
+    {
+      "string": "แคนตาลูป, เนื้อสีเขียว, สุก",
+      "source": "inmu",
+      "file": "INMU:E76",
+      "id": 211,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "โยเกิร์ต, รสธัญญาหาร",
+      "source": "inmu",
+      "file": "INMU:J62",
+      "id": 212,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ผักกาดขาวปลี, ดิบ",
+      "source": "inmu",
+      "file": "INMU:D72",
+      "id": 213,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ทองหยอด",
+      "source": "inmu",
+      "file": "INMU:T141",
+      "id": 214,
+      "allergens": [
+        "egg"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ก๋วยจั๊บญวน, เส้น, ต้มสุก",
+      "source": "inmu",
+      "file": "INMU:A44",
+      "id": 215,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําจิ้มไก่",
+      "source": "inmu",
+      "file": "INMU:N67",
+      "id": 216,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ปลาไส้ตัน, สด",
+      "source": "inmu",
+      "file": "INMU:G137",
+      "id": 217,
+      "allergens": [
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไข่เป็ด, ไข่ขาว, ดิบ",
+      "source": "inmu",
+      "file": "INMU:H12",
+      "id": 218,
+      "allergens": [
+        "egg"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วเต็มกํา, เมล็ดแห้ง, สีต่างๆ, ดิบ",
+      "source": "inmu",
+      "file": "INMU:C20",
+      "id": 219,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ลูกชิ้น, วัว, เอ็น, ลวก",
+      "source": "inmu",
+      "file": "INMU:F149",
+      "id": 220,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มันสําปะหลัง, ดิบ",
+      "source": "inmu",
+      "file": "INMU:B12",
+      "id": 221,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไข่มดแดง",
+      "source": "inmu",
+      "file": "INMU:H29",
+      "id": 222,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "สมอ, ไทย",
+      "source": "inmu",
+      "file": "INMU:E149",
+      "id": 223,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ขนมเบื้อง, ครีม, ไส้เค็ม",
+      "source": "inmu",
+      "file": "INMU:T250",
+      "id": 224,
+      "allergens": [
+        "egg",
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แซนวิชสเปรด",
+      "source": "inmu",
+      "file": "INMU:K3",
+      "id": 225,
+      "allergens": [
+        "egg"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามันข้าวโพด, ผ่านกรรมวิธี 100%, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:K19",
+      "id": 226,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "สาหร่ายเกลียวทอง, สด",
+      "source": "inmu",
+      "file": "INMU:U21",
+      "id": 227,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวราดไข่พะโล้",
+      "source": "inmu",
+      "file": "INMU:T44",
+      "id": 228,
+      "allergens": [
+        "egg",
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไก่, น่อง, ดิบ",
+      "source": "inmu",
+      "file": "INMU:F11",
+      "id": 229,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "นมผงปรุงแต่ง, กลิ่นรสต่างๆ",
+      "source": "inmu",
+      "file": "INMU:J24",
+      "id": 230,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะเขือเปราะ, ดอง",
+      "source": "inmu",
+      "file": "INMU:D121",
+      "id": 231,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พริกไทย, ดํา",
+      "source": "inmu",
+      "file": "INMU:N26",
+      "id": 232,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "เส้นหมี่ข้าวกล้อง",
+      "source": "inmu",
+      "file": "INMU:A88",
+      "id": 233,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ก๋วยเตี๋ยวเส้นเล็ก, อบแห้ง พร้อมเครื่องปรุง",
+      "source": "inmu",
+      "file": "INMU:A47",
+      "id": 234,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ําพริกแกงมัสมั่น",
+      "source": "inmu",
+      "file": "INMU:N100",
+      "id": 235,
+      "allergens": [
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ฟักทอง, เนื้อ, ไม่ปอกเปลือก, ต้ม สายพันธุ์ต่างๆ",
+      "source": "inmu",
+      "file": "INMU:D282",
+      "id": 236,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "พิซซ่า, ทะเล, ชนิดบาง",
+      "source": "inmu",
+      "file": "INMU:S27",
+      "id": 237,
+      "allergens": [
+        "gluten",
+        "milk",
+        "shellfish",
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะม่วงเขียวเสวย, สุก",
+      "source": "inmu",
+      "file": "INMU:E143",
+      "id": 238,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มันบุก, หัว, ดิบ",
+      "source": "inmu",
+      "file": "INMU:B13",
+      "id": 239,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ขนมจีน, ซาวน้ํา, ภาคกลาง",
+      "source": "inmu",
+      "file": "INMU:T36",
+      "id": 240,
+      "allergens": [
+        "fish",
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แครกเกอร์มันฝรั่งแผ่นบาง รสคลาสสิค, เนลี่",
+      "source": "inmu",
+      "file": "INMU:Z060060",
+      "id": 241,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวหมูแดง",
+      "source": "inmu",
+      "file": "INMU:T64",
+      "id": 242,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วลิสง, ต้ม, รวมเยื่อหุ้มเมล็ด",
+      "source": "inmu",
+      "file": "INMU:C107",
+      "id": 243,
+      "allergens": [
+        "peanut"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แครกเกอร์สอดไส้ครีม 2 ชั้น กลิ่นครีมมี่บัตเตอร์, วอยซ์",
+      "source": "inmu",
+      "file": "INMU:Z060029",
+      "id": 244,
+      "allergens": [
+        "gluten",
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "โรซี่ แครกเกอร์สอดไส้ครีม รสนม, อิมพิเรียล",
+      "source": "inmu",
+      "file": "INMU:Z060036",
+      "id": 245,
+      "allergens": [
+        "gluten",
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ปลาสลิด, สด",
+      "source": "inmu",
+      "file": "INMU:G124",
+      "id": 246,
+      "allergens": [
+        "fish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามันเมล็ดชา, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:K38",
+      "id": 247,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แกงเขียวหวานหมู",
+      "source": "inmu",
+      "file": "INMU:T285",
+      "id": 248,
+      "allergens": [
+        "fish",
+        "shrimp"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไก่, น่อง, ต้ม",
+      "source": "inmu",
+      "file": "INMU:F12",
+      "id": 249,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วเหลืองผง, ชนิดไขมันเต็ม",
+      "source": "inmu",
+      "file": "INMU:C63",
+      "id": 250,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "หมู, แฮม, ขาหลัง, เนื้อล้วน, ดิบ",
+      "source": "inmu",
+      "file": "INMU:F132",
+      "id": 251,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ลําไย, อีดอ",
+      "source": "inmu",
+      "file": "INMU:E97",
+      "id": 252,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ผักผ่อง (ผักขี้หูด), ดิบ",
+      "source": "inmu",
+      "file": "INMU:D204",
+      "id": 253,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซอสปรุงรส (protein<10 กรัม), ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:N126",
+      "id": 254,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ผักกาดหอม, ดิบ",
+      "source": "inmu",
+      "file": "INMU:D77",
+      "id": 255,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แครกเกอร์ รสดั้งเดิม, อันปัน",
+      "source": "inmu",
+      "file": "INMU:Z060052",
+      "id": 256,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วดํา, สูตร 3(ซอสจากกากน้ําตาลและถั่วเหลือง)",
+      "source": "inmu",
+      "file": "INMU:N139",
+      "id": 257,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "บัตเตอร์สเปรด (ชนิดจืด) (ผลิตภัณฑ์เนยสําหรับทาขนมปังและทําเบเกอรี่)",
+      "source": "inmu",
+      "file": "INMU:K50",
+      "id": 258,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ข้าวกล้อง, พันธุ์ต่างๆ, ดิบ",
+      "source": "inmu",
+      "file": "INMU:A9",
+      "id": 259,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "นมผง, ครบส่วน (หัวนมผง)",
+      "source": "inmu",
+      "file": "INMU:J7",
+      "id": 260,
+      "allergens": [
+        "milk"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "จิ้งหรีด",
+      "source": "inmu",
+      "file": "INMU:U3",
+      "id": 261,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "มะม่วงหิมพานต์, เมล็ดแห้ง, อบ",
+      "source": "inmu",
+      "file": "INMU:C74",
+      "id": 262,
+      "allergens": [
+        "nut"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไข่ไก่, ไข่ขาว, ดิบ",
+      "source": "inmu",
+      "file": "INMU:H1",
+      "id": 263,
+      "allergens": [
+        "egg"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วขาว, สูตร 2, ต่อ 100 มล.",
+      "source": "inmu",
+      "file": "INMU:N62",
+      "id": 264,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "แครกเกอร์ผสมจมูกข้าวสาลีชนิดเค็ม, คาร์ส เม็ลท์",
+      "source": "inmu",
+      "file": "INMU:Z060076",
+      "id": 265,
+      "allergens": [
+        "gluten"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ถั่วเหลืองผง, ชนิดสกัดไขมันออก",
+      "source": "inmu",
+      "file": "INMU:C64",
+      "id": 266,
+      "allergens": [
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ปลาหมึกกระดอง, สด",
+      "source": "inmu",
+      "file": "INMU:G141",
+      "id": 267,
+      "allergens": [
+        "shellfish"
+      ],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไก่, ตับ, ดิบ",
+      "source": "inmu",
+      "file": "INMU:F15",
+      "id": 268,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ลิ้นจี่, จอมใจกวางเจา",
+      "source": "inmu",
+      "file": "INMU:E101",
+      "id": 269,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "น้ํามันรําข้าว, ผ่านกรรมวิธี",
+      "source": "inmu",
+      "file": "INMU:K43",
+      "id": 270,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซุปก้อน รสต่างๆ",
+      "source": "inmu",
+      "file": "INMU:N146",
+      "id": 271,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ไข่จระเข้, ไข่แดง",
+      "source": "inmu",
+      "file": "INMU:H33",
+      "id": 272,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "กะหล่ําปลีม่วง, ดิบ",
+      "source": "inmu",
+      "file": "INMU:D262",
+      "id": 273,
+      "allergens": [],
+      "public": false,
+      "note": ""
+    },
+    {
+      "string": "ซีอิ๊วหวาน",
+      "source": "inmu",
+      "file": "INMU:N142",
+      "id": 274,
+      "allergens": [
+        "gluten",
+        "soy"
+      ],
+      "public": false,
+      "note": ""
+    }
+  ],
+  "key_definitions": {
+    "shrimp": "IN: shrimp/prawn, shrimp paste, dried shrimp, shrimp-based sauces. OUT: other crustaceans and molluscs (those are 'shellfish').",
+    "shellfish": "IN: crab, lobster/crayfish, and all molluscs including bivalves (clam, oyster, mussel, cockle) and cephalopods (squid, octopus, cuttlefish). OUT: shrimp/prawn (own key), finned fish.",
+    "fish": "IN: finned fish and fish-derived products (fish sauce, pla-ra, dried/fermented fish, fish balls). OUT: squid/molluscs/crustaceans (even though the Thai word for squid contains the fish word).",
+    "egg": "IN: bird eggs (chicken, duck, quail) and products containing them (mayonnaise, custard, egg noodles when egg is a stated ingredient). OUT: insect eggs (e.g. ant eggs), fish roe, reptile eggs.",
+    "milk": "IN: animal milk and dairy (milk, cream, butter, cheese, yogurt, milk powder, condensed milk). OUT: plant milks (soy milk, coconut milk/cream), and words that merely contain the milk syllable (e.g. Thai words for sweets/snacks).",
+    "gluten": "IN: wheat, barley, rye and derivatives (wheat flour, wheat noodles, bread/crackers, soy sauce and oyster sauce made with wheat). OUT: rice, tapioca, mung-bean flour, corn, and oats on their own.",
+    "soy": "IN: soybeans and derivatives (tofu, soy milk, soy sauce, fermented soybean paste, edamame, soy flour). OUT: refined soybean oil.",
+    "peanut": "IN: peanuts and products containing them (satay sauce, peanut butter, peanut oil unrefined). OUT: tree nuts.",
+    "nut": "IN: tree nuts (almond, cashew, walnut, hazelnut, pistachio, pecan, chestnut). OUT: peanut, coconut, nutmeg, water chestnut."
+  },
+  "review_stats": {
+    "rows": 275,
+    "rows_changed_by_user": 1,
+    "allergen_edits": 1
+  }
+}
