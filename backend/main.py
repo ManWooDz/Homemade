@@ -129,6 +129,7 @@ BAD_FLAVOR_PAIRS = [
 ]
 
 from allergen_kg.floor import ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens
+from allergen_kg.match import find_allergy_violation, format_violation_reason
 
 # -------------------------------
 # 1. Ingredient Check (No hallucination)
@@ -220,13 +221,24 @@ def check_nutrition(recipe):
 # -------------------------------
 # 5. Allergy Check
 # -------------------------------
-def check_allergy(recipe, user_prefs):
+def _legacy_check_allergy(recipe, user_prefs):
     ingredients_text = " ".join(recipe["adjusted_ingredients"]).lower()
     for allergen_key in detect_flagged_allergens(user_prefs):
         for block_term in ALLERGEN_MAP[allergen_key]["blocks"]:
             if block_term in ingredients_text:
                 return False, f"Allergy violation: พบ '{block_term}' ในสูตร (ผู้ใช้แพ้ {allergen_key})"
     return True, "OK"
+
+
+def check_allergy(recipe, user_prefs, resolved_blocks=None):
+    # resolved_blocks=None is the legacy path for callers not yet passing
+    # resolved blocks; the endpoint always passes a dict (see resolve_blocks_for_request).
+    if resolved_blocks is None:
+        return _legacy_check_allergy(recipe, user_prefs)
+    violation = find_allergy_violation(recipe, user_prefs, resolved_blocks)
+    if violation is None:
+        return True, "OK"
+    return False, format_violation_reason(violation)
 
 
 # -------------------------------
@@ -244,7 +256,7 @@ def check_core(recipe, user_ingredients):
 # -------------------------------
 # Main Validation Pipeline
 # -------------------------------
-def validate_recipe(recipe, user_ingredients, user_prefs):
+def validate_recipe(recipe, user_ingredients, user_prefs, resolved_blocks=None):
     valid, msg = validate_generated_recipe_shape(recipe)
     if not valid:
         return {
@@ -275,7 +287,7 @@ def validate_recipe(recipe, user_ingredients, user_prefs):
         if check in single_arg_checks:
             valid, msg = check(recipe)
         elif check == check_allergy:
-            valid, msg = check(recipe, user_prefs)
+            valid, msg = check(recipe, user_prefs, resolved_blocks)
         else:  # check_ingredients, check_core
             valid, msg = check(recipe, user_ingredients)
 
