@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 from sqlalchemy import and_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.models import BaseRecipe, Favorite, GenerateHistory, Rating
@@ -64,3 +65,54 @@ def list_history(db: Session, user_id: int):
         _public_history(history, rating, favorite_id is not None, base_image)
         for history, rating, favorite_id, base_image in db.execute(stmt).all()
     ]
+
+
+def _owned_history(db: Session, user_id: int, history_id: int):
+    return db.execute(
+        select(GenerateHistory).where(GenerateHistory.id == history_id, GenerateHistory.user_id == user_id)
+    ).scalar_one_or_none()
+
+
+def upsert_rating(db: Session, *, user_id: int, history_id: int, stars: int, tag, feedback):
+    if _owned_history(db, user_id, history_id) is None:
+        return None
+    # select-then-write works on SQLite and Postgres alike; a concurrent insert
+    # of the same (user, history) pair surfaces as IntegrityError, retried once
+    # as an update.
+    for _ in range(2):
+        rating = db.execute(
+            select(Rating).where(Rating.user_id == user_id, Rating.generate_history_id == history_id)
+        ).scalar_one_or_none()
+        if rating is None:
+            rating = Rating(user_id=user_id, generate_history_id=history_id, stars=stars, tag=tag, feedback=feedback)
+            db.add(rating)
+        else:
+            rating.stars = stars
+            rating.tag = tag
+            rating.feedback = feedback
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            continue
+        db.refresh(rating)
+        return _public_rating(rating)
+    raise RuntimeError("rating upsert conflicted twice")
+
+
+def set_favorite(db: Session, *, user_id: int, history_id: int, favorite: bool) -> bool:
+    if _owned_history(db, user_id, history_id) is None:
+        return False
+    existing = db.execute(
+        select(Favorite).where(Favorite.user_id == user_id, Favorite.generate_history_id == history_id)
+    ).scalar_one_or_none()
+    if favorite and existing is None:
+        db.add(Favorite(user_id=user_id, generate_history_id=history_id))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    elif not favorite and existing is not None:
+        db.delete(existing)
+        db.commit()
+    return True

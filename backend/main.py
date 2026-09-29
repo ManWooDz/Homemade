@@ -23,7 +23,7 @@ import requests
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Dict, Any, Optional, Literal
 
 from auth import (
@@ -49,6 +49,7 @@ import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
+from history_repository import insert_generate_history, list_history, set_favorite, upsert_rating
 
 #
 #       uvicorn main:app --reload
@@ -668,6 +669,76 @@ async def remove_user_ingredient(
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+RatingTag = Literal["Delicious", "Great", "Tasty", "Not Bad", "Meh"]
+
+
+class RatingRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    stars: int = Field(ge=1, le=5, strict=True)
+    tag: Optional[RatingTag] = None
+    feedback: Optional[str] = Field(default=None, max_length=240)
+
+    @field_validator("feedback")
+    @classmethod
+    def _blank_feedback_is_null(cls, value):
+        if value is None or not value.strip():
+            return None
+        return value
+
+
+@app.get("/api/history")
+async def get_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return {"status": "success", "data": list_history(db, current_user.id)}
+
+
+@app.put("/api/history/{history_id}/rating", dependencies=[Depends(verify_same_origin)])
+async def put_history_rating(
+    history_id: int,
+    body: RatingRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    saved = upsert_rating(
+        db,
+        user_id=current_user.id,
+        history_id=history_id,
+        stars=body.stars,
+        tag=body.tag,
+        feedback=body.feedback,
+    )
+    if saved is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="History not found")
+    return {"status": "success", "data": saved}
+
+
+def _set_history_favorite(db, user, history_id, favorite):
+    if not set_favorite(db, user_id=user.id, history_id=history_id, favorite=favorite):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="History not found")
+    return {"status": "success", "data": {"is_favorite": favorite}}
+
+
+@app.put("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
+async def put_history_favorite(
+    history_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _set_history_favorite(db, current_user, history_id, True)
+
+
+@app.delete("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
+async def delete_history_favorite(
+    history_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _set_history_favorite(db, current_user, history_id, False)
+
 
 def resolve_blocks_for_request(user_prefs):
     # Resolved once per request, before the retry loop: prefs never change
