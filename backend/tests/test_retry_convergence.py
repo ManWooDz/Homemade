@@ -35,6 +35,14 @@ def always_shrimp(ingredients, user_prefs, base_recipe, feedback=None):
     }
 
 
+def erroring(ingredients, user_prefs, base_recipe, feedback=None):
+    return {"error": "boom", "details": "quota exceeded"}
+
+
+def erroring_no_details(ingredients, user_prefs, base_recipe, feedback=None):
+    return {"error": "boom"}
+
+
 def _quiet():
     return contextlib.redirect_stdout(io.StringIO())
 
@@ -45,7 +53,7 @@ class RetryConvergenceTests(unittest.TestCase):
             rows = run_arm([CASE], empty_resolver(), always_shrimp, k=2)
         self.assertEqual(len(rows), 2)
         self.assertTrue(all(r["exhausted"] and r["attempts"] == 3 for r in rows))
-        self.assertEqual(summarize(rows), {"c1": {"runs": 2, "exhausted": 2}})
+        self.assertEqual(summarize(rows), {"c1": {"runs": 2, "exhausted": 2, "errored": 0, "passed": 0}})
 
     def test_rows_record_resolved_status_and_final_valid(self):
         with _quiet():
@@ -59,15 +67,39 @@ class RetryConvergenceTests(unittest.TestCase):
         self.assertTrue(none_rows[0]["final_valid"])
         self.assertFalse(none_rows[0]["exhausted"])
 
+    def test_resolved_statuses_records_every_flagged_key(self):
+        case = dict(CASE, case_id="multi", user_prefs={"allergy": "แพ้กุ้งและนม"})
+        with _quiet():
+            rows = run_arm([case], seeded_resolver(), always_shrimp, k=1)
+        statuses = rows[0]["resolved_statuses"]
+        self.assertGreaterEqual(len(statuses), 2)
+        self.assertEqual(set(statuses.values()), {"ok"})
+        self.assertEqual(rows[0]["resolved_status"], "ok")
+
+    def test_error_dict_is_errored_not_exhausted(self):
+        with _quiet():
+            rows = run_arm([CASE], empty_resolver(), erroring, k=1)
+            rows2 = run_arm([CASE], empty_resolver(), erroring_no_details, k=1)
+            ok_rows = run_arm([NO_ALLERGY_CASE], empty_resolver(), always_shrimp, k=1)
+        self.assertTrue(rows[0]["errored"])
+        self.assertFalse(rows[0]["exhausted"])
+        self.assertFalse(rows[0]["final_valid"])
+        self.assertEqual(rows[0]["error_details"], "quota exceeded")
+        self.assertEqual(rows2[0]["error_details"], "boom")
+        self.assertEqual(summarize(rows), {"c1": {"runs": 1, "exhausted": 0, "errored": 1, "passed": 0}})
+        self.assertFalse(ok_rows[0]["errored"])
+        self.assertIsNone(ok_rows[0]["error_details"])
+
     def test_summarize_and_overall(self):
-        rows = [
-            {"case_id": "a", "exhausted": True},
-            {"case_id": "a", "exhausted": False},
-            {"case_id": "b", "exhausted": True},
-        ]
-        self.assertEqual(summarize(rows), {"a": {"runs": 2, "exhausted": 1}, "b": {"runs": 1, "exhausted": 1}})
-        self.assertEqual(overall(rows), {"runs": 3, "exhausted": 2})
-        self.assertEqual(overall([]), {"runs": 0, "exhausted": 0})
+        def row(case_id, exhausted=False, errored=False, passed=False):
+            return {"case_id": case_id, "exhausted": exhausted, "errored": errored, "final_valid": passed}
+        rows = [row("a", exhausted=True), row("a", passed=True), row("b", exhausted=True), row("b", errored=True)]
+        self.assertEqual(summarize(rows), {
+            "a": {"runs": 2, "exhausted": 1, "errored": 0, "passed": 1},
+            "b": {"runs": 2, "exhausted": 1, "errored": 1, "passed": 0},
+        })
+        self.assertEqual(overall(rows), {"runs": 4, "exhausted": 2, "errored": 1, "passed": 1})
+        self.assertEqual(overall([]), {"runs": 0, "exhausted": 0, "errored": 0, "passed": 0})
 
 
 class CheckConfirmationTests(unittest.TestCase):
@@ -78,6 +110,11 @@ class CheckConfirmationTests(unittest.TestCase):
         for bad in (None, "", "71", "72 ", "abc"):
             with self.assertRaises(SystemExit, msg=repr(bad)):
                 check_confirmation(3, 4, bad)
+
+    def test_exits_when_k_or_cases_below_one(self):
+        for k, n in ((0, 4), (3, 0), (-1, 4), (0, 0)):
+            with self.assertRaises(SystemExit, msg=(k, n)):
+                check_confirmation(k, n, "0")
 
     def test_message_names_required_number(self):
         with self.assertRaises(SystemExit) as ctx:
@@ -106,6 +143,10 @@ class MainGuardTests(unittest.TestCase):
         return patch.object(retry_convergence, "_load_generator",
                             side_effect=AssertionError("generator loaded before guard passed"))
 
+    def _cleanup_files(self, *paths):
+        for path in paths:
+            self.addCleanup(lambda p=path: os.path.exists(p) and os.unlink(p))
+
     def test_unset_env_exits_before_generator_is_loaded(self):
         with self._env(None), self._no_generator(), contextlib.redirect_stderr(io.StringIO()) as err:
             with self.assertRaises(SystemExit):
@@ -123,14 +164,84 @@ class MainGuardTests(unittest.TestCase):
                 retry_convergence.main(["2", "c1", "nope"])
         self.assertIn("nope", str(ctx.exception))
 
+    def test_graph_status_assertion_runs_before_confirmation_and_generator(self):
+        with self._env(None), self._no_generator(), \
+                patch.object(retry_convergence, "assert_graph_status", side_effect=RuntimeError("bad graph")), \
+                patch.object(retry_convergence, "check_confirmation",
+                             side_effect=AssertionError("confirmation checked before status assertion")), \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(RuntimeError):
+                retry_convergence.main(["2", "c1"])
+
     def test_confirmed_run_uses_loaded_generator_only(self):
+        with self._env("12"), \
+                patch.object(retry_convergence, "_load_generator", return_value=always_shrimp), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            report = retry_convergence.main(["2", "c1"])
+        expected = {"runs": 2, "exhausted": 2, "errored": 0, "passed": 0}
+        self.assertEqual(report["floor_only"]["overall"], expected)
+        self.assertEqual(report["floor_union_kg"]["overall"], expected)
+
+    def test_stdout_is_only_parseable_json_despite_progress_prints(self):
+        out, err = io.StringIO(), io.StringIO()
+        with self._env("12"), \
+                patch.object(retry_convergence, "_load_generator", return_value=always_shrimp), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            retry_convergence.main(["2", "c1"])
+        parsed = json.loads(out.getvalue())
+        self.assertEqual(set(parsed), {"floor_only", "floor_union_kg"})
+        self.assertIn("Generation Attempt", err.getvalue())  # progress went to stderr
+
+    def test_out_option_writes_report_file_and_partial(self):
+        out_path = self.tmp.name + ".report.json"
+        self._cleanup_files(out_path, out_path + ".partial.json")
         out = io.StringIO()
         with self._env("12"), \
                 patch.object(retry_convergence, "_load_generator", return_value=always_shrimp), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-            report = retry_convergence.main(["2", "c1"])
-        self.assertEqual(report["floor_only"]["overall"], {"runs": 2, "exhausted": 2})
-        self.assertEqual(report["floor_union_kg"]["overall"], {"runs": 2, "exhausted": 2})
+            retry_convergence.main(["--out", out_path, "2", "c1"])
+        self.assertEqual(out.getvalue(), "")
+        with open(out_path, encoding="utf-8") as f:
+            self.assertEqual(set(json.load(f)), {"floor_only", "floor_union_kg"})
+        self.assertTrue(os.path.exists(out_path + ".partial.json"))
+
+    def test_partial_file_survives_crash_in_second_arm(self):
+        out_path = self.tmp.name + ".crash.json"
+        self._cleanup_files(out_path, out_path + ".partial.json")
+        first_rows = [{"case_id": "c1", "run": 1, "exhausted": True, "errored": False, "final_valid": False}]
+        calls = []
+
+        def fake_run_arm(cases, resolve, generate_fn, k):
+            calls.append(1)
+            if len(calls) == 2:
+                raise ConnectionError("second arm died")
+            return first_rows
+
+        with self._env("6"), \
+                patch.object(retry_convergence, "_load_generator", return_value=always_shrimp), \
+                patch.object(retry_convergence, "run_arm", side_effect=fake_run_arm), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(ConnectionError):
+                retry_convergence.main(["--out", out_path, "1", "c1"])
+        with open(out_path + ".partial.json", encoding="utf-8") as f:
+            partial = json.load(f)
+        self.assertEqual(partial["floor_only"]["overall"]["exhausted"], 1)
+        self.assertNotIn("floor_union_kg", partial)
+        self.assertFalse(os.path.exists(out_path))
+
+    def test_errored_rows_still_write_report_then_exit_2_with_warning(self):
+        out, err = io.StringIO(), io.StringIO()
+        with self._env("12"), \
+                patch.object(retry_convergence, "_load_generator", return_value=erroring), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            with self.assertRaises(SystemExit) as ctx:
+                retry_convergence.main(["2", "c1"])
+        self.assertEqual(ctx.exception.code, 2)
+        parsed = json.loads(out.getvalue())
+        self.assertEqual(parsed["floor_only"]["overall"]["errored"], 2)
+        self.assertEqual(parsed["floor_only"]["overall"]["exhausted"], 0)
+        self.assertIn("c1", err.getvalue())
+        self.assertIn("quota exceeded", err.getvalue())
 
 
 if __name__ == "__main__":
