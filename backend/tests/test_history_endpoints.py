@@ -161,6 +161,23 @@ class HistoryEndpointTests(HistoryEndpointTestCase):
             self.assertEqual(res.json()["data"], {"is_favorite": False})
         self.assertFalse(self.alice.get("/api/history").json()["data"][0]["is_favorite"])
 
+    def test_out_of_range_history_ids_are_422_and_max_valid_id_is_404(self):
+        # Postgres binds ids as INTEGER; anything above 2**31-1 would raise
+        # DataError -> 500 if it reached the DB, so validation must stop it.
+        for history_id in (2147483648, 0):
+            with self.subTest(history_id=history_id):
+                self.assertEqual(self.rate(self.alice, history_id, {"stars": 5}).status_code, 422)
+                self.assertEqual(
+                    self.alice.put(f"/api/history/{history_id}/favorite", headers=self.origin).status_code, 422
+                )
+                self.assertEqual(
+                    self.alice.delete(f"/api/history/{history_id}/favorite", headers=self.origin).status_code, 422
+                )
+        top = 2147483647
+        self.assertEqual(self.rate(self.alice, top, {"stars": 5}).status_code, 404)
+        self.assertEqual(self.alice.put(f"/api/history/{top}/favorite", headers=self.origin).status_code, 404)
+        self.assertEqual(self.alice.delete(f"/api/history/{top}/favorite", headers=self.origin).status_code, 404)
+
     def test_requires_login(self):
         anon = TestClient(app)
         self.assertEqual(anon.get("/api/history").status_code, 401)

@@ -4,7 +4,7 @@ import math
 
 logging.basicConfig(level=logging.INFO)
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
+from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response, UploadFile, File, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import List, Dict, Any, Optional, Literal
+from typing import Annotated, List, Dict, Any, Optional, Literal
 
 from auth import (
     REFRESH_TOKEN_EXPIRE_DAYS,
@@ -696,9 +696,14 @@ async def get_history(
     return {"status": "success", "data": list_history(db, current_user.id)}
 
 
+# Postgres binds ids as INTEGER: anything above 2**31-1 would raise DataError
+# (a 500) if it reached the DB, so out-of-range ids are rejected as 422 here.
+HistoryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
+
+
 @app.put("/api/history/{history_id}/rating", dependencies=[Depends(verify_same_origin)])
 async def put_history_rating(
-    history_id: int,
+    history_id: HistoryId,
     body: RatingRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -724,7 +729,7 @@ def _set_history_favorite(db, user, history_id, favorite):
 
 @app.put("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
 async def put_history_favorite(
-    history_id: int,
+    history_id: HistoryId,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -733,7 +738,7 @@ async def put_history_favorite(
 
 @app.delete("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
 async def delete_history_favorite(
-    history_id: int,
+    history_id: HistoryId,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -821,6 +826,10 @@ async def generate_recipe_text(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # get_current_user's lookup began a transaction on this Session; end it now
+    # so no connection sits idle-in-transaction across the LLM calls. The
+    # Session is reused later by the history write (a fresh transaction).
+    db.close()
     try:
         user_prefs = request.preferences
         ingredients_list_for_llm = ingredient_names(request.ingredients)

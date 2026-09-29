@@ -2,7 +2,7 @@
 import unittest
 from copy import deepcopy
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from sqlalchemy.exc import OperationalError
 
@@ -126,7 +126,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             return outputs.pop(0)
 
         with patch("main.SessionLocal", lambda: db), patch("main.call_agentic_llm", side_effect=fake):
-            response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=object())
+            response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=MagicMock())
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(feedbacks[1], "Allergy violation: 'beta' → alpha → กุ้ง (ผู้ใช้แพ้ shrimp)")
@@ -140,7 +140,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             return outputs.pop(0)
 
         with patch("main.SessionLocal", None), patch("main.call_agentic_llm", side_effect=fake):
-            response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=object())
+            response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=MagicMock())
 
         self.assertEqual(response["status"], "success")
         self.assertEqual(feedbacks[1], "Allergy violation: พบ 'กุ้ง' ในสูตร (ผู้ใช้แพ้ shrimp)")

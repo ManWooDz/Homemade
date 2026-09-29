@@ -44,7 +44,7 @@ VALID_RECIPE = {
 }
 
 TEST_USER = SimpleNamespace(id=7)
-TEST_DB = object()
+TEST_DB = MagicMock()  # stands in for the request Session; handler calls db.close()
 
 
 async def call_handler(request):
@@ -81,6 +81,26 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
             response = await call_handler(self.make_request())
 
         return response, mock_llm, feedbacks
+
+    async def test_request_session_is_closed_before_any_llm_call(self):
+        # get_current_user's lookup opens a transaction on this Session; it must
+        # be ended before the (slow) LLM calls so no connection sits idle in
+        # transaction across them.
+        events = []
+        db = MagicMock()
+        db.close.side_effect = lambda: events.append("close")
+
+        def fake_llm(ingredients, user_prefs, base_recipe, feedback=None):
+            events.append("llm")
+            return deepcopy(VALID_RECIPE)
+
+        with patch("main.call_agentic_llm", side_effect=fake_llm):
+            response = await generate_recipe_text(self.make_request(), current_user=TEST_USER, db=db)
+
+        self.assertEqual(response["status"], "success")
+        self.assertEqual(events[0], "close")
+        self.assertIn("llm", events)
+        self.assertLess(events.index("close"), events.index("llm"))
 
     async def test_handler_sends_presence_names_without_quantity(self):
         captured = {}

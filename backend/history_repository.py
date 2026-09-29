@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -28,6 +28,10 @@ def _public_history(history: GenerateHistory, rating, is_favorite: bool, base_im
 def _base_recipe_id(db: Session, request_recipe):
     raw = request_recipe.get("id") if isinstance(request_recipe, dict) else None
     if isinstance(raw, bool) or not isinstance(raw, int):
+        return None
+    # Postgres binds ids as INTEGER; an out-of-range client-supplied id must not
+    # reach db.get or the whole history insert fails (saved as NULL instead).
+    if raw < 1 or raw > 2_147_483_647:
         return None
     return raw if db.get(BaseRecipe, raw) is not None else None
 
@@ -103,16 +107,21 @@ def upsert_rating(db: Session, *, user_id: int, history_id: int, stars: int, tag
 def set_favorite(db: Session, *, user_id: int, history_id: int, favorite: bool) -> bool:
     if _owned_history(db, user_id, history_id) is None:
         return False
+    if not favorite:
+        # Single atomic DELETE: racing double-DELETEs both succeed (the second
+        # matches zero rows) instead of load-then-delete raising StaleDataError.
+        db.execute(
+            delete(Favorite).where(Favorite.user_id == user_id, Favorite.generate_history_id == history_id)
+        )
+        db.commit()
+        return True
     existing = db.execute(
         select(Favorite).where(Favorite.user_id == user_id, Favorite.generate_history_id == history_id)
     ).scalar_one_or_none()
-    if favorite and existing is None:
+    if existing is None:
         db.add(Favorite(user_id=user_id, generate_history_id=history_id))
         try:
             db.commit()
         except IntegrityError:
             db.rollback()
-    elif not favorite and existing is not None:
-        db.delete(existing)
-        db.commit()
     return True

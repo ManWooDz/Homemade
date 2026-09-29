@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -127,7 +127,19 @@ class InsertGenerateHistoryTests(unittest.TestCase):
         self.assertEqual(row.source, "generated")
 
     def test_unusable_base_recipe_ids_become_null(self):
-        for recipe in ({"name": "Custom Recipe from Fridge"}, {"id": 999}, {"id": "5"}, {"id": True}):
+        # Out-of-INTEGER-range ids (2**70, 2147483648) must be rejected before
+        # db.get, or Postgres raises DataError and the whole insert is lost.
+        unusable = (
+            {"name": "Custom Recipe from Fridge"},
+            {"id": 999},
+            {"id": "5"},
+            {"id": True},
+            {"id": 2**70},
+            {"id": 2147483648},
+            {"id": 0},
+            {"id": -1},
+        )
+        for recipe in unusable:
             with self.subTest(recipe=recipe):
                 row = self.db.get(GenerateHistory, self._insert(recipe))
                 self.assertIsNone(row.base_recipe_id)
@@ -185,6 +197,38 @@ class ListHistoryTests(unittest.TestCase):
         self.assertIsNone(second["image"])
         self.assertIsNone(second["rating"])
         self.assertFalse(second["is_favorite"])
+
+
+class SetFavoriteTests(unittest.TestCase):
+    def setUp(self):
+        from history_repository import insert_generate_history
+        self.db = make_session()
+        self.alice = make_user(self.db, "alice@example.com")
+        self.history = insert_generate_history(
+            self.db, user_id=self.alice.id, request_recipe={"name": "Custom"}, final_output=deepcopy(APPROVED)
+        )
+
+    def tearDown(self):
+        self.db.close()
+
+    def test_unfavorite_survives_row_already_deleted_by_another_session(self):
+        # Behavior pin for the double-DELETE race: the unfavorite must be one
+        # atomic DELETE, not load-then-db.delete (which raises StaleDataError
+        # when another session deleted the row in between).
+        from history_repository import list_history, set_favorite
+        self.assertTrue(set_favorite(self.db, user_id=self.alice.id, history_id=self.history, favorite=True))
+        loaded = self.db.execute(select(Favorite)).scalar_one()  # now in this session's identity map
+        self.assertIsNotNone(loaded)
+
+        other = sessionmaker(bind=self.db.get_bind(), autoflush=False, autocommit=False)()
+        try:
+            other.execute(delete(Favorite))
+            other.commit()
+        finally:
+            other.close()
+
+        self.assertTrue(set_favorite(self.db, user_id=self.alice.id, history_id=self.history, favorite=False))
+        self.assertFalse(list_history(self.db, self.alice.id)[0]["is_favorite"])
 
 
 if __name__ == "__main__":
