@@ -49,6 +49,7 @@ function App() {
     const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
     const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
     const [historyReturnView, setHistoryReturnView] = useState("profile");
+    const [favoritesTab, setFavoritesTab] = useState("base"); // "base" | "mine"
     const [cookingHistory, setCookingHistory] = useState([]);
     const [barcodePrefill, setBarcodePrefill] = useState(null);
     const [selectedIngredientDetail, setSelectedIngredientDetail] = useState(null);
@@ -555,6 +556,8 @@ function App() {
                     setActiveTab("cooking");
                     setCurrentView("recipe-detail");
                 }}
+                tab={favoritesTab}
+                onTabChange={setFavoritesTab}
                 historyFavorites={cookingHistory.filter((item) => item.is_favorite)}
                 onToggleHistoryFavorite={toggleHistoryFavorite}
                 onOpenHistoryItem={(item) => {

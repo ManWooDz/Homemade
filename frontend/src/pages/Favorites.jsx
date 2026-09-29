@@ -14,6 +14,8 @@ export default function Favorites({
     onSelectRecipe,
     activeTab,
     setActiveTab,
+    tab,
+    onTabChange,
     historyFavorites = [],
     onToggleHistoryFavorite,
     onOpenHistoryItem,
@@ -40,7 +42,6 @@ export default function Favorites({
           )
         : categoryFilteredRecipes;
 
-    const [tab, setTab] = useState("base"); // base | mine
     const [pendingHistoryIds, setPendingHistoryIds] = useState([]);
 
     const query = searchQuery.trim().toLowerCase();
@@ -97,7 +98,7 @@ export default function Favorites({
                         ].map((t) => (
                             <button
                                 key={t.key}
-                                onClick={() => setTab(t.key)}
+                                onClick={() => onTabChange?.(t.key)}
                                 className={`flex-1 py-2 rounded-full text-sm font-medium border transition ${
                                     tab === t.key
                                         ? "bg-[#EF5A3A] text-white border-[#EF5A3A]"
