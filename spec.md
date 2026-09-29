@@ -113,6 +113,12 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 ## Current state
 
+**Personalization data capture — design approved, not implemented (2026-09-29) — product envelope, ไม่ใช่ contribution, ไม่มี KPI:**
+- Spec (local, `docs/` gitignored): `docs/superpowers/specs/2026-09-29-personalization-data-capture-design.md`. ขั้นแรกของ personalization: เก็บข้อมูลจริงก่อน ส่วน taste profile / embedding retrieval / inject ลง prompt แยกเป็น spec ถัดไป. เป็น **in-context personalization** ห้ามเรียกว่าเทรน/พัฒนา LLM ต่อ user
+- ตัดสินใจแล้ว: (1) บันทึก history ทุกครั้งที่ generate สำเร็จ, personalization ใช้เฉพาะแถวที่มี rating (2) `/api/generate-recipe-text` ต้อง login และเขียน history เองหลัง validation + Nutrition Engine คืน `data.history_id` (null ถ้าบันทึกพัง สูตรไม่หาย) (3) ปุ่ม ♥ ขวาหัว CookingPage = favorite สูตรที่ generate (บันทึก DB) (4) Profile › Cooking History มีปุ่มกรอง ทั้งหมด/♥ รายการโปรด (5) ♥ เมนูพื้นฐานบน Home ไม่แตะ ยังอยู่ฝั่ง client (6) หน้า Favorites มีแท็บ เมนูพื้นฐาน / ✨ สูตรของฉัน (7) เพิ่ม `generate_history.recipe_data JSONB` เก็บ response เต็ม + คอลัมน์ typed เดิม; `ratings` เพิ่ม `tag`, `feedback` (≤240), `updated_at` (8) เทสต์ใช้ SQLite ผ่าน `.with_variant(...)`
+- API ใหม่ที่วางไว้: `GET /api/history`, `PUT /api/history/{id}/rating`, `PUT|DELETE /api/history/{id}/favorite` (ของคนอื่น → 404). Data contract ใน section ด้านล่างจะอัปเดตตอน implement เสร็จ
+- ถัดไป: implementation plan → checkpoint ขอ confirm รายการไฟล์ `/backend/` ก่อนแก้
+
 **python-jose → PyJWT (2026-09-29, user อนุมัติ install + แก้ `/backend/`) — product envelope, ไม่ใช่ contribution:**
 - แก้ 3 ไฟล์: `backend/auth.py` (`import jwt`, `except jwt.PyJWTError`), `backend/tests/test_auth.py` (`import jwt`), `backend/requirements.txt` (`python-jose[cryptography]` → `PyJWT`). ติดตั้ง PyJWT 2.15.1 ใน `backend/venv`. `encode`/`decode` signature เดิม ไม่แก้ logic
 - Verify: `python -m unittest discover -s tests` 442 tests OK (skipped=1); `-k test_auth` 34/34 (รวม expired/bad-sub/no-jti/rotation); token ที่ mint ด้วย jose ยัง decode ผ่าน `_decode_token` ใหม่ และกลับกัน → session เดิมของ user ไม่โดนเตะ. **รัน uvicorn จริง + Postgres dev DB แล้ว (2026-09-29):** register 201 → login 200 → `/me` 200 → refresh 200 → `/me` 200; `/me` ไม่มี cookie 401, token ปลอม 401, logout 200 แล้ว `/me` 401 (ทิ้ง user ทดสอบ `pyjwt_check_*@example.com` id 54 ไว้ใน dev DB)
