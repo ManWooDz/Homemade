@@ -13,7 +13,7 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 
 **Stack เป้าหมาย (กำลังจะสร้าง):**
 - Backend DB: ย้าย SQLite → **PostgreSQL** (พร้อม SQLAlchemy แนะนำ เพราะตอนนี้ raw SQL string จะรกเมื่อมี user_id ผูกหลายตาราง)
-- Auth: JWT ทำเอง (`bcrypt` ตรง — **ไม่ใช่** `passlib[bcrypt]`, verify แล้วว่าคู่กับ bcrypt>=4.0 พัง ดู Current State step 8 — + `python-jose` + FastAPI `OAuth2PasswordBearer`/`OAuth2PasswordRequestForm`) — **ไม่ใช่** fastapi-users, **ไม่ใช่** Auth.js/BetterAuth (เป็น Node-only ใช้กับ FastAPI ไม่ได้) — **เสร็จแล้ว** (`backend/auth.py`, `/api/auth/register`, `/api/auth/login`, `/api/auth/me`)
+- Auth: JWT ทำเอง (`bcrypt` ตรง — **ไม่ใช่** `passlib[bcrypt]`, verify แล้วว่าคู่กับ bcrypt>=4.0 พัง ดู Current State step 8 — + `PyJWT` (เดิมใช้ `python-jose` เปลี่ยน 2026-09-29) + FastAPI `OAuth2PasswordBearer`/`OAuth2PasswordRequestForm`) — **ไม่ใช่** fastapi-users, **ไม่ใช่** Auth.js/BetterAuth (เป็น Node-only ใช้กับ FastAPI ไม่ได้) — **เสร็จแล้ว** (`backend/auth.py`, `/api/auth/register`, `/api/auth/login`, `/api/auth/me`)
 - ตั้ง `hashed_password` เป็น nullable ไว้เผื่ออนาคตอยากเพิ่ม Google OAuth (เพิ่มได้แบบ additive ไม่ต้องรื้อ ไม่ต้องทำตอนนี้)
 - External API: Open Food Facts (barcode lookup, fallback พิมพ์เองถ้าไม่เจอ — coverage ของสดตลาดไทยอ่อน)
 
@@ -112,6 +112,11 @@ Capstone โปรเจกต์ ทีม 2 คน กำลังเตรี
 - ทำอาหารจริงทุกสูตรเพื่อทดสอบ (ใช้ 3-layer verification: rule-based safety + retrieval similarity + expert-rated sample เล็กแทน)
 
 ## Current state
+
+**python-jose → PyJWT (2026-09-29, user อนุมัติ install + แก้ `/backend/`) — product envelope, ไม่ใช่ contribution:**
+- แก้ 3 ไฟล์: `backend/auth.py` (`import jwt`, `except jwt.PyJWTError`), `backend/tests/test_auth.py` (`import jwt`), `backend/requirements.txt` (`python-jose[cryptography]` → `PyJWT`). ติดตั้ง PyJWT 2.15.1 ใน `backend/venv`. `encode`/`decode` signature เดิม ไม่แก้ logic
+- Verify: `python -m unittest discover -s tests` 442 tests OK (skipped=1); `-k test_auth` 34/34 (รวม expired/bad-sub/no-jti/rotation); token ที่ mint ด้วย jose ยัง decode ผ่าน `_decode_token` ใหม่ และกลับกัน → session เดิมของ user ไม่โดนเตะ. **ยังไม่ได้รัน uvicorn จริง** (ครอบคลุมด้วย TestClient endpoint tests เท่านั้น)
+- ค้างใน venv: `python-jose`, `ecdsa`, `rsa`, `pyasn1` ยังไม่ถูก uninstall (ไม่ได้สั่ง) — ลบเองได้ถ้าต้องการ
 
 **Local LLM Generator + Gemini Critic — Milestone 1 implemented AND benchmarked for real (2026-09-14 code, 2026-09-18 real benchmark run, merged to `main` at `acd61c81`) — not a 4th contribution:**
 - Advisor asked to evaluate a local trained model replacing Gemini, or local-primary + Gemini-verifies. Brainstormed with user + external review (Codex). Design: [`docs/superpowers/specs/2026-09-13-local-llm-generator-design.md`](docs/superpowers/specs/2026-09-13-local-llm-generator-design.md); Plan: [`docs/superpowers/plans/2026-09-14-local-llm-generator-milestone1.md`](docs/superpowers/plans/2026-09-14-local-llm-generator-milestone1.md); ledger: `.superpowers/sdd/2026-09-14-local-llm-generator-milestone1/progress.md`

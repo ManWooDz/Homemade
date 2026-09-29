@@ -22,7 +22,7 @@
 **Stack mismatch เวลาแนะนำ library (2026-07):**
 - what: ผู้ใช้ถามว่าควรใช้ Auth.js/BetterAuth ไหม
 - root cause: สองตัวนี้เป็น Node.js-only library ต้องรันบน Node runtime แต่ backend จริงคือ FastAPI (Python)
-- correct: ก่อนแนะนำ library ต้องเช็คก่อนว่ามัน compatible กับ runtime/ภาษาของ backend จริง ไม่ใช่แนะนำเพราะ "เป็นที่นิยม" เฉยๆ — สำหรับ FastAPI ใช้ passlib+python-jose+OAuth2PasswordBearer (เขียนเอง) หรือ fastapi-users เท่านั้น
+- correct: ก่อนแนะนำ library ต้องเช็คก่อนว่ามัน compatible กับ runtime/ภาษาของ backend จริง ไม่ใช่แนะนำเพราะ "เป็นที่นิยม" เฉยๆ — สำหรับ FastAPI ใช้ bcrypt+PyJWT+OAuth2PasswordBearer (เขียนเอง; เดิมเขียนว่า passlib+python-jose — แก้ 2026-09-29 ให้ตรงโค้ดจริง) หรือ fastapi-users เท่านั้น
 
 **Blind-retry ไม่ใช่ critic-feedback loop (2026-07) — RESOLVED 2026-07, ดู spec.md:232-238:**
 - what: โค้ดเดิมใน main.py (`generate_recipe_text`) มี retry loop สูงสุด 3 รอบ แต่เรียก `call_agentic_llm()` ด้วย argument ชุดเดิมทุกรอบ ไม่ส่งเหตุผลที่ fail กลับไป

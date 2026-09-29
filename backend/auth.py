@@ -6,7 +6,7 @@ from uuid import uuid4
 import bcrypt
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, Request, Response, status
-from jose import JWTError, jwt
+import jwt
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
@@ -77,7 +77,7 @@ def _decode_token(token: str, expected_type: str) -> dict | None:
     turn every failure into a 401 uniformly."""
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
     if payload.get("type") != expected_type:
         return None

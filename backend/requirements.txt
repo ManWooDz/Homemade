@@ -12,6 +12,6 @@ psycopg[binary]
 alembic
 pgvector
 bcrypt
-python-jose[cryptography]
+PyJWT
 pandas
 openpyxl

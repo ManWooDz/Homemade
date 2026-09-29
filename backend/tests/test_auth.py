@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from jose import jwt
+import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
