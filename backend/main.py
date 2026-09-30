@@ -52,6 +52,23 @@ from image_urls import public_image_url
 from history_repository import insert_generate_history, list_history, set_favorite, upsert_rating
 from base_favorites_repository import list_base_favorite_ids, set_base_favorite
 
+
+def _harden_stdio(streams):
+    # On Windows, stdout/stderr are cp874/cp1252 when piped or redirected, so any
+    # print() of a character outside that codepage (KG reason arrows, emoji in
+    # user prefs or LLM output) raises UnicodeEncodeError, and the endpoint's
+    # outer except turns a good request into {"status":"error"}. Degrade to
+    # backslash escapes once, at startup, instead of guarding every print.
+    # Streams without .reconfigure (test runners swap in StringIO) are left alone.
+    for stream in streams:
+        try:
+            stream.reconfigure(errors="backslashreplace")
+        except Exception:
+            pass
+
+
+_harden_stdio([sys.stdout, sys.stderr])
+
 #
 #       uvicorn main:app --reload
 # 
