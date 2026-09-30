@@ -7,7 +7,7 @@ protection these lists already gave (design: docs/superpowers/specs/2026-09-28-a
 """
 
 ALLERGEN_MAP = {
-    "shrimp":    {"triggers": ["shrimp", "prawn", "กุ้ง"],
+    "shrimp":    {"triggers": ["shrimp", "prawn", "กุ้ง", "กะปิ", "อาหารทะเล"],
                   # "กะปิ" (shrimp paste) was an interim single-entry patch
                   # (2026-09-19). It stays as part of the floor; derived
                   # ingredients in general are now covered by the allergen
@@ -15,15 +15,18 @@ ALLERGEN_MAP = {
                   "blocks":   ["shrimp", "prawn", "กุ้ง", "กะปิ"]},
     "peanut":    {"triggers": ["peanut", "peanuts", "ถั่วลิสง", "ถั่ว"],
                   "blocks":   ["peanut", "peanuts", "ถั่วลิสง", "เนยถั่ว"]},
-    "milk":      {"triggers": ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม"],
+    "milk":      {"triggers": ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม",
+                               "แลคโตส", "แล็กโทส", "lactose", "โยเกิร์ต", "yogurt", "whey"],
                   "blocks":   ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม"]},
     "egg":       {"triggers": ["egg", "eggs", "ไข่"],
                   "blocks":   ["egg", "eggs", "ไข่"]},
-    "gluten":    {"triggers": ["wheat", "flour", "gluten", "แป้งสาลี", "แป้ง"],
+    "gluten":    {"triggers": ["wheat", "flour", "gluten", "แป้งสาลี", "แป้ง",
+                                "กลูเตน", "ข้าวสาลี", "บาร์เลย์", "ไรย์", "barley", "rye"],
                   "blocks":   ["wheat", "flour", "gluten", "แป้งสาลี", "แป้ง"]},
-    "shellfish": {"triggers": ["crab", "lobster", "clam", "oyster", "ปู", "หอย", "กั้ง"],
+    "shellfish": {"triggers": ["crab", "lobster", "clam", "oyster", "ปู", "หอย", "กั้ง",
+                                "หมึก", "squid", "octopus", "mussel", "ล็อบสเตอร์", "shellfish", "อาหารทะเล"],
                   "blocks":   ["crab", "lobster", "clam", "oyster", "ปู", "หอย", "กั้ง"]},
-    "fish":      {"triggers": ["fish", "ปลา"],
+    "fish":      {"triggers": ["fish", "ปลา", "อาหารทะเล", "salmon", "tuna", "แซลมอน", "ทูน่า"],
                   "blocks":   ["fish", "ปลา"]},
     # "ถั่ว" (generic Thai word, ambiguous between peanut/soy/other legumes)
     # deliberately excluded here -- kept only under "peanut" below, since
@@ -32,12 +35,15 @@ ALLERGEN_MAP = {
     # over-block: a soy-unrelated recipe containing "ซีอิ๊ว" (soy sauce) got
     # blocked for a user who only said "แพ้ถั่ว" (peanut allergy) -- found
     # and verified 2026-09-19 via the expanded eval fixtures.
-    "soy":       {"triggers": ["soy", "ถั่วเหลือง", "เต้าหู้"],
+    "soy":       {"triggers": ["soy", "ถั่วเหลือง", "เต้าหู้", "ซีอิ๊ว", "เต้าเจี้ยว", "tofu", "soya", "edamame"],
                   "blocks":   ["soy sauce", "soy", "tofu", "เต้าหู้", "ถั่วเหลือง", "ซีอิ๊ว", "ซอสถั่วเหลือง"]},
-    "nut":       {"triggers": ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์"],
+    "nut":       {"triggers": ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์",
+                                "พิสตาชิโอ", "pistachio", "แมคคาเดเมีย", "macadamia", "พีแคน", "pecan",
+                                "วอลนัท", "เฮเซลนัท", "เกาลัด", "เม็ดมะม่วง", "ถั่วเปลือกแข็ง", "tree nut"],
                   "blocks":   ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์"]},
 }
-ALLERGY_TRIGGER_KEYWORDS = ["allergic to", "allergy", "แพ้", "ห้ามใส่", "ไม่ทาน"]
+ALLERGY_TRIGGER_KEYWORDS = ["allergic to", "allergy", "แพ้", "ห้ามใส่", "ไม่ทาน",
+                             "ไม่กิน", "ห้ามกิน", "กินไม่ได้", "allergic", "intolerant"]
 
 NO_ALLERGY_VALUES = ("", "none", "ไม่มี", "ไม่แพ้อาหาร", "no allergy")
 
