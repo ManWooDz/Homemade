@@ -8,6 +8,7 @@ import RecipeContent from "../components/RecipeContent";
 export default function CookingPage({
   recipe,
   generatedRecipe,
+  generateError,
   isGenerating,
   onBack,
   activeTab,
@@ -170,6 +171,11 @@ export default function CookingPage({
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl items-center justify-center space-y-4">
           <p className="text-gray-500">เกิดข้อผิดพลาดในการสร้างสูตรอาหาร</p>
+          {typeof generateError === "string" && generateError && (
+            <p className="text-sm text-gray-600 text-center px-8">
+              {generateError}
+            </p>
+          )}
           <button
             onClick={onBack}
             className="bg-[#EF5A3A] text-white px-6 py-2 rounded-full font-medium shadow-sm"

@@ -75,6 +75,7 @@ function App() {
     const [filterPanelTop, setFilterPanelTop] = useState(0);
 
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
+    const [generateError, setGenerateError] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
     const rateRecipe = async (historyId, rating) => {
@@ -460,6 +461,7 @@ function App() {
                     setCurrentView("cooking-page");
                     setCookingSource("create-recipe");
                     setGeneratedRecipe(null);
+                    setGenerateError(null);
                     setIsGenerating(true);
                     try {
                         const response = await apiFetch("/api/generate-recipe-text", {
@@ -493,6 +495,9 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
+                            if (typeof result.message === "string" && result.message) {
+                                setGenerateError(result.message);
+                            }
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
@@ -509,6 +514,7 @@ function App() {
             <CookingPage
                 recipe={selectedRecipe}
                 generatedRecipe={generatedRecipe}
+                generateError={generateError}
                 isGenerating={isGenerating}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
@@ -644,6 +650,7 @@ function App() {
                     setCurrentView("cooking-page");
                     setCookingSource("custom-cooking");
                     setGeneratedRecipe(null);
+                    setGenerateError(null);
                     setIsGenerating(true);
                     try {
                         const response = await apiFetch("/api/generate-recipe-text", {
@@ -675,6 +682,9 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
+                            if (typeof result.message === "string" && result.message) {
+                                setGenerateError(result.message);
+                            }
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
