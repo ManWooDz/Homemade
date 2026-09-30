@@ -128,6 +128,103 @@ class TriggerCoverageTests(unittest.TestCase):
         self.assertEqual(detect_flagged_allergens(case["user_prefs"]), ["gluten"])
 
 
+# The real frontend (CreateRecipe.jsx / CustomCookingPage.jsx) sends the user's
+# allergies under the PLURAL key "allergies" as a comma-joined string of pill labels.
+ALL_ALLERGY_PILLS = ["แพ้ถั่ว", "แพ้นม / ผลิตภัณฑ์จากนม", "แพ้อาหารทะเล",
+                     "แพ้แป้งสาลี / Gluten", "แพ้ปลา", "แพ้ถั่วเหลือง", "แพ้งา"]
+
+
+def frontend_prefs(allergies):
+    return {"taste": "", "allergies": allergies, "equipment": "", "extra": ""}
+
+
+class FrontendShapedAllergiesKeyTests(unittest.TestCase):
+    def test_peanut_pill(self):
+        self.assertIn("peanut", detect_flagged_allergens(frontend_prefs("แพ้ถั่ว")))
+
+    def test_milk_pill(self):
+        self.assertIn("milk", detect_flagged_allergens(frontend_prefs("แพ้นม / ผลิตภัณฑ์จากนม")))
+
+    def test_egg_pill(self):
+        self.assertIn("egg", detect_flagged_allergens(frontend_prefs("แพ้ไข่")))
+
+    def test_seafood_pill_flags_exactly_shrimp_shellfish_fish(self):
+        self.assertEqual(detect_flagged_allergens(frontend_prefs("แพ้อาหารทะเล")),
+                         ["shrimp", "shellfish", "fish"])
+
+    def test_gluten_pill(self):
+        self.assertIn("gluten", detect_flagged_allergens(frontend_prefs("แพ้แป้งสาลี / Gluten")))
+
+    def test_fish_pill(self):
+        self.assertIn("fish", detect_flagged_allergens(frontend_prefs("แพ้ปลา")))
+
+    def test_soy_pill(self):
+        self.assertIn("soy", detect_flagged_allergens(frontend_prefs("แพ้ถั่วเหลือง")))
+
+    def test_sesame_pill_flags_nothing_known_scope_limit_no_sesame_key(self):
+        # KNOWN SCOPE LIMIT: ALLERGEN_MAP has no sesame key, so the "แพ้งา" pill maps to nothing.
+        self.assertEqual(detect_flagged_allergens(frontend_prefs("แพ้งา")), [])
+
+    def test_none_pill_and_empty_flag_nothing(self):
+        for text in ("ไม่มีข้อจำกัด", ""):
+            with self.subTest(text=text):
+                self.assertEqual(detect_flagged_allergens(frontend_prefs(text)), [])
+
+    def test_diet_labels_only_flag_nothing(self):
+        self.assertEqual(detect_flagged_allergens(frontend_prefs("ทาน Vegan, ฮาลาล")), [])
+
+    def test_all_pills_joined_flag_every_key_in_map_order(self):
+        joined = ", ".join(ALL_ALLERGY_PILLS)
+        lowered = joined.lower()
+        expected = [key for key, mapping in ALLERGEN_MAP.items()
+                    if any(t in lowered for t in mapping["triggers"])]
+        # Hand-checked: none of these 7 pills mentions egg (separate "แพ้ไข่" pill) or tree
+        # nuts, and sesame has no key, so those add nothing; the rest follow ALLERGEN_MAP order.
+        self.assertEqual(expected, [k for k in ALLERGEN_MAP if k not in ("egg", "nut")])
+        self.assertEqual(detect_flagged_allergens(frontend_prefs(joined)), expected)
+
+
+class BothAllergyKeysTests(unittest.TestCase):
+    def test_both_keys_combine_in_map_order(self):
+        self.assertEqual(
+            detect_flagged_allergens({"allergy": "แพ้กุ้ง", "allergies": "แพ้นม"}),
+            ["shrimp", "milk"])
+
+    def test_both_keys_combine_regardless_of_key_order(self):
+        self.assertEqual(
+            detect_flagged_allergens({"allergies": "แพ้นม", "allergy": "แพ้กุ้ง"}),
+            ["shrimp", "milk"])
+
+    def test_allergy_only_and_allergies_only_are_identical(self):
+        for text in ("แพ้กุ้ง", "แพ้ถั่ว", "Allergic to Shrimp", "ไม่มี", "กุ้ง"):
+            with self.subTest(text=text):
+                self.assertEqual(detect_flagged_allergens({"allergy": text}),
+                                 detect_flagged_allergens({"allergies": text}))
+
+    def test_none_sentinel_in_one_key_does_not_hide_the_other(self):
+        self.assertEqual(
+            detect_flagged_allergens({"allergy": "ไม่มี", "allergies": "แพ้กุ้ง"}), ["shrimp"])
+
+    def test_non_str_values_never_raise(self):
+        for bad in (None, 5, ["แพ้กุ้ง"], {"a": 1}, 0.5, False):
+            for key in ("allergy", "allergies"):
+                with self.subTest(key=key, bad=bad):
+                    self.assertIsInstance(detect_flagged_allergens({key: bad}), list)
+        self.assertEqual(detect_flagged_allergens({"allergy": None, "allergies": None}), [])
+        self.assertEqual(detect_flagged_allergens({"allergy": 5, "allergies": 5}), [])
+
+
+class CheckAllergyLegacyPathAllergiesKeyTests(unittest.TestCase):
+    def test_allergies_key_now_blocks_on_legacy_path(self):
+        from main import check_allergy
+        for ingredient in ("กะปิ 1 ช้อนชา", "กุ้งสด 200 กรัม"):
+            with self.subTest(ingredient=ingredient):
+                ok, reason = check_allergy({"adjusted_ingredients": [ingredient]},
+                                           {"allergies": "แพ้กุ้ง"})
+                self.assertFalse(ok)
+                self.assertTrue(reason.startswith("Allergy violation:"), reason)
+
+
 class FloorConstantsTests(unittest.TestCase):
     def test_floor_blocks_mirror_allergen_map_blocks(self):
         self.assertEqual(FLOOR_BLOCKS, {k: v["blocks"] for k, v in ALLERGEN_MAP.items()})

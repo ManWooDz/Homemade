@@ -70,7 +70,11 @@ def detect_flagged_allergens(user_prefs) -> list[str]:
     matching can never disagree about which allergens are in play.
     """
     if isinstance(user_prefs, dict):
-        allergy_str = str(user_prefs.get("allergy", "") or "").lower().strip()
+        # The frontend sends the pill labels under the PLURAL key "allergies"
+        # (CreateRecipe.jsx / CustomCookingPage.jsx); "allergy" is the older singular
+        # key. Read both and join, so neither source can silently disable the check.
+        parts = [str(user_prefs.get(key, "") or "").strip() for key in ("allergy", "allergies")]
+        allergy_str = ", ".join(p for p in parts if p).lower().strip()
     else:
         allergy_str = str(user_prefs).lower()
 
