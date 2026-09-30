@@ -66,8 +66,18 @@ ALLERGEN_LABELS = {
 def detect_flagged_allergens(user_prefs) -> list[str]:
     """Which ALLERGEN_MAP keys the user's stated allergy refers to.
 
-    Extracted unchanged from the old check_allergy() so resolution and
-    matching can never disagree about which allergens are in play.
+    Resolution (resolve.py) and matching (match.py) both call this, so they can
+    never disagree about which allergens are in play. Behavior:
+    - dict prefs, singular "allergy": free prose. Contributes only if it is not a
+      NO_ALLERGY_VALUES sentinel AND contains an ALLERGY_TRIGGER_KEYWORDS word
+      ("ชอบกุ้ง" flags nothing). The gate applies per key: a keyword in the other
+      key does not un-gate it.
+    - dict prefs, plural "allergies": an allergy list by definition (the frontend's
+      comma-joined pill labels and free text), so NO keyword gate; it contributes
+      whenever non-empty and not a NO_ALLERGY_VALUES sentinel.
+    - plain-string prefs: keyword-gated, sentinel-checked.
+    The contributing texts are joined, lower-cased, and matched against the
+    ALLERGEN_MAP triggers; results follow ALLERGEN_MAP order.
     """
     if isinstance(user_prefs, dict):
         # Both frontend forms (CreateRecipe.jsx and CustomCookingPage.jsx) send the

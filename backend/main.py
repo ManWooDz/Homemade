@@ -840,11 +840,15 @@ def save_generate_history(db, user, request, final_output):
         return None
 
 
-_LLM_FORBIDDEN_KEY = ("ห้ามใช้เด็ดขาด (ระบบตรวจอัตโนมัติจะปฏิเสธสูตรที่มีคำเหล่านี้ "
-                      "แม้เป็นเครื่องปรุงพื้นฐานหรือหมายเหตุ)")
-_LLM_FORBIDDEN_SUFFIX = (" — ห้ามพิมพ์คำเหล่านี้ในรายการวัตถุดิบ ขั้นตอน หรือหมายเหตุใดๆ "
-                         "ไม่ว่าจะเป็นคำปฏิเสธ เช่น 'ไม่มี...' "
-                         "ให้ตัดวัตถุดิบนั้นออกหรือใช้ทางเลือกที่ชื่อไม่มีคำเหล่านี้")
+# The checker (allergen_kg/match.py) scans ONLY recipe["adjusted_ingredients"]; steps and
+# safety_warning are never checked, so the wording must not forbid the words there.
+_LLM_FORBIDDEN_KEY = ("ห้ามมีในรายการวัตถุดิบ adjusted_ingredients "
+                      "(ระบบตรวจอัตโนมัติจะปฏิเสธสูตรที่รายการวัตถุดิบมีคำเหล่านี้ "
+                      "แม้อยู่ในหมายเหตุหรือคำปฏิเสธ เช่น 'ไม่มี...' ภายในบรรทัดวัตถุดิบ)")
+_LLM_FORBIDDEN_SUFFIX = (" — ห้ามพิมพ์คำเหล่านี้ในบรรทัดใดๆ ของ adjusted_ingredients "
+                         "ให้ตัดวัตถุดิบนั้นออกหรือใช้ทางเลือกที่ชื่อไม่มีคำเหล่านี้ "
+                         "ส่วน safety_warning และขั้นตอนการทำ (instructions) "
+                         "ยังกล่าวถึงเรื่องอาการแพ้ได้ตามปกติ")
 
 
 def build_llm_prefs(user_prefs, resolved_blocks):

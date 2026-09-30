@@ -203,6 +203,16 @@ class BothAllergyKeysTests(unittest.TestCase):
                 self.assertEqual(detect_flagged_allergens({"allergy": text}),
                                  detect_flagged_allergens({"allergies": text}))
 
+    def test_singular_key_keeps_its_keyword_gate_when_both_keys_present(self):
+        # DELIBERATE BEHAVIOUR CHANGE: the singular key keeps its own keyword gate, so a
+        # bare "กุ้ง" in `allergy` is no longer un-gated by the "แพ้" that lives in the
+        # OTHER key (`allergies`). The old behaviour joined both keys before gating, which
+        # let that cross-key keyword leak; it is intentionally gone.
+        self.assertEqual(
+            detect_flagged_allergens({"allergy": "กุ้ง", "allergies": "แพ้นม"}), ["milk"])
+        self.assertEqual(
+            detect_flagged_allergens({"allergy": "ชอบกุ้ง", "allergies": "แพ้นม"}), ["milk"])
+
     def test_none_sentinel_in_one_key_does_not_hide_the_other(self):
         self.assertEqual(
             detect_flagged_allergens({"allergy": "ไม่มี", "allergies": "แพ้กุ้ง"}), ["shrimp"])

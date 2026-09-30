@@ -10,6 +10,8 @@ from allergen_kg.fixtures import add_edges, make_memory_db
 from allergen_kg.resolve import ResolvedAllergen, TermInfo
 from main import (
     GenerateRecipeTextRequest,
+    _LLM_FORBIDDEN_KEY as LLM_FORBIDDEN_KEY,
+    _LLM_FORBIDDEN_SUFFIX as LLM_FORBIDDEN_SUFFIX,
     build_llm_prefs,
     generate_recipe_text,
     resolve_blocks_for_request,
@@ -76,11 +78,24 @@ class ResolveForRequestTests(unittest.TestCase):
         self.assertIn("beta", resolved["shrimp"].terms)
 
 
-LLM_FORBIDDEN_KEY = ("ห้ามใช้เด็ดขาด (ระบบตรวจอัตโนมัติจะปฏิเสธสูตรที่มีคำเหล่านี้ "
-                     "แม้เป็นเครื่องปรุงพื้นฐานหรือหมายเหตุ)")
-LLM_FORBIDDEN_SUFFIX = (" — ห้ามพิมพ์คำเหล่านี้ในรายการวัตถุดิบ ขั้นตอน หรือหมายเหตุใดๆ "
-                        "ไม่ว่าจะเป็นคำปฏิเสธ เช่น 'ไม่มี...' "
-                        "ให้ตัดวัตถุดิบนั้นออกหรือใช้ทางเลือกที่ชื่อไม่มีคำเหล่านี้")
+class ForbiddenWordingScopeTests(unittest.TestCase):
+    """The wording must describe what the checker really does: it scans only adjusted_ingredients."""
+
+    def test_wording_scopes_the_ban_to_the_ingredient_list(self):
+        self.assertIn("adjusted_ingredients", LLM_FORBIDDEN_KEY)
+        self.assertIn("ไม่มี...", LLM_FORBIDDEN_KEY)  # rejected even inside a negation note
+        self.assertIn("adjusted_ingredients", LLM_FORBIDDEN_SUFFIX)
+
+    def test_wording_does_not_forbid_steps_or_safety_warning(self):
+        self.assertNotIn("ขั้นตอน หรือหมายเหตุใดๆ", LLM_FORBIDDEN_SUFFIX)
+        self.assertIn("safety_warning", LLM_FORBIDDEN_SUFFIX)
+        self.assertIn("instructions", LLM_FORBIDDEN_SUFFIX)
+        self.assertIn("ได้ตามปกติ", LLM_FORBIDDEN_SUFFIX)
+
+    def test_suffix_keeps_single_leading_separator(self):
+        # eval/retry_convergence tests split the value on this separator to recover the term list
+        self.assertTrue(LLM_FORBIDDEN_SUFFIX.startswith(" — "))
+        self.assertEqual(LLM_FORBIDDEN_SUFFIX.count(" — "), 1)
 
 
 def resolved_with(**terms_by_key):
@@ -161,15 +176,19 @@ class RunGenerationTests(unittest.TestCase):
             seen.append(prefs)
             return with_ingredient("กุ้ง")  # violates the allergy under user_prefs
 
+        # The two prefs deliberately disagree: only user_prefs states an allergy. If
+        # validation used llm_prefs it would accept the shrimp recipe; if the generator
+        # got user_prefs it would not see the {"allergies": ""} object.
         user_prefs = {"allergies": "แพ้กุ้ง"}
-        llm_prefs = {"allergies": "แพ้กุ้ง", "extra-hint": "x"}
+        llm_prefs = {"allergies": ""}
         final, log = run_generation_with_validation(
             fake, ["หมูสับ"], ["หมูสับ"], user_prefs, {"name": "x"}, {}, llm_prefs=llm_prefs)
         self.assertIsNone(final)
+        self.assertEqual(log[0]["status"], "fail")
+        self.assertTrue(log[0]["reason"].startswith("Allergy violation:"), log)
         self.assertEqual(len(seen), 3)
         self.assertTrue(all(p is llm_prefs for p in seen))
-        # validation ran against user_prefs: the allergy violation was still detected
-        self.assertTrue(log[0]["reason"].startswith("Allergy violation:"), log)
+        self.assertEqual(seen[0], {"allergies": ""})
 
     def test_llm_prefs_default_is_user_prefs(self):
         seen = []
@@ -264,7 +283,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             response = await generate_recipe_text(req, current_user=SimpleNamespace(id=7), db=MagicMock())
         return response, calls
 
-    async def test_endpoint_passes_forbidden_terms_to_generator_not_to_validation(self):
+    async def test_endpoint_generator_receives_forbidden_terms_and_original_allergies_text(self):
         response, calls = await self._exhausted_response(
             ["หมูสับ"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
         self.assertEqual(response["status"], "error")
