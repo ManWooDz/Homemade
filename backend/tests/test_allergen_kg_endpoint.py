@@ -131,13 +131,13 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response["status"], "success")
         self.assertEqual(feedbacks[1], "Allergy violation: 'beta' → alpha → กุ้ง (ผู้ใช้แพ้ shrimp)")
 
-    async def test_endpoint_blocks_with_frontend_shaped_allergies_key(self):
-        # Exactly what CreateRecipe.jsx / CustomCookingPage.jsx send: plural "allergies",
+    async def _assert_frontend_allergies_block(self, allergies):
+        # Exactly what the frontend sends: plural "allergies" (comma-joined pill labels),
         # no "allergy" key at all. Before the fix the whole allergy check never fired.
         frontend_request = GenerateRecipeTextRequest(
             recipe={"name": "Custom"},
             ingredients=[{"id": 1, "name": "หมูสับ"}],
-            preferences={"taste": "", "allergies": "แพ้กุ้ง", "equipment": "", "extra": ""},
+            preferences={"taste": "", "allergies": allergies, "equipment": "", "extra": ""},
         )
         db = make_memory_db()
         outputs = [with_ingredient("กุ้ง"), deepcopy(SAFE)]
@@ -154,6 +154,14 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(feedbacks), 2)
         self.assertIsNone(feedbacks[0])
         self.assertTrue(feedbacks[1].startswith("Allergy violation:"), feedbacks[1])
+
+    async def test_endpoint_blocks_with_create_recipe_pill_value(self):
+        # CreateRecipe.jsx pill label, with the "แพ้" prefix.
+        await self._assert_frontend_allergies_block("แพ้อาหารทะเล")
+
+    async def test_endpoint_blocks_with_custom_cooking_page_pill_value(self):
+        # CustomCookingPage.jsx pill label: NO "แพ้" prefix.
+        await self._assert_frontend_allergies_block("กุ้ง/อาหารทะเล")
 
     async def test_endpoint_still_blocks_floor_when_db_unset(self):
         outputs = [with_ingredient("กุ้ง"), deepcopy(SAFE)]

@@ -28,10 +28,11 @@ export const CUISINE_EMOJI = {
 // "อาการแพ้อาหาร" picker — a field meant for true allergens only, distinct
 // from the broader dietary_restrictions list — can filter out diet-type
 // entries like Vegan/Halal without a separate label-mapping table. (Note:
-// this reaches the LLM prompt via allergies/preferences interpolation in
-// main.py, not via check_allergy()'s rule-based check — that function
-// reads a differently-named request field and never actually receives
-// this data. Pre-existing, unrelated to this file.)
+// the labels reach the backend as preferences.allergies, which feeds both the
+// LLM prompt and the rule-based allergy check — detect_flagged_allergens in
+// backend/allergen_kg/floor.py reads the "allergies" key and matches these
+// labels against ALLERGEN_MAP triggers. "แพ้งา" has no matching trigger yet,
+// so sesame is only enforced by the LLM prompt, not by the rule-based check.)
 const RESTRICTION_ITEMS = [
   { label: "แพ้ถั่ว", emoji: "🥜", isAllergy: true },
   { label: "แพ้นม / ผลิตภัณฑ์จากนม", emoji: "🥛", isAllergy: true },

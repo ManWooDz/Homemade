@@ -195,8 +195,10 @@ class BothAllergyKeysTests(unittest.TestCase):
             detect_flagged_allergens({"allergies": "แพ้นม", "allergy": "แพ้กุ้ง"}),
             ["shrimp", "milk"])
 
-    def test_allergy_only_and_allergies_only_are_identical(self):
-        for text in ("แพ้กุ้ง", "แพ้ถั่ว", "Allergic to Shrimp", "ไม่มี", "กุ้ง"):
+    def test_allergy_only_and_allergies_only_are_identical_for_gated_text(self):
+        # Text that carries an allergy keyword (or a none-sentinel) behaves the same under
+        # either key. Bare terms ("กุ้ง") intentionally differ: see AllergiesKeyIsUngatedTests.
+        for text in ("แพ้กุ้ง", "แพ้ถั่ว", "Allergic to Shrimp", "ไม่มี"):
             with self.subTest(text=text):
                 self.assertEqual(detect_flagged_allergens({"allergy": text}),
                                  detect_flagged_allergens({"allergies": text}))
@@ -212,6 +214,69 @@ class BothAllergyKeysTests(unittest.TestCase):
                     self.assertIsInstance(detect_flagged_allergens({key: bad}), list)
         self.assertEqual(detect_flagged_allergens({"allergy": None, "allergies": None}), [])
         self.assertEqual(detect_flagged_allergens({"allergy": 5, "allergies": 5}), [])
+
+
+# CustomCookingPage.jsx pill labels: NO "แพ้" prefix. Free-text "other" entries are raw too.
+# The plural "allergies" key IS an allergy list by definition, so it bypasses the keyword
+# gate; the singular "allergy" key and plain-string prefs keep the gate.
+CUSTOM_COOKING_PILLS = {
+    "กุ้ง/อาหารทะเล": ["shrimp", "shellfish", "fish"],
+    "ถั่ว": ["peanut"],
+    "นม/ผลิตภัณฑ์จากนม": ["milk"],
+    "ไข่": ["egg"],
+    "แป้งสาลี/กลูเตน": ["gluten"],
+    # The generic trigger "ถั่ว" is a substring of "ถั่วเหลือง", so peanut is flagged as well
+    # as soy. Over-flagging is the safe direction (extra block terms), documented not fixed.
+    "ถั่วเหลือง": ["peanut", "soy"],
+    # KNOWN SCOPE LIMIT: ALLERGEN_MAP has no sesame key, so "งา" maps to nothing.
+    "งา": [],
+}
+
+
+class AllergiesKeyIsUngatedTests(unittest.TestCase):
+    def test_every_custom_cooking_pill_individually(self):
+        for label, expected in CUSTOM_COOKING_PILLS.items():
+            with self.subTest(label=label):
+                self.assertEqual(detect_flagged_allergens(frontend_prefs(label)), expected)
+
+    def test_free_text_bare_terms(self):
+        cases = {"กุ้ง": ["shrimp"], "shrimp": ["shrimp"], "ปู": ["shellfish"]}
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(detect_flagged_allergens(frontend_prefs(text)), expected)
+
+    def test_none_sentinels_and_empty_flag_nothing(self):
+        for text in ("ไม่มีข้อจำกัด", "ไม่มีอาการแพ้", "ไม่มี", "None", "  ", ""):
+            with self.subTest(text=text):
+                self.assertEqual(detect_flagged_allergens(frontend_prefs(text)), [])
+
+    def test_diet_words_only_flag_nothing(self):
+        self.assertEqual(detect_flagged_allergens(frontend_prefs("ทาน Vegan, ฮาลาล")), [])
+
+    def test_bare_term_in_allergies_combines_with_gated_singular_key(self):
+        self.assertEqual(
+            detect_flagged_allergens({"allergy": "แพ้นม", "allergies": "กุ้ง"}), ["shrimp", "milk"])
+
+    def test_singular_key_keeps_the_keyword_gate(self):
+        self.assertEqual(detect_flagged_allergens({"allergy": "ชอบกุ้ง"}), [])
+        self.assertEqual(detect_flagged_allergens({"allergy": "กุ้ง"}), [])
+        self.assertEqual(detect_flagged_allergens({"allergy": "ถั่ว"}), [])
+
+    def test_singular_key_none_sentinels_flag_nothing(self):
+        for text in ("ไม่มีข้อจำกัด", "ไม่มีอาการแพ้"):
+            with self.subTest(text=text):
+                self.assertEqual(detect_flagged_allergens({"allergy": text}), [])
+
+    def test_plain_string_prefs_keep_the_keyword_gate(self):
+        self.assertEqual(detect_flagged_allergens("กุ้ง"), [])
+        self.assertEqual(detect_flagged_allergens("ชอบกุ้ง"), [])
+        self.assertEqual(detect_flagged_allergens("allergy: peanut"), ["peanut"])
+        self.assertEqual(detect_flagged_allergens("ไม่มีอาการแพ้"), [])
+
+    def test_no_allergy_values_include_new_sentinels(self):
+        from allergen_kg.floor import NO_ALLERGY_VALUES
+        for value in ("ไม่มีข้อจำกัด", "ไม่มีอาการแพ้"):
+            self.assertIn(value, NO_ALLERGY_VALUES)
 
 
 class CheckAllergyLegacyPathAllergiesKeyTests(unittest.TestCase):

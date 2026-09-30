@@ -45,7 +45,7 @@ ALLERGEN_MAP = {
 ALLERGY_TRIGGER_KEYWORDS = ["allergic to", "allergy", "แพ้", "ห้ามใส่", "ไม่ทาน",
                              "ไม่กิน", "ห้ามกิน", "กินไม่ได้", "allergic", "intolerant"]
 
-NO_ALLERGY_VALUES = ("", "none", "ไม่มี", "ไม่แพ้อาหาร", "no allergy")
+NO_ALLERGY_VALUES = ("", "none", "ไม่มี", "ไม่แพ้อาหาร", "no allergy", "ไม่มีข้อจำกัด", "ไม่มีอาการแพ้")
 
 FLOOR_BLOCKS = {key: mapping["blocks"] for key, mapping in ALLERGEN_MAP.items()}
 
@@ -70,17 +70,32 @@ def detect_flagged_allergens(user_prefs) -> list[str]:
     matching can never disagree about which allergens are in play.
     """
     if isinstance(user_prefs, dict):
-        # The frontend sends the pill labels under the PLURAL key "allergies"
-        # (CreateRecipe.jsx / CustomCookingPage.jsx); "allergy" is the older singular
-        # key. Read both and join, so neither source can silently disable the check.
-        parts = [str(user_prefs.get(key, "") or "").strip() for key in ("allergy", "allergies")]
-        allergy_str = ", ".join(p for p in parts if p).lower().strip()
+        # Both frontend forms (CreateRecipe.jsx and CustomCookingPage.jsx) send the
+        # user's allergies under the PLURAL key "allergies", as a comma-joined string
+        # of pill labels plus any raw free-text "other" entry. CreateRecipe's pills
+        # carry a "แพ้" prefix ("แพ้อาหารทะเล"); CustomCookingPage's do NOT
+        # ("กุ้ง/อาหารทะเล", "ถั่ว", ...), and free text is raw ("กุ้ง"). The plural
+        # key is an allergy list by definition, so its text is NOT keyword-gated: it
+        # contributes whenever it is non-empty and not a "none" sentinel.
+        # The older singular key "allergy" is free prose ("ชอบกุ้ง" must not flag
+        # shrimp), so it keeps the keyword gate.
+        parts = []
+        singular = str(user_prefs.get("allergy", "") or "").strip().lower()
+        if singular not in NO_ALLERGY_VALUES and any(kw in singular for kw in ALLERGY_TRIGGER_KEYWORDS):
+            parts.append(singular)
+        plural = str(user_prefs.get("allergies", "") or "").strip().lower()
+        if plural not in NO_ALLERGY_VALUES:
+            parts.append(plural)
+        allergy_str = ", ".join(parts)
     else:
+        # A plain-string prefs value has no key to say it is an allergy list: gated.
         allergy_str = str(user_prefs).lower()
+        if not allergy_str or allergy_str in NO_ALLERGY_VALUES:
+            return []
+        if not any(kw in allergy_str for kw in ALLERGY_TRIGGER_KEYWORDS):
+            return []
 
-    if not allergy_str or allergy_str in NO_ALLERGY_VALUES:
-        return []
-    if not any(kw in allergy_str for kw in ALLERGY_TRIGGER_KEYWORDS):
+    if not allergy_str:
         return []
     return [
         key for key, mapping in ALLERGEN_MAP.items()
