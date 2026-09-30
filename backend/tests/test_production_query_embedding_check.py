@@ -2,6 +2,9 @@ import copy
 import io
 import json
 import math
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from collections import Counter
@@ -13,6 +16,7 @@ from eval import production_query_embedding_check as check
 
 
 FIXTURE_PATH = Path(__file__).parents[1] / "eval" / "production_query_embedding_cases.json"
+BACKEND_PATH = Path(__file__).parents[1]
 
 
 class RecordingEmbedder:
@@ -188,9 +192,18 @@ class ProductionQueryEvaluatorTests(unittest.TestCase):
         only_nine_top3[0]["intended_rank"] = 4
         self.assertEqual(check.evaluate_criteria(only_nine_top3)["decision"], "FAIL")
 
-        only_eight_pairwise = copy.deepcopy(passing_rows)
-        only_eight_pairwise[0]["margin"] = 0.0
-        self.assertEqual(check.evaluate_criteria(only_eight_pairwise)["decision"], "FAIL")
+        only_eight_pairwise = [
+            {"intended_rank": 2, "margin": 0.07}
+            for _ in range(8)
+        ] + [
+            {"intended_rank": 3, "margin": 0.0},
+            {"intended_rank": 3, "margin": 0.0},
+        ]
+        pairwise_summary = check.evaluate_criteria(only_eight_pairwise)
+        self.assertEqual(pairwise_summary["intended_top3"], 10)
+        self.assertEqual(pairwise_summary["intended_over_unrelated"], 8)
+        self.assertGreaterEqual(pairwise_summary["mean_margin"], 0.05)
+        self.assertEqual(pairwise_summary["decision"], "FAIL")
 
         low_mean_margin = [
             {"intended_rank": 1, "margin": 0.049}
@@ -256,6 +269,27 @@ class ProductionQueryCliTests(unittest.TestCase):
 
         self.assertEqual(self.document_embedder.calls, [])
         self.assertEqual(self.query_embedder.calls, [])
+
+    def test_direct_script_invocation_reaches_guard_without_api_or_import_error(self):
+        environment = os.environ.copy()
+        environment["GEMINI_API_KEY"] = ""
+
+        completed = subprocess.run(
+            [sys.executable, "eval/production_query_embedding_check.py"],
+            cwd=BACKEND_PATH,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn(
+            "Refusing preflight: pass --confirm-inputs 20",
+            completed.stderr,
+        )
+        self.assertNotIn("ModuleNotFoundError", completed.stderr)
 
     def test_cli_report_contains_fixture_raw_results_criteria_and_accounting(self):
         with tempfile.TemporaryDirectory() as directory:
