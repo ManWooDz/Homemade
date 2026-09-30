@@ -149,7 +149,7 @@ BAD_FLAVOR_PAIRS = [
     ("chocolate", "garlic"),
 ]
 
-from allergen_kg.floor import ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens
+from allergen_kg.floor import ALLERGEN_LABELS, ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens
 from allergen_kg.match import find_allergy_violation, format_violation_reason
 from allergen_kg.resolve import resolve_allergy_blocks, unavailable_blocks
 
@@ -868,16 +868,22 @@ def build_llm_prefs(user_prefs, resolved_blocks):
 
 def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_blocks):
     """Thai message for a retry loop that ran out on an allergy violation."""
-    violating = [
-        name for name in ingredient_names
-        if find_allergy_violation({"adjusted_ingredients": [name]}, user_prefs, resolved_blocks) is not None
-    ]
-    intro = "ไม่สามารถสร้างสูตรได้ เพราะวัตถุดิบหรือสูตรขัดกับอาการแพ้อาหารที่คุณระบุ"
+    violating = []
+    for name in ingredient_names:
+        violation = find_allergy_violation({"adjusted_ingredients": [name]}, user_prefs, resolved_blocks)
+        if violation is None:
+            continue
+        if violation.path and len(violation.path) >= 2:
+            # path[-1] is the ingredient node that directly implies the allergen.
+            cause = f"มี{violation.path[-1]}"
+        else:
+            cause = f"ตรงกับที่แพ้: {ALLERGEN_LABELS[violation.allergen_key]}"
+        violating.append(f"{name} ({cause})")
     if violating:
-        return (f"{intro} วัตถุดิบของคุณที่ตรงกับอาการแพ้ ได้แก่ {', '.join(violating)} "
-                "กรุณาเอาวัตถุดิบเหล่านี้ออกแล้วลองใหม่อีกครั้ง")
-    return (f"{intro} ระบบหาสูตรที่ปลอดภัยจากวัตถุดิบเหล่านี้ไม่พบ "
-            "ลองเปลี่ยนวัตถุดิบแล้วลองใหม่อีกครั้ง")
+        return (f"สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: {', '.join(violating)} "
+                "ลองเอาออกแล้วสร้างใหม่")
+    return ("สร้างสูตรไม่ได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
+            "ลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
 
 
 def run_generation_with_validation(generate_fn, ingredients, ingredients_name_only, user_prefs,
@@ -951,7 +957,7 @@ async def generate_recipe_text(
              if last_reason.startswith("Allergy violation:"):
                  return {"status": "error", "message": build_allergy_exhaustion_message(
                      ingredients_list_for_llm, user_prefs, resolved_blocks)}
-             return {"status": "error", "message": "Failed to generate a valid recipe after multiple attempts due to validation failures."}
+             return {"status": "error", "message": "สร้างสูตรที่ผ่านการตรวจสอบไม่สำเร็จ ลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ"}
         elif isinstance(final_output, dict) and "error" in final_output:
              return {"status": "error", "message": final_output["error"]}
 

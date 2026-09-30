@@ -7,11 +7,12 @@ from unittest.mock import MagicMock, patch
 from sqlalchemy.exc import OperationalError
 
 from allergen_kg.fixtures import add_edges, make_memory_db
-from allergen_kg.resolve import ResolvedAllergen, TermInfo
+from allergen_kg.resolve import ResolvedAllergen, TermInfo, floor_only
 from main import (
     GenerateRecipeTextRequest,
     _LLM_FORBIDDEN_KEY as LLM_FORBIDDEN_KEY,
     _LLM_FORBIDDEN_SUFFIX as LLM_FORBIDDEN_SUFFIX,
+    build_allergy_exhaustion_message,
     build_llm_prefs,
     generate_recipe_text,
     resolve_blocks_for_request,
@@ -208,6 +209,43 @@ class RunGenerationTests(unittest.TestCase):
         self.assertEqual(log, [{"attempt": 1, "status": "error", "reason": "no key"}])
 
 
+class AllergyExhaustionMessageTests(unittest.TestCase):
+    PREFS = {"allergies": "แพ้กลูเตน"}
+    CHAIN_BLOCKS = {"gluten": ResolvedAllergen(
+        terms={"ซีอิ๊ว": TermInfo("kg", ("ซีอิ๊ว", "แป้งสาลี"))}, graph_status="ok")}
+    FLOOR_BLOCKS = {"shrimp": floor_only("shrimp", "unavailable")}
+
+    def test_case_a_chain_cause_names_the_implying_ingredient(self):
+        message = build_allergy_exhaustion_message(["ซีอิ๊วขาว", "หมูสับ"], self.PREFS, self.CHAIN_BLOCKS)
+        self.assertEqual(
+            message,
+            "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: ซีอิ๊วขาว (มีแป้งสาลี) ลองเอาออกแล้วสร้างใหม่")
+
+    def test_case_a_direct_floor_term_cause_uses_allergen_label(self):
+        message = build_allergy_exhaustion_message(["กุ้งสด", "หมูสับ"], {"allergies": "แพ้กุ้ง"}, self.FLOOR_BLOCKS)
+        self.assertEqual(
+            message,
+            "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: กุ้งสด (ตรงกับที่แพ้: กุ้ง) ลองเอาออกแล้วสร้างใหม่")
+
+    def test_case_a_two_violating_ingredients_joined_with_comma_space(self):
+        blocks = {
+            "gluten": self.CHAIN_BLOCKS["gluten"],
+            "shrimp": self.FLOOR_BLOCKS["shrimp"],
+        }
+        message = build_allergy_exhaustion_message(
+            ["ซีอิ๊วขาว", "หมูสับ", "กุ้งสด"], {"allergies": "แพ้กลูเตน, แพ้กุ้ง"}, blocks)
+        self.assertEqual(
+            message,
+            "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+            "ซีอิ๊วขาว (มีแป้งสาลี), กุ้งสด (ตรงกับที่แพ้: กุ้ง) ลองเอาออกแล้วสร้างใหม่")
+
+    def test_case_b_no_user_ingredient_violates(self):
+        message = build_allergy_exhaustion_message(["หมูสับ", "ผักกาด"], self.PREFS, self.CHAIN_BLOCKS)
+        self.assertEqual(
+            message,
+            "สร้างสูตรไม่ได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ ลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
+
+
 class EndpointTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         patcher = patch("main.compute_recipe_nutrition", return_value=_STUB_NUTRITION)
@@ -296,27 +334,22 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
     async def test_allergy_exhaustion_names_the_users_violating_ingredients(self):
         response, _ = await self._exhausted_response(
             ["กุ้งสด", "หมูสับ", "กะปิ"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
-        self.assertEqual(response["status"], "error")
-        message = response["message"]
-        self.assertIn("อาการแพ้", message)
-        self.assertIn("กุ้งสด", message)
-        self.assertIn("กะปิ", message)
-        self.assertNotIn("หมูสับ", message)
-        self.assertIn("เอาวัตถุดิบเหล่านี้ออก", message)
-        self.assertNotIn("Failed to generate", message)
+        self.assertEqual(response, {
+            "status": "error",
+            "message": "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+                       "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (ตรงกับที่แพ้: กุ้ง) ลองเอาออกแล้วสร้างใหม่",
+        })
 
     async def test_allergy_exhaustion_without_violating_user_ingredient(self):
         response, _ = await self._exhausted_response(
             ["หมูสับ", "ผักกาด"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
-        self.assertEqual(response["status"], "error")
-        message = response["message"]
-        self.assertIn("อาการแพ้", message)
-        self.assertIn("หาสูตรที่ปลอดภัย", message)
-        self.assertIn("ลองเปลี่ยนวัตถุดิบ", message)
-        self.assertNotIn("เอาวัตถุดิบเหล่านี้ออก", message)
-        self.assertNotIn("หมูสับ", message)
+        self.assertEqual(response, {
+            "status": "error",
+            "message": "สร้างสูตรไม่ได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
+                       "ลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่",
+        })
 
-    async def test_non_allergy_failure_keeps_generic_message(self):
+    async def test_non_allergy_failure_uses_thai_generic_message(self):
         def no_oil():
             r = deepcopy(SAFE)
             r["instructions"] = ["1. ผัดหมูให้สุก"]
@@ -325,8 +358,10 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         response, _ = await self._exhausted_response(["หมูสับ"], "แพ้กุ้ง", no_oil)
         self.assertEqual(response, {
             "status": "error",
-            "message": "Failed to generate a valid recipe after multiple attempts due to validation failures.",
+            "message": "สร้างสูตรที่ผ่านการตรวจสอบไม่สำเร็จ ลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ",
         })
+        self.assertNotIn("อาการแพ้", response["message"])
+        self.assertNotIn("สร้างสูตรไม่ได้", response["message"])
 
     async def test_generator_error_path_unchanged(self):
         response, _ = await self._exhausted_response(
