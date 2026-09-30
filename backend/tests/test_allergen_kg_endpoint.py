@@ -219,13 +219,13 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
         message = build_allergy_exhaustion_message(["ซีอิ๊วขาว", "หมูสับ"], self.PREFS, self.CHAIN_BLOCKS)
         self.assertEqual(
             message,
-            "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: ซีอิ๊วขาว (มีแป้งสาลี) ลองเอาออกแล้วสร้างใหม่")
+            "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: ซีอิ๊วขาว (มีแป้งสาลี) กรุณาลองเอาออกแล้วสร้างใหม่")
 
     def test_case_a_direct_floor_term_cause_uses_allergen_label(self):
         message = build_allergy_exhaustion_message(["กุ้งสด", "หมูสับ"], {"allergies": "แพ้กุ้ง"}, self.FLOOR_BLOCKS)
         self.assertEqual(
             message,
-            "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: กุ้งสด (ตรงกับที่แพ้: กุ้ง) ลองเอาออกแล้วสร้างใหม่")
+            "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: กุ้งสด (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่")
 
     def test_case_a_two_violating_ingredients_joined_with_comma_space(self):
         blocks = {
@@ -236,14 +236,14 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
             ["ซีอิ๊วขาว", "หมูสับ", "กุ้งสด"], {"allergies": "แพ้กลูเตน, แพ้กุ้ง"}, blocks)
         self.assertEqual(
             message,
-            "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
-            "ซีอิ๊วขาว (มีแป้งสาลี), กุ้งสด (ตรงกับที่แพ้: กุ้ง) ลองเอาออกแล้วสร้างใหม่")
+            "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+            "ซีอิ๊วขาว (มีแป้งสาลี), กุ้งสด (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่")
 
     def test_case_b_no_user_ingredient_violates(self):
         message = build_allergy_exhaustion_message(["หมูสับ", "ผักกาด"], self.PREFS, self.CHAIN_BLOCKS)
         self.assertEqual(
             message,
-            "สร้างสูตรไม่ได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ ลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
+            "ไม่สามารถสร้างสูตรได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ กรุณาลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
 
 
 class EndpointTests(unittest.IsolatedAsyncioTestCase):
@@ -336,8 +336,8 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             ["กุ้งสด", "หมูสับ", "กะปิ"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
         self.assertEqual(response, {
             "status": "error",
-            "message": "สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
-                       "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (ตรงกับที่แพ้: กุ้ง) ลองเอาออกแล้วสร้างใหม่",
+            "message": "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+                       "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่",
         })
 
     async def test_allergy_exhaustion_without_violating_user_ingredient(self):
@@ -345,8 +345,8 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             ["หมูสับ", "ผักกาด"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
         self.assertEqual(response, {
             "status": "error",
-            "message": "สร้างสูตรไม่ได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
-                       "ลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่",
+            "message": "ไม่สามารถสร้างสูตรได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
+                       "กรุณาลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่",
         })
 
     async def test_non_allergy_failure_uses_thai_generic_message(self):
@@ -358,10 +358,10 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         response, _ = await self._exhausted_response(["หมูสับ"], "แพ้กุ้ง", no_oil)
         self.assertEqual(response, {
             "status": "error",
-            "message": "สร้างสูตรที่ผ่านการตรวจสอบไม่สำเร็จ ลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ",
+            "message": "ไม่สามารถสร้างสูตรที่ผ่านการตรวจสอบได้ กรุณาลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ",
         })
         self.assertNotIn("อาการแพ้", response["message"])
-        self.assertNotIn("สร้างสูตรไม่ได้", response["message"])
+        self.assertNotIn("ไม่สามารถสร้างสูตรได้", response["message"])
 
     async def test_generator_error_path_unchanged(self):
         response, _ = await self._exhausted_response(

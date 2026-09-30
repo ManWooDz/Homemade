@@ -880,10 +880,10 @@ def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_bloc
             cause = f"ตรงกับที่แพ้: {ALLERGEN_LABELS[violation.allergen_key]}"
         violating.append(f"{name} ({cause})")
     if violating:
-        return (f"สร้างสูตรไม่ได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: {', '.join(violating)} "
-                "ลองเอาออกแล้วสร้างใหม่")
-    return ("สร้างสูตรไม่ได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
-            "ลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
+        return (f"ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: {', '.join(violating)} "
+                "กรุณาลองเอาออกแล้วสร้างใหม่")
+    return ("ไม่สามารถสร้างสูตรได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
+            "กรุณาลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
 
 
 def run_generation_with_validation(generate_fn, ingredients, ingredients_name_only, user_prefs,
@@ -957,7 +957,7 @@ async def generate_recipe_text(
              if last_reason.startswith("Allergy violation:"):
                  return {"status": "error", "message": build_allergy_exhaustion_message(
                      ingredients_list_for_llm, user_prefs, resolved_blocks)}
-             return {"status": "error", "message": "สร้างสูตรที่ผ่านการตรวจสอบไม่สำเร็จ ลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ"}
+             return {"status": "error", "message": "ไม่สามารถสร้างสูตรที่ผ่านการตรวจสอบได้ กรุณาลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ"}
         elif isinstance(final_output, dict) and "error" in final_output:
              return {"status": "error", "message": final_output["error"]}
 
