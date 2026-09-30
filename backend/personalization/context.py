@@ -85,11 +85,11 @@ def _clean_display(value: str) -> str:
 
 
 def _sanitize_feedback(value: str) -> str | None:
-    comparison = _normalize_for_comparison(value)
+    display = _clean_display(value)
+    comparison = _normalize_for_comparison(display)
     if any(marker in comparison for marker in _NORMALIZED_INSTRUCTION_MARKERS):
         return None
-    display = _clean_display(value)[:_MAX_FEEDBACK_CHARS]
-    return display or None
+    return display[:_MAX_FEEDBACK_CHARS] or None
 
 
 def _is_allergy_safe(
@@ -129,31 +129,34 @@ def _aggregate(
     average_descending: bool,
 ) -> tuple[str, ...]:
     occurrences: dict[str, list[int]] = defaultdict(list)
+    display_names: dict[str, str] = {}
     for row in rows:
         if row.stars not in stars:
             continue
-        normalized_values = {
-            str(value).strip().casefold()
-            for value in values(row)
-            if str(value).strip()
-        }
-        for value in normalized_values:
-            occurrences[value].append(row.stars)
+        normalized_values: dict[str, str] = {}
+        for value in values(row):
+            display = str(value).strip()
+            if not display:
+                continue
+            normalized_values.setdefault(display.casefold(), display)
+        for normalized, display in normalized_values.items():
+            occurrences[normalized].append(row.stars)
+            display_names.setdefault(normalized, display)
 
     eligible = [
-        (name, ratings)
-        for name, ratings in occurrences.items()
+        (normalized, ratings)
+        for normalized, ratings in occurrences.items()
         if len(ratings) >= threshold
     ]
 
     def sort_key(item):
-        name, ratings = item
+        normalized, ratings = item
         average = sum(ratings) / len(ratings)
         directed_average = -average if average_descending else average
-        return (-len(ratings), directed_average, name)
+        return (-len(ratings), directed_average, normalized)
 
     eligible.sort(key=sort_key)
-    return tuple(name for name, _ratings in eligible[:limit])
+    return tuple(display_names[normalized] for normalized, _ratings in eligible[:limit])
 
 
 def _build_profile(rows: list[HistorySignal]) -> _TasteProfile:
@@ -194,6 +197,21 @@ def _format_profile(profile: _TasteProfile) -> str:
     if profile.liked_ingredients:
         facts.append(f"วัตถุดิบที่ชอบ: {', '.join(profile.liked_ingredients)}")
     return "; ".join(facts) if facts else "ไม่มีข้อมูลสรุปที่ผ่านเกณฑ์"
+
+
+def _profile_variants(profile: _TasteProfile):
+    groups = [
+        ["แท็กที่ชอบ", list(profile.liked_tags)],
+        ["แท็กที่ไม่ชอบ", list(profile.disliked_tags)],
+        ["วัตถุดิบที่ชอบ", list(profile.liked_ingredients)],
+    ]
+    while True:
+        facts = [f"{label}: {', '.join(values)}" for label, values in groups if values]
+        yield "; ".join(facts) if facts else "ไม่มีข้อมูลสรุปที่ผ่านเกณฑ์"
+        populated = [index for index, (_label, values) in enumerate(groups) if values]
+        if not populated:
+            return
+        groups[populated[-1]][1].pop()
 
 
 def _format_exemplar(row: HistorySignal, kind: str) -> _RenderedExemplar:
@@ -237,11 +255,23 @@ def _render_prompt_block(
     negatives: list[HistorySignal],
     profile: _TasteProfile,
 ) -> PersonalizationContext | None:
-    profile_text = _format_profile(profile)
     candidates = [
         *(_format_exemplar(row, "positive") for row in positives[:3]),
         *(_format_exemplar(row, "negative") for row in negatives[:2]),
     ]
+    if not candidates:
+        return None
+
+    profile_text = None
+    for profile_variant in _profile_variants(profile):
+        if any(
+            len(_compose_block(profile_variant, [candidate])) <= _MAX_CONTEXT_CHARS
+            for candidate in candidates
+        ):
+            profile_text = profile_variant
+            break
+    if profile_text is None:
+        return None
 
     rendered: list[_RenderedExemplar] = []
     for candidate in candidates:
