@@ -122,6 +122,14 @@ class EmbeddingTests(unittest.TestCase):
         with self.assertRaises(EmbeddingError):
             embed_history_documents(["document"], client=client)
 
+    def test_embedding_normalizes_large_finite_vector_without_overflow(self):
+        vector = [1e200] + [0.0] * 767
+        client, _ = self._client_with_response(_response_for(vector))
+
+        result = embed_history_documents(["document"], client=client)
+
+        self.assertEqual(result, [[1.0] + [0.0] * 767])
+
     @patch.dict(os.environ, {"GEMINI_API_KEY": ""})
     def test_embedding_rejects_missing_api_key_when_client_is_not_injected(self):
         with self.assertRaises(EmbeddingError):
@@ -135,6 +143,15 @@ class EmbeddingTests(unittest.TestCase):
 
         with self.assertRaises(EmbeddingError):
             embed_request_queries(["query"], client=client)
+
+    @patch("embeddings.genai.Client", side_effect=RuntimeError("client unavailable"))
+    @patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"})
+    def test_embedding_wraps_client_constructor_exception(self, client_constructor):
+        with self.assertRaises(EmbeddingError) as raised:
+            embed_request_queries(["query"])
+
+        self.assertIsInstance(raised.exception.__cause__, RuntimeError)
+        client_constructor.assert_called_once()
 
     @patch("embeddings.genai.Client")
     @patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"})

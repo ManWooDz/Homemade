@@ -88,9 +88,9 @@ def _validate_and_normalize(response, expected_count: int) -> list[list[float]]:
         if any(not isinstance(value, (int, float)) or not math.isfinite(value) for value in values):
             raise EmbeddingError("Embedding response contained non-finite values")
         vector = [float(value) for value in values]
-        norm = math.sqrt(sum(value * value for value in vector))
-        if norm == 0.0:
-            raise EmbeddingError("Embedding response contained a zero-norm vector")
+        norm = math.hypot(*vector)
+        if not math.isfinite(norm) or norm == 0.0:
+            raise EmbeddingError("Embedding response contained an invalid-norm vector")
         normalized.append([value / norm for value in vector])
     return normalized
 
@@ -98,8 +98,8 @@ def _validate_and_normalize(response, expected_count: int) -> list[list[float]]:
 def _embed(texts: list[str], task_type: str, client=None) -> list[list[float]]:
     if not texts:
         return []
-    active_client = client if client is not None else _create_client()
     try:
+        active_client = client if client is not None else _create_client()
         response = active_client.models.embed_content(
             model=_MODEL_NAME,
             contents=texts,
@@ -108,6 +108,8 @@ def _embed(texts: list[str], task_type: str, client=None) -> list[list[float]]:
                 output_dimensionality=_DIMENSION,
             ),
         )
+    except EmbeddingError:
+        raise
     except Exception as error:
         raise EmbeddingError("Embedding request failed") from error
     return _validate_and_normalize(response, len(texts))
