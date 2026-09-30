@@ -172,7 +172,7 @@ export default function CookingPage({
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl items-center justify-center space-y-4">
           <p className="text-gray-500">เกิดข้อผิดพลาดในการสร้างสูตรอาหาร</p>
           {typeof generateError === "string" && generateError && (
-            <p className="text-sm text-gray-600 text-center px-8">
+            <p className="text-sm text-gray-600 text-center px-8 max-w-full break-words">
               {generateError}
             </p>
           )}

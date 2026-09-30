@@ -24,6 +24,7 @@ import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import HistoryDetail from "./pages/HistoryDetail";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
+import { toUserFacingGenerateError } from "./utils/generateError";
 import { getTagColor } from "./utils/tagColors";
 import { useAuth } from "./context/AuthContext";
 
@@ -495,9 +496,7 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
-                            if (typeof result.message === "string" && result.message) {
-                                setGenerateError(result.message);
-                            }
+                            setGenerateError(toUserFacingGenerateError(result.message));
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
@@ -682,9 +681,7 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
-                            if (typeof result.message === "string" && result.message) {
-                                setGenerateError(result.message);
-                            }
+                            setGenerateError(toUserFacingGenerateError(result.message));
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
