@@ -840,13 +840,53 @@ def save_generate_history(db, user, request, final_output):
         return None
 
 
+_LLM_FORBIDDEN_KEY = ("ห้ามใช้เด็ดขาด (ระบบตรวจอัตโนมัติจะปฏิเสธสูตรที่มีคำเหล่านี้ "
+                      "แม้เป็นเครื่องปรุงพื้นฐานหรือหมายเหตุ)")
+_LLM_FORBIDDEN_SUFFIX = (" — ห้ามพิมพ์คำเหล่านี้ในรายการวัตถุดิบ ขั้นตอน หรือหมายเหตุใดๆ "
+                         "ไม่ว่าจะเป็นคำปฏิเสธ เช่น 'ไม่มี...' "
+                         "ให้ตัดวัตถุดิบนั้นออกหรือใช้ทางเลือกที่ชื่อไม่มีคำเหล่านี้")
+
+
+def build_llm_prefs(user_prefs, resolved_blocks):
+    """Prefs as shown to the generator: user_prefs plus the exact terms the checker rejects.
+
+    The validator rejects any recipe containing a resolved block term, even inside a
+    note or a negation ("ไม่มีกุ้ง"). Telling the model the terms up front avoids
+    burning retries on them. Returns user_prefs itself when nothing is resolved;
+    otherwise a NEW dict (user_prefs is never mutated; validation keeps using it).
+    Pure: no DB access.
+    """
+    if not resolved_blocks or not isinstance(user_prefs, dict):
+        return user_prefs
+    terms = sorted({term for resolved in resolved_blocks.values() for term in resolved.terms})
+    return {**user_prefs, _LLM_FORBIDDEN_KEY: ", ".join(terms) + _LLM_FORBIDDEN_SUFFIX}
+
+
+def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_blocks):
+    """Thai message for a retry loop that ran out on an allergy violation."""
+    violating = [
+        name for name in ingredient_names
+        if find_allergy_violation({"adjusted_ingredients": [name]}, user_prefs, resolved_blocks) is not None
+    ]
+    intro = "ไม่สามารถสร้างสูตรได้ เพราะวัตถุดิบหรือสูตรขัดกับอาการแพ้อาหารที่คุณระบุ"
+    if violating:
+        return (f"{intro} วัตถุดิบของคุณที่ตรงกับอาการแพ้ ได้แก่ {', '.join(violating)} "
+                "กรุณาเอาวัตถุดิบเหล่านี้ออกแล้วลองใหม่อีกครั้ง")
+    return (f"{intro} ระบบหาสูตรที่ปลอดภัยจากวัตถุดิบเหล่านี้ไม่พบ "
+            "ลองเปลี่ยนวัตถุดิบแล้วลองใหม่อีกครั้ง")
+
+
 def run_generation_with_validation(generate_fn, ingredients, ingredients_name_only, user_prefs,
-                                   base_recipe, resolved_blocks, max_retries=3):
+                                   base_recipe, resolved_blocks, max_retries=3, llm_prefs=None):
+    # llm_prefs is what the generator sees (defaults to user_prefs); validation
+    # always uses user_prefs.
+    if llm_prefs is None:
+        llm_prefs = user_prefs
     attempts_log = []
     feedback = None
     for attempt in range(1, max_retries + 1):
         print(f"Generation Attempt: {attempt}/{max_retries}")
-        recipe = generate_fn(ingredients, user_prefs, base_recipe, feedback=feedback)
+        recipe = generate_fn(ingredients, llm_prefs, base_recipe, feedback=feedback)
 
         if isinstance(recipe, dict) and "error" in recipe:
             attempts_log.append({"attempt": attempt, "status": "error", "reason": recipe["error"]})
@@ -892,16 +932,21 @@ async def generate_recipe_text(
         print(f"[3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
 
         resolved_blocks = resolve_blocks_for_request(user_prefs)
-        final_output, _attempts_log = run_generation_with_validation(
+        final_output, attempts_log = run_generation_with_validation(
             call_agentic_llm,
             ingredients_list_for_llm,
             ingredients_name_only,
             user_prefs,
             base_recipe,
             resolved_blocks,
+            llm_prefs=build_llm_prefs(user_prefs, resolved_blocks),
         )
 
         if not final_output:
+             last_reason = (attempts_log[-1].get("reason") or "") if attempts_log else ""
+             if last_reason.startswith("Allergy violation:"):
+                 return {"status": "error", "message": build_allergy_exhaustion_message(
+                     ingredients_list_for_llm, user_prefs, resolved_blocks)}
              return {"status": "error", "message": "Failed to generate a valid recipe after multiple attempts due to validation failures."}
         elif isinstance(final_output, dict) and "error" in final_output:
              return {"status": "error", "message": final_output["error"]}
