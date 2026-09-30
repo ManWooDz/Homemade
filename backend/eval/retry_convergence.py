@@ -28,7 +28,7 @@ MAX_ATTEMPTS = 3
 
 
 def run_arm(cases, resolve, generate_fn, k):
-    from main import run_generation_with_validation
+    from main import build_llm_prefs, run_generation_with_validation
     rows = []
     for case in cases:
         names = [i["name"] for i in case["ingredients"]]
@@ -38,7 +38,9 @@ def run_arm(cases, resolve, generate_fn, k):
         resolved_status = statuses[keys[0]] if keys else "none"
         for run in range(1, k + 1):
             final, log = run_generation_with_validation(
-                generate_fn, names, [n.lower() for n in names], case["user_prefs"], case["base_recipe"], resolved)
+                generate_fn, names, [n.lower() for n in names], case["user_prefs"], case["base_recipe"], resolved,
+                # same prompt the endpoint sends: user prefs + this arm's forbidden terms
+                llm_prefs=build_llm_prefs(case["user_prefs"], resolved))
             errored = isinstance(final, dict) and "error" in final
             rows.append({
                 "case_id": case["case_id"], "run": run,

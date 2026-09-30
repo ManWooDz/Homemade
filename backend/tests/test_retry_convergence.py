@@ -90,6 +90,33 @@ class RetryConvergenceTests(unittest.TestCase):
         self.assertFalse(ok_rows[0]["errored"])
         self.assertIsNone(ok_rows[0]["error_details"])
 
+    def test_generator_sees_forbidden_terms_key_per_arm(self):
+        # The measurement must use the production prompt: the same forbidden-terms
+        # key build_llm_prefs adds in the endpoint, with each arm's own term list.
+        from main import _LLM_FORBIDDEN_KEY
+
+        def forbidden_terms(seen):
+            text = seen[0][_LLM_FORBIDDEN_KEY]
+            return set(text.split(" — ")[0].split(", "))
+
+        def recording(seen):
+            def gen(ingredients, user_prefs, base_recipe, feedback=None):
+                seen.append(user_prefs)
+                return always_shrimp(ingredients, user_prefs, base_recipe, feedback)
+            return gen
+
+        floor_seen, kg_seen, none_seen = [], [], []
+        with _quiet():
+            run_arm([CASE], empty_resolver(), recording(floor_seen), k=1)
+            run_arm([CASE], seeded_resolver(), recording(kg_seen), k=1)
+            run_arm([NO_ALLERGY_CASE], seeded_resolver(), recording(none_seen), k=1)
+
+        floor_terms, kg_terms = forbidden_terms(floor_seen), forbidden_terms(kg_seen)
+        self.assertIn("กุ้ง", floor_terms)  # floor-only arm still lists the floor terms
+        self.assertLess(floor_terms, kg_terms)  # seeded arm adds KG chain terms: strict superset
+        self.assertNotIn(_LLM_FORBIDDEN_KEY, none_seen[0])
+        self.assertEqual(CASE["user_prefs"], {"allergy": "แพ้กุ้ง"})  # case fixture not mutated
+
     def test_summarize_and_overall(self):
         def row(case_id, exhausted=False, errored=False, passed=False):
             return {"case_id": case_id, "exhausted": exhausted, "errored": errored, "final_valid": passed}
