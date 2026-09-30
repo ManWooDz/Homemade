@@ -869,13 +869,16 @@ def build_llm_prefs(user_prefs, resolved_blocks):
 def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_blocks):
     """Thai message for a retry loop that ran out on an allergy violation."""
     violating = []
-    for name in ingredient_names:
+    for name in dict.fromkeys(ingredient_names):  # de-duplicate, keep order
         violation = find_allergy_violation({"adjusted_ingredients": [name]}, user_prefs, resolved_blocks)
         if violation is None:
             continue
-        if violation.path and len(violation.path) >= 2:
-            # path[-1] is the ingredient node that directly implies the allergen.
-            cause = f"มี{violation.path[-1]}"
+        path = violation.path
+        # path[-1] is the ingredient node that directly implies the allergen. Graph
+        # node names can be English (e.g. "oyster"); the user-facing cause must be
+        # Thai only, so those fall back to the allergen label.
+        if path and len(path) >= 2 and re.search(r"[A-Za-z]", path[-1]) is None:
+            cause = f"มี{path[-1]}"
         else:
             cause = f"ตรงกับที่แพ้: {ALLERGEN_LABELS[violation.allergen_key]}"
         violating.append(f"{name} ({cause})")

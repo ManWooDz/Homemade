@@ -1,4 +1,5 @@
 # backend/tests/test_allergen_kg_endpoint.py
+import re
 import unittest
 from copy import deepcopy
 from types import SimpleNamespace
@@ -7,7 +8,9 @@ from unittest.mock import MagicMock, patch
 from sqlalchemy.exc import OperationalError
 
 from allergen_kg.fixtures import add_edges, make_memory_db
-from allergen_kg.resolve import ResolvedAllergen, TermInfo, floor_only
+from allergen_kg.floor import ALLERGEN_LABELS, ALLERGEN_MAP, detect_flagged_allergens
+from allergen_kg.resolve import ResolvedAllergen, TermInfo, floor_only, resolve_blocks_for_keys
+from database.seed_allergen_graph import seed_allergen_graph
 from main import (
     GenerateRecipeTextRequest,
     _LLM_FORBIDDEN_KEY as LLM_FORBIDDEN_KEY,
@@ -238,6 +241,53 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
             message,
             "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
             "ซีอิ๊วขาว (มีแป้งสาลี), กุ้งสด (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่")
+
+    def test_case_a_chain_node_with_ascii_letters_falls_back_to_allergen_label(self):
+        blocks = {"shellfish": ResolvedAllergen(
+            terms={"น้ำมันหอย": TermInfo("kg", ("น้ำมันหอย", "oyster"))}, graph_status="ok")}
+        message = build_allergy_exhaustion_message(["น้ำมันหอย"], {"allergies": "หอย"}, blocks)
+        self.assertEqual(
+            message,
+            "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+            "น้ำมันหอย (ตรงกับที่แพ้: สัตว์มีเปลือก) กรุณาลองเอาออกแล้วสร้างใหม่")
+
+    def test_case_a_duplicate_ingredients_listed_once_in_order(self):
+        message = build_allergy_exhaustion_message(
+            ["กุ้งสด", "หมูสับ", "กุ้งสด", "กะปิ", "กะปิ"], {"allergies": "แพ้กุ้ง"}, self.FLOOR_BLOCKS)
+        self.assertEqual(
+            message,
+            "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+            "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่")
+
+    def test_real_seeded_graph_causes_never_leak_ascii_arrows_or_internal_names(self):
+        db = make_memory_db()
+        seed_allergen_graph(db)
+        resolved_all = resolve_blocks_for_keys(db, list(ALLERGEN_LABELS))
+        checked = 0
+        for key, resolved in resolved_all.items():
+            self.assertEqual(resolved.graph_status, "ok", key)
+            # frontend-shaped prefs: first Thai word (label, else a trigger) that flags this key
+            candidates = [ALLERGEN_LABELS[key]] + [
+                t for t in ALLERGEN_MAP[key]["triggers"] if re.search(r"[฀-๿]", t)]
+            word = next((w for w in candidates if key in detect_flagged_allergens({"allergies": w})), None)
+            self.assertIsNotNone(word, key)
+            prefs = {"allergies": word}
+            self.assertIn(key, detect_flagged_allergens(prefs), key)
+            heads = [t for t, info in resolved.terms.items() if info.matched_via == "kg"]
+            self.assertTrue(heads, key)
+            for head in heads:
+                message = build_allergy_exhaustion_message([head], prefs, {key: resolved})
+                prefix = "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+                suffix = " กรุณาลองเอาออกแล้วสร้างใหม่"
+                self.assertTrue(message.startswith(prefix + head + " ("), message)
+                self.assertTrue(message.endswith(")" + suffix), message)
+                cause = message[len(prefix) + len(head) + 2:-len(suffix) - 1]
+                self.assertTrue(cause.startswith("มี") or cause.startswith("ตรงกับที่แพ้: "), cause)
+                self.assertIsNone(re.search(r"[A-Za-z]", cause), (key, head, cause))
+                self.assertNotIn("→", cause)
+                self.assertNotIn("allergen:", cause)
+                checked += 1
+        self.assertGreater(checked, 50)
 
     def test_case_b_no_user_ingredient_violates(self):
         message = build_allergy_exhaustion_message(["หมูสับ", "ผักกาด"], self.PREFS, self.CHAIN_BLOCKS)
