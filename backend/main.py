@@ -919,7 +919,19 @@ async def get_personalization_for_request(
         )
         return None
 
-    db.close()
+    try:
+        db.close()
+    except Exception as error:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        logging.getLogger("personalization").warning(
+            "[personalization] stage=count_close user_id=%s error=%s",
+            user_id,
+            type(error).__name__,
+        )
+        return None
     if signal_count < 3:
         return None
 
@@ -1029,6 +1041,12 @@ async def generate_recipe_text(
     db.close()
     try:
         user_prefs = request.preferences
+        if isinstance(user_prefs, dict) and _PERSONALIZATION_CONTEXT_KEY in user_prefs:
+            user_prefs = {
+                key: value
+                for key, value in user_prefs.items()
+                if key != _PERSONALIZATION_CONTEXT_KEY
+            }
         ingredients_list_for_llm = ingredient_names(request.ingredients)
         ingredients_name_only = [name.lower() for name in ingredients_list_for_llm]
         

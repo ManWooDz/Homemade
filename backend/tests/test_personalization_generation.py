@@ -75,6 +75,12 @@ class TrackingSession:
         self.events.append("rollback")
 
 
+class CloseFailSession(TrackingSession):
+    def close(self):
+        self.events.append("close")
+        raise RuntimeError("close failed")
+
+
 class PersonalizationGenerationPromptTests(unittest.TestCase):
     def _capture(self, prefs, feedback=None):
         captured = {}
@@ -164,6 +170,27 @@ class PersonalizationGenerationOrchestrationTests(unittest.IsolatedAsyncioTestCa
             )
         self.assertIsNone(result)
         self.assertEqual(db.events, ["close"])
+
+    async def test_count_close_failures_fail_open_before_embedding(self):
+        for signal_count in (2, 3):
+            with self.subTest(signal_count=signal_count):
+                db = CloseFailSession()
+                threadpool = AsyncMock(side_effect=AssertionError("embedded"))
+                with patch.dict(os.environ, {"PERSONALIZATION_ENABLED": "1"}), \
+                        patch("main.count_embedded_signals", return_value=signal_count), \
+                        patch("main.run_in_threadpool", new=threadpool):
+                    result = await main.get_personalization_for_request(
+                        db,
+                        7,
+                        recipe_name="Pad Kra Pao",
+                        ingredient_names=["minced pork"],
+                        taste="spicy",
+                        user_prefs={"allergies": ""},
+                        resolved_blocks={},
+                    )
+                self.assertIsNone(result)
+                self.assertEqual(db.events, ["close", "rollback"])
+                threadpool.assert_not_awaited()
 
     async def test_count_is_closed_before_threadpool_embedding_and_query_is_production_shaped(self):
         db = TrackingSession()
@@ -353,6 +380,33 @@ class PersonalizationGenerationHandlerTests(unittest.IsolatedAsyncioTestCase):
             response["data"]["personalization"],
             {"applied": False, "positives": 0, "negatives": 0},
         )
+
+    async def test_client_reserved_key_never_reaches_generation_or_persistence(self):
+        body = request()
+        malicious = "CLIENT-CONTROLLED-PROMPT-INJECTION"
+        body.preferences[PERSONALIZATION_KEY] = malicious
+        persisted = []
+
+        def writer(_db, _user, _request, final_output):
+            persisted.append(deepcopy(final_output))
+            return 101
+
+        response, seam, generator, _writer = await self._generate(
+            body,
+            context=None,
+            writer=writer,
+        )
+
+        self.assertEqual(response["status"], "success")
+        self.assertEqual(
+            response["data"]["personalization"],
+            {"applied": False, "positives": 0, "negatives": 0},
+        )
+        self.assertNotIn(PERSONALIZATION_KEY, seam.call_args.kwargs["user_prefs"])
+        self.assertNotIn(PERSONALIZATION_KEY, generator.call_args.args[1])
+        self.assertEqual(body.preferences[PERSONALIZATION_KEY], malicious)
+        self.assertNotIn(malicious, json.dumps(response, ensure_ascii=False))
+        self.assertNotIn(malicious, json.dumps(persisted, ensure_ascii=False))
 
     async def test_generation_error_contract_is_unchanged(self):
         generator = MagicMock(return_value={"error": "no key"})
