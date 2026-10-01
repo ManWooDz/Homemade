@@ -1,6 +1,7 @@
 from copy import deepcopy
+from dataclasses import dataclass
 
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -75,6 +76,53 @@ def _owned_history(db: Session, user_id: int, history_id: int):
     return db.execute(
         select(GenerateHistory).where(GenerateHistory.id == history_id, GenerateHistory.user_id == user_id)
     ).scalar_one_or_none()
+
+
+@dataclass(frozen=True)
+class HistoryEmbeddingSnapshot:
+    history_id: int
+    user_id: int
+    recipe_name: str
+    adjusted_ingredients: tuple[str, ...]
+    diet_tags: tuple[str, ...]
+    embedding: tuple[float, ...] | None
+
+
+def get_history_embedding_snapshot(db: Session, *, user_id: int, history_id: int):
+    """Copy owned recipe fields so remote embedding needs no live ORM row."""
+    row = _owned_history(db, user_id, history_id)
+    if row is None:
+        return None
+    return HistoryEmbeddingSnapshot(
+        history_id=row.id,
+        user_id=row.user_id,
+        recipe_name=row.recipe_name,
+        adjusted_ingredients=tuple(row.adjusted_ingredients or ()),
+        diet_tags=tuple(row.diet_tags or ()),
+        embedding=tuple(row.embedding) if row.embedding is not None else None,
+    )
+
+
+def set_history_embedding_if_missing(db: Session, *, user_id: int, history_id: int, embedding) -> bool:
+    """Atomically fill an owned NULL vector; an existing vector always wins."""
+    try:
+        result = db.execute(
+            update(GenerateHistory)
+            .where(
+                GenerateHistory.id == history_id,
+                GenerateHistory.user_id == user_id,
+                GenerateHistory.embedding.is_(None),
+            )
+            .values(embedding=embedding)
+        )
+        if result.rowcount != 1:
+            db.rollback()
+            return False
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        raise
 
 
 def upsert_rating(db: Session, *, user_id: int, history_id: int, stars: int, tag, feedback):

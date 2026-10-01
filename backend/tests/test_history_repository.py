@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from sqlalchemy import create_engine, delete, select
+from sqlalchemy import create_engine, delete, null, select, update
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -91,6 +91,8 @@ class HistorySchemaTests(unittest.TestCase):
         self.assertIsNotNone(rating.updated_at)
 
 from copy import deepcopy
+from dataclasses import FrozenInstanceError
+from unittest.mock import patch
 
 APPROVED = {
     "recipe_name": "Thai Basil Pork",
@@ -229,6 +231,154 @@ class SetFavoriteTests(unittest.TestCase):
 
         self.assertTrue(set_favorite(self.db, user_id=self.alice.id, history_id=self.history, favorite=False))
         self.assertFalse(list_history(self.db, self.alice.id)[0]["is_favorite"])
+
+
+class HistoryEmbeddingSnapshotTests(unittest.TestCase):
+    def setUp(self):
+        from history_repository import insert_generate_history
+        self.db = make_session()
+        self.alice = make_user(self.db, "snapshot-alice@example.com")
+        self.bob = make_user(self.db, "snapshot-bob@example.com")
+        self.history_id = insert_generate_history(
+            self.db, user_id=self.alice.id, request_recipe={}, final_output=deepcopy(APPROVED)
+        )
+
+    def tearDown(self):
+        self.db.close()
+
+    def snapshot(self, user_id):
+        import history_repository
+        getter = getattr(history_repository, "get_history_embedding_snapshot", None)
+        self.assertTrue(callable(getter), "owned immutable embedding snapshot is missing")
+        return getter(self.db, user_id=user_id, history_id=self.history_id)
+
+    def test_owned_snapshot_survives_close_and_is_immutable(self):
+        snapshot = self.snapshot(self.alice.id)
+        self.db.close()
+        self.assertEqual(snapshot.history_id, self.history_id)
+        self.assertEqual(snapshot.user_id, self.alice.id)
+        self.assertEqual(snapshot.recipe_name, "Thai Basil Pork")
+        self.assertEqual(snapshot.adjusted_ingredients, ("หมูสับ 200 กรัม", "น้ำมัน 1 ช้อนโต๊ะ"))
+        self.assertEqual(snapshot.diet_tags, ("Thai",))
+        self.assertIsNone(snapshot.embedding)
+        with self.assertRaises(FrozenInstanceError):
+            snapshot.recipe_name = "changed"
+        with self.assertRaises(TypeError):
+            snapshot.adjusted_ingredients[0] = "changed"
+
+    def test_other_user_cannot_obtain_snapshot(self):
+        self.assertIsNone(self.snapshot(self.bob.id))
+
+    def test_snapshot_copies_existing_vector_into_immutable_tuple(self):
+        row = self.db.get(GenerateHistory, self.history_id)
+        row.embedding = [1.0] + [0.0] * 767
+        self.db.commit()
+        snapshot = self.snapshot(self.alice.id)
+        self.db.close()
+        self.assertEqual(snapshot.embedding, (1.0,) + (0.0,) * 767)
+        with self.assertRaises(TypeError):
+            snapshot.embedding[0] = 0.0
+
+
+class SetHistoryEmbeddingTests(unittest.TestCase):
+    def setUp(self):
+        from history_repository import insert_generate_history, upsert_rating
+        self.db = make_session()
+        alice = make_user(self.db, "vector-alice@example.com")
+        bob = make_user(self.db, "vector-bob@example.com")
+        self.alice_id, self.bob_id = alice.id, bob.id
+        self.history_id = insert_generate_history(
+            self.db, user_id=self.alice_id, request_recipe={}, final_output=deepcopy(APPROVED)
+        )
+        self.other_history_id = insert_generate_history(
+            self.db, user_id=self.alice_id, request_recipe={}, final_output=deepcopy(APPROVED)
+        )
+        self.rating = upsert_rating(
+            self.db, user_id=self.alice_id, history_id=self.history_id,
+            stars=4, tag="Tasty", feedback="keep this rating",
+        )
+        # VECTOR on Postgres stores a missing vector as SQL NULL. SQLite's
+        # test-only JSON variant otherwise serializes Python None as JSON null.
+        self.db.execute(update(GenerateHistory).values(embedding=null()))
+        self.db.commit()
+        self.db.close()
+        self.vector = [1.0] + [0.0] * 767
+
+    def tearDown(self):
+        self.db.close()
+
+    def setter(self):
+        import history_repository
+        setter = getattr(history_repository, "set_history_embedding_if_missing", None)
+        self.assertTrue(callable(setter), "conditional embedding update is missing")
+        return setter
+
+    def save(self, user_id=None):
+        return self.setter()(
+            self.db, user_id=self.alice_id if user_id is None else user_id,
+            history_id=self.history_id, embedding=self.vector,
+        )
+
+    def test_updates_only_owned_missing_vector_and_commits_one_row(self):
+        with patch.object(self.db, "commit", wraps=self.db.commit) as commit:
+            self.assertTrue(self.save())
+            self.assertEqual(commit.call_count, 1)
+        with sessionmaker(bind=self.db.get_bind())() as reader:
+            self.assertEqual(reader.get(GenerateHistory, self.history_id).embedding, self.vector)
+            self.assertIsNone(reader.get(GenerateHistory, self.other_history_id).embedding)
+            rating = reader.execute(select(Rating)).scalar_one()
+            self.assertEqual((rating.stars, rating.tag, rating.feedback), (4, "Tasty", "keep this rating"))
+
+    def test_update_sql_requires_id_owner_and_null_embedding(self):
+        from sqlalchemy import event
+        statements = []
+
+        def record(connection, cursor, statement, parameters, context, executemany):
+            statements.append(statement)
+
+        engine = self.db.get_bind()
+        event.listen(engine, "before_cursor_execute", record)
+        try:
+            self.assertTrue(self.save())
+        finally:
+            event.remove(engine, "before_cursor_execute", record)
+        updates = [statement for statement in statements if statement.startswith("UPDATE")]
+        self.assertEqual(len(updates), 1)
+        where = updates[0].split("WHERE", 1)[1]
+        self.assertIn("generate_history.id =", where)
+        self.assertIn("generate_history.user_id =", where)
+        self.assertIn("generate_history.embedding IS NULL", where)
+
+    def test_cross_user_update_is_false_without_commit(self):
+        with patch.object(self.db, "commit", wraps=self.db.commit) as commit:
+            self.assertFalse(self.save(self.bob_id))
+            self.assertEqual(commit.call_count, 0)
+        self.assertIsNone(self.db.get(GenerateHistory, self.history_id).embedding)
+
+    def test_concurrent_winner_is_false_without_overwrite_or_commit(self):
+        # A stale loaded row still says NULL; another session wins before UPDATE.
+        stale = self.db.get(GenerateHistory, self.history_id)
+        self.assertIsNone(stale.embedding)
+        winner = [0.0, 1.0] + [0.0] * 766
+        with sessionmaker(bind=self.db.get_bind())() as other:
+            other.get(GenerateHistory, self.history_id).embedding = winner
+            other.commit()
+        with patch.object(self.db, "commit", wraps=self.db.commit) as commit:
+            self.assertFalse(self.save())
+            self.assertEqual(commit.call_count, 0)
+        self.db.expire_all()
+        self.assertEqual(self.db.get(GenerateHistory, self.history_id).embedding, winner)
+
+    def test_commit_failure_rolls_back_vector_and_preserves_rating(self):
+        setter = self.setter()
+        with patch.object(self.db, "commit", side_effect=RuntimeError("update commit failed")), \
+                patch.object(self.db, "rollback", wraps=self.db.rollback) as rollback:
+            with self.assertRaises(RuntimeError):
+                setter(self.db, user_id=self.alice_id, history_id=self.history_id, embedding=self.vector)
+            self.assertEqual(rollback.call_count, 1)
+        self.assertIsNone(self.db.get(GenerateHistory, self.history_id).embedding)
+        rating = self.db.execute(select(Rating)).scalar_one()
+        self.assertEqual((rating.stars, rating.tag, rating.feedback), (4, "Tasty", "keep this rating"))
 
 
 if __name__ == "__main__":

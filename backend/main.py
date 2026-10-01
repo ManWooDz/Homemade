@@ -50,9 +50,16 @@ import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
-from history_repository import insert_generate_history, list_history, set_favorite, upsert_rating
+from history_repository import (
+    get_history_embedding_snapshot,
+    insert_generate_history,
+    list_history,
+    set_favorite,
+    set_history_embedding_if_missing,
+    upsert_rating,
+)
 from base_favorites_repository import list_base_favorite_ids, set_base_favorite
-from embeddings import build_request_query, embed_request_queries
+from embeddings import build_history_document, build_request_query, embed_history_documents, embed_request_queries
 from personalization.context import PersonalizationContext, build_personalization_context
 from personalization.repository import count_embedded_signals
 
@@ -740,6 +747,46 @@ async def get_history(
 PositiveInt32Id = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
 
+async def embed_rated_history_best_effort(db, *, user_id, history_id, rating) -> None:
+    """Embed a signal after its rating commits, without holding a remote-work transaction."""
+    if os.getenv("PERSONALIZATION_ENABLED", "1") == "0" or rating["stars"] not in (1, 2, 4, 5):
+        return
+
+    stage = "history_snapshot"
+    try:
+        snapshot = get_history_embedding_snapshot(db, user_id=user_id, history_id=history_id)
+        stage = "history_snapshot_close"
+        db.close()
+        if snapshot is None or snapshot.embedding is not None:
+            return
+
+        stage = "history_embedding"
+        document = build_history_document(
+            snapshot.recipe_name, snapshot.adjusted_ingredients, snapshot.diet_tags
+        )
+        embedding = (await run_in_threadpool(embed_history_documents, [document]))[0]
+        stage = "history_embedding_update"
+        # Session.close() releases the refresh/read transaction; reusing the
+        # session here opens a new transaction only for the conditional update.
+        set_history_embedding_if_missing(
+            db, user_id=user_id, history_id=history_id, embedding=embedding
+        )
+    except Exception as error:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        logging.getLogger("personalization").warning(
+            "[personalization] stage=%s user_id=%s history_id=%s error=%s",
+            stage, user_id, history_id, type(error).__name__,
+        )
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+
 @app.put("/api/history/{history_id}/rating", dependencies=[Depends(verify_same_origin)])
 async def put_history_rating(
     history_id: PositiveInt32Id,
@@ -747,9 +794,10 @@ async def put_history_rating(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    user_id = current_user.id
     saved = upsert_rating(
         db,
-        user_id=current_user.id,
+        user_id=user_id,
         history_id=history_id,
         stars=body.stars,
         tag=body.tag,
@@ -757,6 +805,9 @@ async def put_history_rating(
     )
     if saved is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="History not found")
+    await embed_rated_history_best_effort(
+        db, user_id=user_id, history_id=history_id, rating=saved
+    )
     return {"status": "success", "data": saved}
 
 

@@ -89,6 +89,11 @@ class HistoryEndpointTestCase(unittest.TestCase):
 class HistoryEndpointTests(HistoryEndpointTestCase):
     def setUp(self):
         super().setUp()
+        rating_embedding_patcher = patch(
+            "main.embed_rated_history_best_effort", new=AsyncMock(return_value=None)
+        )
+        self.mock_rating_embedding = rating_embedding_patcher.start()
+        self.addCleanup(rating_embedding_patcher.stop)
         self.alice = self.login("alice@example.com")
         self.bob = self.login("bob@example.com")
         self.alice_history = self.seed_history("alice@example.com")
