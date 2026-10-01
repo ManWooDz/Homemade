@@ -428,7 +428,7 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         return result_json
 
     except Exception as e:
-        print(f"Gemini API Error: {e}")
+        print(f"Gemini API Error: {type(e).__name__}")
         return {
             "error": "ไม่สามารถสร้างสูตรอาหารได้ในขณะนี้",
             "details": str(e)
@@ -1196,7 +1196,7 @@ async def generate_recipe_text(
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
             final_output["nutrition_partially_estimated"] = True
 
-        print(f"[4] Final Output: {json.dumps(final_output, ensure_ascii=False, indent=2)}")
+        print("[4] Recipe generation completed")
 
         history_id = save_generate_history(db, current_user, request, final_output)
 

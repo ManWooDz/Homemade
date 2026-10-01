@@ -1,10 +1,14 @@
 import hashlib
+import io
 import json
 import os
 import unittest
 from copy import deepcopy
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
+
+from google.genai.errors import ClientError
 
 import main
 from embeddings import EmbeddingError
@@ -82,6 +86,47 @@ class CloseFailSession(TrackingSession):
 
 
 class PersonalizationGenerationPromptTests(unittest.TestCase):
+    def test_provider_error_logs_omit_personalized_request_contents(self):
+        private_feedback = "PRIVATE-RATING-FEEDBACK"
+        private_message = "PRIVATE-PROVIDER-MESSAGE"
+        context = PROMPT_BLOCK.replace("ข้อมูลอ้างอิงทดสอบ", private_feedback)
+
+        def generate_content(**kwargs):
+            raise ClientError(400, {
+                "error": {
+                    "code": 400,
+                    "status": "INVALID_ARGUMENT",
+                    "message": private_message,
+                },
+                "request": {"contents": kwargs["contents"]},
+            })
+
+        fake_client = SimpleNamespace(
+            models=SimpleNamespace(generate_content=generate_content)
+        )
+        output = io.StringIO()
+        with patch("main.client", fake_client), redirect_stdout(output):
+            response = main.call_agentic_llm(
+                ["minced pork"],
+                {"taste": "spicy", PERSONALIZATION_KEY: context},
+                {"name": "test"},
+                feedback="PRIVATE-CRITIC-FEEDBACK",
+            )
+
+        self.assertEqual(response["error"], "ไม่สามารถสร้างสูตรอาหารได้ในขณะนี้")
+        logs = output.getvalue()
+        self.assertIn("Gemini", logs)
+        for private_text in (
+            private_feedback,
+            private_message,
+            "PRIVATE-CRITIC-FEEDBACK",
+            "<<<PERSONALIZATION_REFERENCE_DATA>>>",
+            "<<<END_PERSONALIZATION_REFERENCE_DATA>>>",
+        ):
+            with self.subTest(private_text=private_text):
+                self.assertNotIn(private_text, logs)
+        self.assertIn("ClientError", logs)
+
     def _capture(self, prefs, feedback=None):
         captured = {}
 
@@ -380,6 +425,31 @@ class PersonalizationGenerationHandlerTests(unittest.IsolatedAsyncioTestCase):
             response["data"]["personalization"],
             {"applied": False, "positives": 0, "negatives": 0},
         )
+
+    async def test_success_logs_omit_full_recipe_response(self):
+        recipe = deepcopy(VALID_RECIPE)
+        recipe["safety_warning"] = "PRIVATE-RECIPE-WARNING"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            response, _seam, _generator, _writer = await self._generate(
+                request(),
+                context=self.context,
+                generator=MagicMock(return_value=recipe),
+            )
+
+        self.assertEqual(response["status"], "success")
+        self.assertEqual(response["data"]["safety_warning"], "PRIVATE-RECIPE-WARNING")
+        logs = output.getvalue()
+        self.assertIn("Recipe approved", logs)
+        for private_text in (
+            "PRIVATE-RECIPE-WARNING",
+            "Thai Basil Pork",
+            VALID_RECIPE["instructions"][0],
+            "<<<PERSONALIZATION_REFERENCE_DATA>>>",
+            "<<<END_PERSONALIZATION_REFERENCE_DATA>>>",
+        ):
+            with self.subTest(private_text=private_text):
+                self.assertNotIn(private_text, logs)
 
     async def test_client_reserved_key_never_reaches_generation_or_persistence(self):
         body = request()
