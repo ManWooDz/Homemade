@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 import uvicorn
@@ -51,6 +52,9 @@ from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
 from history_repository import insert_generate_history, list_history, set_favorite, upsert_rating
 from base_favorites_repository import list_base_favorite_ids, set_base_favorite
+from embeddings import build_request_query, embed_request_queries
+from personalization.context import PersonalizationContext, build_personalization_context
+from personalization.repository import count_embedded_signals
 
 
 def _harden_stdio(streams):
@@ -327,6 +331,9 @@ def validate_recipe(recipe, user_ingredients, user_prefs, resolved_blocks=None):
 # ==========================================
 # LLM Agent
 # ==========================================
+_PERSONALIZATION_CONTEXT_KEY = "__personalization_context"
+
+
 def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
     print("Agentic LLM (Gemini) is thinking and calculating...")
 
@@ -334,12 +341,26 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         return {"error": "API Key is missing. Please check your .env file."}
 
     try:
+        personalization_block = None
+        prompt_prefs = user_prefs
+        if isinstance(user_prefs, dict) and _PERSONALIZATION_CONTEXT_KEY in user_prefs:
+            personalization_block = user_prefs[_PERSONALIZATION_CONTEXT_KEY]
+            prompt_prefs = {
+                key: value
+                for key, value in user_prefs.items()
+                if key != _PERSONALIZATION_CONTEXT_KEY
+            }
+
         feedback_section = ""
         if feedback:
             feedback_section = f"""
         ผลตรวจสอบจากรอบก่อนหน้า (MUST FIX): สูตรที่คุณสร้างในรอบก่อนไม่ผ่านการตรวจสอบ เนื่องจาก: "{feedback}"
         กรุณาแก้ไขปัญหานี้โดยเฉพาะในรอบนี้ โดยยังคงรักษาส่วนอื่นที่ถูกต้องไว้เหมือนเดิม
         """
+
+        prompt_additions = feedback_section
+        if personalization_block:
+            prompt_additions = f"{personalization_block}\n{feedback_section}"
 
         prompt = f"""
         คุณคือ Executive Chef และนักโภชนาการคลินิกที่มีประสบการณ์สูง
@@ -348,7 +369,7 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
 
         ข้อมูลของคุณมีดังนี้:
         1. วัตถุดิบที่ผู้ใช้มี : {ingredients}
-        2. เงื่อนไขและข้อควรระวังของผู้ใช้: {user_prefs}
+        2. เงื่อนไขและข้อควรระวังของผู้ใช้: {prompt_prefs}
         3. สูตรอาหารตั้งต้น (อ้างอิงโภชนาการจากสูตรนี้): {base_recipe}
         รายการวัตถุดิบนี้บอกเฉพาะชนิดที่ผู้ใช้ระบุว่ามี ไม่ได้ระบุปริมาณคงเหลือจริง
         ห้ามสรุปว่าวัตถุดิบเพียงพอ ไม่เพียงพอ หรือต้องซื้อเพิ่มจากรายการนี้
@@ -356,10 +377,10 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         ปริมาณใน adjusted_ingredients ต้องเป็นปริมาณรวมสำหรับทั้งสูตร ซึ่งครอบคลุมจำนวนที่เสิร์ฟตาม servings
         ค่า calories, protein_g, carbs_g และ fat_g ใน nutrition ต้องเป็นค่าต่อ 1 ที่เสิร์ฟ
         หากประมาณค่าโภชนาการเป็นค่ารวมทั้งสูตร ต้องหารด้วย servings ก่อนตอบ
-        {feedback_section}
+        {prompt_additions}
         กฎเหล็กด้านความปลอดภัยและคุณภาพ (MUST FOLLOW STRICTLY):
         1. ความปลอดภัยอาหาร (Food Safety): ห้ามแนะนำให้รับประทานเนื้อสัตว์ดิบ (ยกเว้นวัตถุดิบที่ระบุว่าทานดิบได้) ต้องระบุการทำเนื้อสัตว์ ไก่ หมู หรืออาหารทะเลให้สุกอย่างชัดเจน และห้ามมีขั้นตอนที่เสี่ยงต่อการปนเปื้อนข้าม (Cross-contamination)
-        2. ข้อควรระวังการแพ้ (Allergy Risks): ต้องตรวจสอบและปฏิบัติตาม {user_prefs} อย่างเคร่งครัด หากมีการแพ้อาหาร ห้ามใส่วัตถุดิบนั้นและวัตถุดิบแฝงเด็ดขาด
+        2. ข้อควรระวังการแพ้ (Allergy Risks): ต้องตรวจสอบและปฏิบัติตาม {prompt_prefs} อย่างเคร่งครัด หากมีการแพ้อาหาร ห้ามใส่วัตถุดิบนั้นและวัตถุดิบแฝงเด็ดขาด
         3. ปริมาณและสัดส่วน (Logical Proportions): กำหนดปริมาณวัตถุดิบและเครื่องปรุงให้อยู่ในเกณฑ์มาตรฐานที่มนุษย์ทานได้จริง ห้ามใส่เครื่องปรุงรสจัดเกินไป (เช่น เกลือ 5 ช้อนโต๊ะ หรือน้ำมัน 1 ถ้วย)
         4. ขั้นตอนสมเหตุสมผล (Logical Workflow): ลำดับขั้นตอนการทำอาหารต้องถูกต้องตามหลักฟิสิกส์การทำอาหาร (เช่น ต้องเจียวกระเทียมกับน้ำมันก่อนใส่น้ำ, ทอดต้องใช้น้ำมัน, รวนเนื้อสัตว์ก่อนใส่ผักที่สุกง่าย)
         5. ความเข้ากันของรสชาติ (Flavor Pairing): หากวัตถุดิบที่มีจับคู่กันแล้วรสชาติจะแย่มาก (เช่น นม + น้ำปลา) ให้เลือกตัดวัตถุดิบบางอย่างออกอย่างสมเหตุสมผล ดีกว่าฝืนผสมกัน
@@ -866,6 +887,79 @@ def build_llm_prefs(user_prefs, resolved_blocks):
     return {**user_prefs, _LLM_FORBIDDEN_KEY: ", ".join(terms) + _LLM_FORBIDDEN_SUFFIX}
 
 
+async def get_personalization_for_request(
+    db,
+    user_id,
+    *,
+    recipe_name,
+    ingredient_names,
+    taste,
+    user_prefs,
+    resolved_blocks,
+) -> PersonalizationContext | None:
+    """Build request-scoped context without holding a transaction over remote work."""
+    if os.getenv("PERSONALIZATION_ENABLED", "1") == "0":
+        return None
+
+    try:
+        signal_count = count_embedded_signals(db, user_id)
+    except Exception as error:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        try:
+            db.close()
+        except Exception:
+            pass
+        logging.getLogger("personalization").warning(
+            "[personalization] stage=count user_id=%s error=%s",
+            user_id,
+            type(error).__name__,
+        )
+        return None
+
+    db.close()
+    if signal_count < 3:
+        return None
+
+    try:
+        query = build_request_query(recipe_name, ingredient_names, taste)
+        query_embedding = (await run_in_threadpool(embed_request_queries, [query]))[0]
+    except Exception as error:
+        logging.getLogger("personalization").warning(
+            "[personalization] stage=query_embedding user_id=%s error=%s",
+            user_id,
+            type(error).__name__,
+        )
+        return None
+
+    try:
+        return build_personalization_context(
+            db,
+            user_id,
+            query_embedding=query_embedding,
+            user_prefs=user_prefs,
+            resolved_blocks=resolved_blocks,
+        )
+    except Exception as error:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        logging.getLogger("personalization").warning(
+            "[personalization] stage=context user_id=%s error=%s",
+            user_id,
+            type(error).__name__,
+        )
+        return None
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+
 def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_blocks):
     """Thai message for a retry loop that ran out on an allergy violation."""
     violating = []
@@ -945,6 +1039,21 @@ async def generate_recipe_text(
         print(f"[3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
 
         resolved_blocks = resolve_blocks_for_request(user_prefs)
+        personalization = await get_personalization_for_request(
+            db,
+            current_user.id,
+            recipe_name=base_recipe.get("name", ""),
+            ingredient_names=ingredients_list_for_llm,
+            taste=user_prefs.get("taste", ""),
+            user_prefs=user_prefs,
+            resolved_blocks=resolved_blocks,
+        )
+        llm_prefs = build_llm_prefs(user_prefs, resolved_blocks)
+        if personalization is not None:
+            llm_prefs = {
+                **llm_prefs,
+                _PERSONALIZATION_CONTEXT_KEY: personalization.prompt_block,
+            }
         final_output, attempts_log = run_generation_with_validation(
             call_agentic_llm,
             ingredients_list_for_llm,
@@ -952,7 +1061,7 @@ async def generate_recipe_text(
             user_prefs,
             base_recipe,
             resolved_blocks,
-            llm_prefs=build_llm_prefs(user_prefs, resolved_blocks),
+            llm_prefs=llm_prefs,
         )
 
         if not final_output:
@@ -1022,9 +1131,19 @@ async def generate_recipe_text(
 
         history_id = save_generate_history(db, current_user, request, final_output)
 
+        personalization_metadata = {
+            "applied": personalization is not None,
+            "positives": personalization.positives if personalization is not None else 0,
+            "negatives": personalization.negatives if personalization is not None else 0,
+        }
+
         return {
             "status": "success",
-            "data": {**final_output, "history_id": history_id},
+            "data": {
+                **final_output,
+                "history_id": history_id,
+                "personalization": personalization_metadata,
+            },
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}

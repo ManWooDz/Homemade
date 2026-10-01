@@ -5,7 +5,7 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from eval import retry_convergence
 from eval.allergen_kg_eval import empty_resolver, seeded_resolver
@@ -48,6 +48,14 @@ def _quiet():
 
 
 class RetryConvergenceTests(unittest.TestCase):
+    def setUp(self):
+        personalization_patcher = patch(
+            "main.get_personalization_for_request",
+            new=AsyncMock(return_value=None),
+        )
+        self.mock_personalization = personalization_patcher.start()
+        self.addCleanup(personalization_patcher.stop)
+
     def test_exhaustion_counted_per_run(self):
         with _quiet():
             rows = run_arm([CASE], empty_resolver(), always_shrimp, k=2)

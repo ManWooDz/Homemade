@@ -1,7 +1,7 @@
 import unittest
 from copy import deepcopy
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from main import (
     GenerateRecipeTextRequest,
@@ -53,6 +53,13 @@ async def call_handler(request):
 
 class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        personalization_patcher = patch(
+            "main.get_personalization_for_request",
+            new=AsyncMock(return_value=None),
+        )
+        self.mock_personalization = personalization_patcher.start()
+        self.addCleanup(personalization_patcher.stop)
+
         patcher = patch("main.compute_recipe_nutrition", return_value=_STUB_NUTRITION_RESULT)
         self.mock_compute_nutrition = patcher.start()
         self.addCleanup(patcher.stop)
@@ -349,8 +356,14 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(passed_request, request)
         expected = dict(response["data"])
         expected.pop("history_id")
+        personalization = expected.pop("personalization")
         self.assertEqual(final_output, expected)
         self.assertNotIn("history_id", final_output)
+        self.assertNotIn("personalization", final_output)
+        self.assertEqual(
+            personalization,
+            {"applied": False, "positives": 0, "negatives": 0},
+        )
 
     async def test_history_write_failure_still_returns_recipe(self):
         self.mock_save_history.return_value = None

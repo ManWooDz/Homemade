@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 from copy import deepcopy
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -241,6 +241,15 @@ class GenerateWritesHistoryEndToEndTests(HistoryEndpointTestCase):
     Postgres. compute_recipe_nutrition is patched, so the mock session is
     never queried."""
 
+    def setUp(self):
+        super().setUp()
+        personalization_patcher = patch(
+            "main.get_personalization_for_request",
+            new=AsyncMock(return_value=None),
+        )
+        self.mock_personalization = personalization_patcher.start()
+        self.addCleanup(personalization_patcher.stop)
+
     def generate(self, client, extra_body=None, headers=None):
         body = {
             "recipe": {"name": "Custom Recipe from Fridge"},
@@ -266,11 +275,17 @@ class GenerateWritesHistoryEndToEndTests(HistoryEndpointTestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()["data"]
         self.assertIsInstance(data["history_id"], int)
+        self.assertEqual(
+            data["personalization"],
+            {"applied": False, "positives": 0, "negatives": 0},
+        )
 
         alice_rows = alice.get("/api/history").json()["data"]
         self.assertEqual([row["id"] for row in alice_rows], [data["history_id"]])
         self.assertEqual(alice_rows[0]["recipe_name"], "Thai Basil Pork")
         self.assertNotIn("history_id", alice_rows[0]["recipe_data"])
+        self.assertNotIn("personalization", alice_rows[0]["recipe_data"])
+        self.assertNotIn("personalization", alice_rows[0])
         self.assertEqual(bob.get("/api/history").json()["data"], [])
 
     def test_generate_requires_login(self):
