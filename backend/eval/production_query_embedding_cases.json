@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "documents": [
+    {
+      "id": "A1",
+      "recipe_name": "Stir-fried Minced Pork with Holy Basil",
+      "adjusted_ingredients": ["หมูสับ", "ใบกะเพรา", "กระเทียม", "พริก"],
+      "diet_tags": ["Spicy", "Stir Fry", "High Protein"]
+    },
+    {
+      "id": "A2",
+      "recipe_name": "Stir-fried Chicken with Holy Basil",
+      "adjusted_ingredients": ["ไก่สับ", "ใบกะเพรา", "กระเทียม", "พริก"],
+      "diet_tags": ["Spicy", "Stir Fry", "High Protein"]
+    },
+    {
+      "id": "B1",
+      "recipe_name": "Tom Yum Shrimp Soup",
+      "adjusted_ingredients": ["กุ้ง", "ตะไคร้", "ข่า", "ใบมะกรูด", "มะนาว"],
+      "diet_tags": ["Spicy", "Sour", "Soup"]
+    },
+    {
+      "id": "B2",
+      "recipe_name": "Tom Kha Chicken",
+      "adjusted_ingredients": ["ไก่", "กะทิ", "ข่า", "ตะไคร้"],
+      "diet_tags": ["Creamy", "Soup", "Thai"]
+    },
+    {
+      "id": "C1",
+      "recipe_name": "Green Curry with Chicken",
+      "adjusted_ingredients": ["ไก่", "กะทิ", "พริกแกงเขียวหวาน", "มะเขือเปราะ", "ใบโหระพา"],
+      "diet_tags": ["Spicy", "Curry", "Thai"]
+    },
+    {
+      "id": "C2",
+      "recipe_name": "Red Curry with Pork",
+      "adjusted_ingredients": ["หมู", "กะทิ", "พริกแกงเผ็ด", "ใบมะกรูด"],
+      "diet_tags": ["Spicy", "Curry", "Thai"]
+    },
+    {
+      "id": "D1",
+      "recipe_name": "Green Papaya Salad",
+      "adjusted_ingredients": ["มะละกอ", "มะนาว", "พริก", "ถั่วลิสง", "น้ำปลา"],
+      "diet_tags": ["Spicy", "Sour", "Salad"]
+    },
+    {
+      "id": "E1",
+      "recipe_name": "Mango Sticky Rice",
+      "adjusted_ingredients": ["มะม่วง", "ข้าวเหนียว", "กะทิ", "น้ำตาล"],
+      "diet_tags": ["Sweet", "Dessert", "Thai"]
+    },
+    {
+      "id": "E2",
+      "recipe_name": "Taro in Coconut Milk Dessert",
+      "adjusted_ingredients": ["เผือก", "กะทิ", "น้ำตาล"],
+      "diet_tags": ["Sweet", "Dessert", "Thai"]
+    },
+    {
+      "id": "F1",
+      "recipe_name": "Thai Fried Rice with Egg",
+      "adjusted_ingredients": ["ข้าวสวย", "ไข่", "ต้นหอม", "ซีอิ๊ว"],
+      "diet_tags": ["Quick Meal", "Stir Fry", "Thai"]
+    }
+  ],
+  "queries": [
+    {
+      "id": "Q-A1",
+      "recipe_name": "Stir-fried Minced Pork with Holy Basil",
+      "ingredient_names": ["ground pork", "holy basil", "garlic", "chili"],
+      "taste": "เผ็ด",
+      "intended_id": "A1",
+      "unrelated_id": "E1",
+      "category": "base_english_title_english_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-A2",
+      "recipe_name": "Stir-fried Chicken with Holy Basil",
+      "ingredient_names": ["minced chicken", "holy basil", "garlic", "chili"],
+      "taste": "เผ็ด",
+      "intended_id": "A2",
+      "unrelated_id": "D1",
+      "category": "base_english_title_english_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-B1",
+      "recipe_name": "Tom Yum Shrimp Soup",
+      "ingredient_names": ["shrimp", "lemongrass", "galangal", "makrut lime leaves", "lime"],
+      "taste": "เผ็ดเปรี้ยว",
+      "intended_id": "B1",
+      "unrelated_id": "E2",
+      "category": "base_english_title_english_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-C1",
+      "recipe_name": "Green Curry with Chicken",
+      "ingredient_names": ["chicken", "coconut milk", "green curry paste", "Thai eggplant", "Thai basil"],
+      "taste": "เผ็ดมัน",
+      "intended_id": "C1",
+      "unrelated_id": "F1",
+      "category": "base_english_title_english_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-C2",
+      "recipe_name": "Red Curry with Pork",
+      "ingredient_names": ["หมู", "coconut milk", "พริกแกงเผ็ด", "makrut lime leaves"],
+      "taste": "เผ็ด",
+      "intended_id": "C2",
+      "unrelated_id": "E1",
+      "category": "base_english_title_mixed_ingredients"
+    },
+    {
+      "id": "Q-E1",
+      "recipe_name": "Mango Sticky Rice",
+      "ingredient_names": ["mango", "ข้าวเหนียว", "coconut milk", "น้ำตาล"],
+      "taste": "หวานมัน",
+      "intended_id": "E1",
+      "unrelated_id": "B1",
+      "category": "base_english_title_mixed_ingredients"
+    },
+    {
+      "id": "Q-D1",
+      "recipe_name": "Custom Recipe from Fridge",
+      "ingredient_names": ["มะละกอ", "มะนาว", "พริก", "ถั่วลิสง", "น้ำปลา"],
+      "taste": "เผ็ดเปรี้ยว",
+      "intended_id": "D1",
+      "unrelated_id": "B2",
+      "category": "custom_thai_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-E2",
+      "recipe_name": "Custom Recipe from Fridge",
+      "ingredient_names": ["เผือก", "กะทิ", "น้ำตาล"],
+      "taste": "หวานมัน",
+      "intended_id": "E2",
+      "unrelated_id": "A1",
+      "category": "custom_thai_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-F1",
+      "recipe_name": "Custom Recipe from Fridge",
+      "ingredient_names": ["cooked rice", "egg", "spring onion", "soy sauce"],
+      "taste": "กลมกล่อม",
+      "intended_id": "F1",
+      "unrelated_id": "C1",
+      "category": "custom_english_ingredients_thai_taste"
+    },
+    {
+      "id": "Q-B2",
+      "recipe_name": "Tom Kha Chicken",
+      "ingredient_names": ["chicken", "coconut milk", "galangal", "lemongrass"],
+      "taste": "ไม่ระบุ",
+      "intended_id": "B2",
+      "unrelated_id": "D1",
+      "category": "unspecified_taste_sentinel"
+    }
+  ]
+}

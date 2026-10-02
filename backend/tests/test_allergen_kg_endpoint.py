@@ -3,7 +3,7 @@ import re
 import unittest
 from copy import deepcopy
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.exc import OperationalError
 
@@ -298,6 +298,13 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
 
 class EndpointTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        personalization_patcher = patch(
+            "main.get_personalization_for_request",
+            new=AsyncMock(return_value=None),
+        )
+        self.mock_personalization = personalization_patcher.start()
+        self.addCleanup(personalization_patcher.stop)
+
         patcher = patch("main.compute_recipe_nutrition", return_value=_STUB_NUTRITION)
         patcher.start()
         self.addCleanup(patcher.stop)
