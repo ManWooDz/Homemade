@@ -18,6 +18,11 @@ from main import app
 
 class PasswordResetEndpointTests(unittest.TestCase):
     def setUp(self):
+        self.email_backend_patch = mock.patch.dict(
+            os.environ,
+            {"EMAIL_BACKEND": "console"},
+        )
+        self.email_backend_patch.start()
         self.engine = create_engine(
             "sqlite:///:memory:",
             connect_args={"check_same_thread": False},
@@ -42,6 +47,13 @@ class PasswordResetEndpointTests(unittest.TestCase):
 
     def tearDown(self):
         app.dependency_overrides.clear()
+        self.email_backend_patch.stop()
+
+    def test_invalid_email_configuration_prevents_app_startup(self):
+        with mock.patch.dict(os.environ, {"EMAIL_BACKEND": "invalid"}):
+            with self.assertRaisesRegex(RuntimeError, "EMAIL_BACKEND"):
+                with TestClient(app):
+                    pass
 
     def _register(self, client, email, password="hunter22"):
         return client.post(
@@ -153,12 +165,13 @@ class PasswordResetEndpointTests(unittest.TestCase):
         client = TestClient(app)
         self._register(client, "fp5@example.com")
 
-        with mock.patch("main.send_otp_email", side_effect=RuntimeError("smtp down")):
-            res = client.post(
-                "/api/auth/forgot-password",
-                json={"email": "fp5@example.com"},
-                headers=self.origin_headers,
-            )
+        with self.assertLogs(level="ERROR") as captured:
+            with mock.patch("main.send_otp_email", side_effect=RuntimeError("smtp down")):
+                res = client.post(
+                    "/api/auth/forgot-password",
+                    json={"email": "fp5@example.com"},
+                    headers=self.origin_headers,
+                )
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["status"], "success")
@@ -166,6 +179,41 @@ class PasswordResetEndpointTests(unittest.TestCase):
         db = self.Session()
         rows = db.query(PasswordResetOtp).all()
         self.assertEqual(len(rows), 0)
+        joined = "\n".join(captured.output)
+        self.assertIn("user_id=1", joined)
+        self.assertIn("RuntimeError", joined)
+        self.assertNotIn("fp5@example.com", joined)
+        self.assertNotIn("smtp down", joined)
+
+    def test_commit_failure_after_delivery_returns_generic_response_and_rolls_back(self):
+        client = TestClient(app)
+        self._register(client, "fp6@example.com")
+
+        with self.assertLogs(level="ERROR") as captured:
+            with (
+                mock.patch("main.send_otp_email"),
+                mock.patch.object(
+                    self.Session.class_,
+                    "commit",
+                    side_effect=RuntimeError("db unavailable"),
+                ),
+            ):
+                res = client.post(
+                    "/api/auth/forgot-password",
+                    json={"email": "fp6@example.com"},
+                    headers=self.origin_headers,
+                )
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["status"], "success")
+
+        db = self.Session()
+        self.assertEqual(db.query(PasswordResetOtp).count(), 0)
+        joined = "\n".join(captured.output)
+        self.assertIn("user_id=1", joined)
+        self.assertIn("RuntimeError", joined)
+        self.assertNotIn("fp6@example.com", joined)
+        self.assertNotIn("db unavailable", joined)
 
     @mock.patch("otp.generate_otp_code", return_value="424242")
     def test_verify_otp_succeeds_with_correct_code_and_returns_ticket(self, _mock):

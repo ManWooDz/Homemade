@@ -165,3 +165,25 @@
 - what: the first real USDA seed silently mapped several ingredients to plausible-looking but wrong foods (for example cherry tomatoes?cherries, palm sugar?palm oil, galangal?abiyuch, kaffir lime leaves?drumstick leaves), while every imported calorie value was NULL even though the API response contained Energy.
 - root cause: the importer treated the first search hit as an exact identity match, matched `unitName` against uppercase `KCAL` although real responses use lowercase `kcal`, and assumed one Energy representation even though Foundation records may expose nutrient IDs 1008, 2048 or 2047.
 - correct: never seed canonical nutrition identity from search rank. Review and pin every FDC ID, fetch details through `/foods` batches of at most 20, casefold `unitName`, prefer Energy IDs 1008?2048?2047, reject rows with missing/negative required macros before commit, record every proxy in `derivation`, and run a small real-API diagnostic before any bulk seed.
+
+**PowerShell native-argument parsing can strip nested Python string quotes in `python -c` checks (2026-10-04):**
+- what: a safe `backend/.env` presence check printed all six email-key flags, then its final summary raised `NameError: name 'EMAIL_BACKEND' is not defined` instead of evaluating `os.getenv("EMAIL_BACKEND")`.
+- root cause: the nested double quotes inside the PowerShell argument passed to `python -c` were not preserved as intended, so Python received an unquoted identifier in the f-string expression.
+- correct: for PowerShell one-off Python checks, assign quoted lookups to local Python variables before formatting (for example `backend = os.getenv("EMAIL_BACKEND")`), or run a checked script file; never place a nested quoted lookup directly inside an f-string passed through `python -c`.
+
+**UPDATE 2026-10-05:** the same quoting class recurred when a PowerShell command nested Bash `-lc` and Python `-c`; Python received no usable `-c` argument. Do not nest inline Python through another shell for verification. Invoke the Python executable directly from PowerShell, or use an existing checked script/module; treat any nested-shell result as invalid until replaced by a direct run.
+
+**Git Bash may be installed but absent from PowerShell `PATH` on this machine (2026-10-04):**
+- what: wizard verification failed before running because PowerShell could not resolve the bare `bash` command.
+- root cause: Git is exposed through `C:\\Program Files\\Git\\cmd`, while `bash.exe` lives under `C:\\Program Files\\Git\\bin` and that directory is not on the PowerShell `PATH`.
+- correct: before Bash-script verification on this machine, resolve and invoke `C:\\Program Files\\Git\\bin\\bash.exe` explicitly; do not assume a successful `git` lookup means the bare `bash` command is available.
+
+**An existing virtualenv `python.exe` is not proof that the interpreter still works (2026-10-05):**
+- what: the Gmail setup wizard found executable `backend/venv/Scripts/python.exe`, but its config-validation step failed because that launcher still pointed to a removed Python 3.12 installation; an initial fallback attempt also reconstructed `.venv-test-win` one directory too high.
+- root cause: the wizard tested only file executability, not whether the interpreter could start and import the required module, while the manual fallback relied on a remembered relative path instead of resolving the checkout's actual directory tree.
+- correct: interpreter selection must probe each candidate with a harmless import before choosing it; resolve candidate paths from the current checkout, and let the lightweight `backend/.venv-test-win` use the resolved `backend/venv/Lib/site-packages` path when the main venv launcher is stale.
+
+**Dotted `unittest` names can resolve the installed Ultralytics `tests` package instead of this repo's tests (2026-10-05):**
+- what: `python -m unittest tests.test_email_sender tests.test_password_reset_endpoints` imported `backend/venv/Lib/site-packages/tests/__init__.py`, then failed while Ultralytics tried to read its user settings; no Homemade test ran.
+- root cause: this repo's `backend/tests` directory is not a Python package, while a top-level package named `tests` exists in site-packages and wins dotted-name resolution.
+- correct: from `backend/`, run these tests through discovery (`python -m unittest discover -s tests -p "test_email_sender.py"` and the equivalent endpoint pattern); never address this repo's test files as `tests.<module>` unless `backend/tests` intentionally becomes a package.

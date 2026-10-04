@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from contextlib import asynccontextmanager
 import logging
 import math
 
@@ -45,7 +46,7 @@ from database.db import get_db, SessionLocal
 from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
 from nutrition.calculator import compute_recipe_nutrition
 from nutrition.llm_fallback import NutritionLLMEstimator
-from email_sender import send_otp_email
+from email_sender import send_otp_email, validate_email_config
 import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
@@ -94,7 +95,13 @@ else:
     print("Warning: ไม่พบ GEMINI_API_KEY ในไฟล์ .env")
     client = None
 
-app = FastAPI(title="Homemade Recipe API")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    validate_email_config()
+    yield
+
+
+app = FastAPI(title="Homemade Recipe API", lifespan=lifespan)
 
 origins =[
     "http://localhost:5173",
@@ -1267,13 +1274,26 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
 
     _row, code = otp.create_otp_for_user(db, user.id)
     try:
-        send_otp_email(email, code)
-    except Exception:
+        await run_in_threadpool(send_otp_email, email, code)
+    except Exception as exc:
         db.rollback()
-        logging.exception("forgot-password: OTP delivery failed for user_id=%s", user.id)
+        logging.error(
+            "forgot-password: OTP delivery unconfirmed for user_id=%s error_type=%s",
+            user.id,
+            type(exc).__name__,
+        )
         return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logging.error(
+            "forgot-password: OTP commit failed for user_id=%s error_type=%s",
+            user.id,
+            type(exc).__name__,
+        )
+        return _GENERIC_FORGOT_PASSWORD_RESPONSE
     return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
 

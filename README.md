@@ -44,9 +44,17 @@
     DATABASE_URL=postgresql+psycopg://homemade:homemade_dev_only@localhost:5432/homemade
     JWT_SECRET_KEY=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
     OTP_HMAC_SECRET=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
+    EMAIL_BACKEND=console
+    # เมื่อใช้ Gmail SMTP ให้เปลี่ยน EMAIL_BACKEND=smtp แล้วกำหนดค่าด้านล่าง
+    SMTP_HOST=smtp.gmail.com
+    SMTP_PORT=587
+    SMTP_USERNAME=บัญชี_Gmail_ผู้ส่ง
+    SMTP_PASSWORD=Google_App_Password_16_หลัก_ห้ามใช้รหัสผ่านบัญชีปกติ
+    SMTP_FROM=HomeMade OTP <บัญชี_Gmail_ผู้ส่ง>
     LOCAL_LLM_BASE_URL=http://localhost:8001 (ไม่บังคับ — ใส่เมื่อรัน vLLM server สำหรับ LocalLLMGenerator เท่านั้น, ดู docs/superpowers/specs/2026-09-13-local-llm-generator-design.md)
     LOCAL_LLM_MODEL=qwen2.5-7b-instruct (ไม่บังคับ — ชื่อ model ที่ vLLM serve อยู่, สลับ 4B/7B-9B ได้โดยไม่ต้องแก้โค้ด)
     ```
+    `EMAIL_BACKEND` ต้องกำหนดชัดเจนเสมอ: `console` ใช้เฉพาะ local development และจะ log อีเมลกับ OTP; `smtp` ส่งจริงผ่าน STARTTLS และต้องมีค่า `SMTP_*` ครบ มิฉะนั้น backend จะหยุดระหว่าง startup. เก็บ App Password ไว้เฉพาะใน `backend/.env` และห้าม commit. สำหรับ Gmail ให้เปิด Git Bash ที่ root โปรเจกต์แล้วรัน `./scripts/setup-gmail-smtp.sh`; wizard จะซ่อน App Password ระหว่างพิมพ์และตรวจ config โดยไม่ส่งอีเมล.
 4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
     ต้องติดตั้ง [Docker Desktop](https://www.docker.com/products/docker-desktop/) ก่อน แล้วเปิดโปรแกรมทิ้งไว้ (ต้องเห็นสถานะ "Running")
 
