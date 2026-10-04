@@ -178,10 +178,10 @@
 - root cause: Git is exposed through `C:\\Program Files\\Git\\cmd`, while `bash.exe` lives under `C:\\Program Files\\Git\\bin` and that directory is not on the PowerShell `PATH`.
 - correct: before Bash-script verification on this machine, resolve and invoke `C:\\Program Files\\Git\\bin\\bash.exe` explicitly; do not assume a successful `git` lookup means the bare `bash` command is available.
 
-**An existing virtualenv `python.exe` is not proof that the interpreter still works (2026-10-05):**
-- what: the Gmail setup wizard found executable `backend/venv/Scripts/python.exe`, but its config-validation step failed because that launcher still pointed to a removed Python 3.12 installation; an initial fallback attempt also reconstructed `.venv-test-win` one directory too high.
-- root cause: the wizard tested only file executability, not whether the interpreter could start and import the required module, while the manual fallback relied on a remembered relative path instead of resolving the checkout's actual directory tree.
-- correct: interpreter selection must probe each candidate with a harmless import before choosing it; resolve candidate paths from the current checkout, and let the lightweight `backend/.venv-test-win` use the resolved `backend/venv/Lib/site-packages` path when the main venv launcher is stale.
+**A sandbox-denied base-Python path can masquerade as a broken virtualenv (2026-10-05):**
+- what: inside the agent sandbox, `Test-Path` on `C:\Users\Hp\AppData\Local\Programs\Python\Python312\python.exe` returned `Access is denied`, and the visible `backend/venv/Scripts/python.exe` then reported `No Python at ...`; outside the sandbox, the exact base executable and the backend venv both ran successfully as Python 3.12.10.
+- root cause: the sandbox could not traverse the user-level Python installation path. The venv launcher inherited that access boundary and emitted a misleading missing-Python message; the interpreter and venv were not broken.
+- correct: never infer that a base interpreter was deleted from a sandboxed `Test-Path=False` or venv `No Python at ...` result when an access error is also present. Probe the exact base and venv executables in the user's shell or through an approved read-only unsandboxed command before recommending venv recreation.
 
 **Dotted `unittest` names can resolve the installed Ultralytics `tests` package instead of this repo's tests (2026-10-05):**
 - what: `python -m unittest tests.test_email_sender tests.test_password_reset_endpoints` imported `backend/venv/Lib/site-packages/tests/__init__.py`, then failed while Ultralytics tried to read its user settings; no Homemade test ran.
