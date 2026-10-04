@@ -7,14 +7,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from database.models import Base, IngredientNutrition, IngredientNutritionAlias
-from nutrition.seed_usda import backfill_portions, fetch_food, import_usda
-
-_SEARCH_RESPONSE = {"foods": [{"fdcId": 12345, "description": "Shrimp, raw", "dataType": "SR Legacy"}]}
+from nutrition.seed_usda import backfill_portions, fetch_foods, import_usda
 
 _DETAIL_RESPONSE = {
     "fdcId": 12345, "description": "Shrimp, raw",
     "foodNutrients": [
-        {"nutrient": {"name": "Energy", "unitName": "KCAL"}, "amount": 85.0},
+        {"nutrient": {"name": "Energy", "unitName": "kcal"}, "amount": 85.0},
         {"nutrient": {"name": "Energy", "unitName": "kJ"}, "amount": 356.0},
         {"nutrient": {"name": "Protein", "unitName": "G"}, "amount": 20.1},
         {"nutrient": {"name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.5},
@@ -34,14 +32,23 @@ _FISH_SAUCE_DETAIL = {
     ],
 }
 
+_FOUNDATION_DETAIL = {
+    **_DETAIL_RESPONSE,
+    "foodNutrients": [
+        {"nutrient": {"id": 2047, "name": "Energy (Atwater General Factors)", "unitName": "kcal"}, "amount": 554.602},
+        {"nutrient": {"id": 2048, "name": "Energy (Atwater Specific Factors)", "unitName": "kcal"}, "amount": 514.83917},
+        *_DETAIL_RESPONSE["foodNutrients"][2:],
+    ],
+}
 
-def _fake_session(search_json, detail_json):
+
+def _fake_session(batch_json):
     session = MagicMock()
 
     def fake_get(url, params=None, timeout=None):
         response = MagicMock()
         response.raise_for_status = lambda: None
-        response.json = lambda: (search_json if "search" in url else detail_json)
+        response.json = lambda: batch_json
         return response
 
     session.get.side_effect = fake_get
@@ -58,23 +65,30 @@ class ImportUsdaTests(unittest.TestCase):
         self.db.close()
 
     def test_imports_matched_food_using_kcal_not_kj(self):
-        result = import_usda(self.db, _fake_session(_SEARCH_RESPONSE, _DETAIL_RESPONSE), "fake-key", {"shrimp": "shrimp raw"})
+        result = import_usda(self.db, _fake_session([_DETAIL_RESPONSE]), "fake-key", {"shrimp": 12345})
         row = self.db.query(IngredientNutrition).filter_by(ingredient_name="shrimp").one()
         self.assertEqual(row.calories, 85.0)
         self.assertEqual(row.source_ref, "12345")
         self.assertEqual(result["imported"], 1)
 
     def test_large_shrimp_portion_is_not_treated_as_an_egg_count(self):
-        import_usda(self.db, _fake_session(_SEARCH_RESPONSE, _DETAIL_RESPONSE), "fake-key", {"shrimp": "shrimp raw"})
+        import_usda(self.db, _fake_session([_DETAIL_RESPONSE]), "fake-key", {"shrimp": 12345})
         row = self.db.query(IngredientNutrition).filter_by(ingredient_name="shrimp").one()
         self.assertNotIn("ฟอง", row.portion_grams or {})
+
+    def test_foundation_energy_prefers_specific_atwater_factors(self):
+        import_usda(self.db, _fake_session([_FOUNDATION_DETAIL]), "fake-key", {"shrimp": 12345})
+        row = self.db.query(IngredientNutrition).filter_by(ingredient_name="shrimp").one()
+        self.assertEqual(row.calories, 514.83917)
 
     def test_skips_name_already_present_from_inmu_seeding(self):
         self.db.add(IngredientNutrition(ingredient_name="shrimp", unit_basis="100g", calories=1.0, protein_g=1.0, carbs_g=1.0, fat_g=1.0, source="INMU"))
         self.db.commit()
-        result = import_usda(self.db, _fake_session(_SEARCH_RESPONSE, _DETAIL_RESPONSE), "fake-key", {"shrimp": "shrimp raw"})
+        session = _fake_session([_DETAIL_RESPONSE])
+        result = import_usda(self.db, session, "fake-key", {"shrimp": 12345})
         self.assertEqual(result["imported"], 0)
         self.assertEqual(result["skipped_existing"], 1)
+        session.get.assert_not_called()
 
     def test_skips_name_already_covered_by_an_alias_without_calling_api(self):
         row = IngredientNutrition(ingredient_name="ไข่ไก่, ทั้งฟอง, ดิบ", unit_basis="100g", calories=1.0, protein_g=1.0, carbs_g=1.0, fat_g=1.0, source="INMU", source_ref="H19")
@@ -82,9 +96,9 @@ class ImportUsdaTests(unittest.TestCase):
         self.db.flush()
         self.db.add(IngredientNutritionAlias(alias="egg", ingredient_nutrition_id=row.id))
         self.db.commit()
-        session = _fake_session(_SEARCH_RESPONSE, _DETAIL_RESPONSE)
+        session = _fake_session([_DETAIL_RESPONSE])
 
-        result = import_usda(self.db, session, "fake-key", {"egg": "egg whole raw"})
+        result = import_usda(self.db, session, "fake-key", {"egg": 12345})
 
         self.assertEqual(result["imported"], 0)
         self.assertEqual(result["skipped_existing"], 1)
@@ -108,11 +122,11 @@ class ImportUsdaTests(unittest.TestCase):
 
         session.get.side_effect = failing_get
         with self.assertRaises(RuntimeError) as ctx:
-            fetch_food(session, secret, "shrimp raw")
+            fetch_foods(session, secret, [12345])
 
         self.assertNotIn(secret, str(ctx.exception))
         self.assertNotIn("api_key", str(ctx.exception))
-        self.assertIn("shrimp raw", str(ctx.exception))
+        self.assertIn("batch food details", str(ctx.exception))
         self.assertIn("403", str(ctx.exception))
         self.assertIsNone(ctx.exception.__cause__)
         self.assertTrue(ctx.exception.__suppress_context__)
@@ -122,13 +136,33 @@ class ImportUsdaTests(unittest.TestCase):
         session = MagicMock()
         session.get.side_effect = requests.ConnectionError(f"Max retries exceeded with url: /fdc/v1/foods/search?api_key={secret}")
         with self.assertRaises(RuntimeError) as ctx:
-            fetch_food(session, secret, "shrimp raw")
+            fetch_foods(session, secret, [12345])
         self.assertNotIn(secret, str(ctx.exception))
 
-    def test_no_search_results_is_skipped_not_an_error(self):
-        result = import_usda(self.db, _fake_session({"foods": []}, _DETAIL_RESPONSE), "fake-key", {"nonexistent": "zzz"})
-        self.assertEqual(result["imported"], 0)
-        self.assertEqual(result["skipped_no_match"], 1)
+    def test_missing_batch_detail_is_an_error_and_writes_nothing(self):
+        with self.assertRaisesRegex(RuntimeError, "omitted requested fdcIds"):
+            import_usda(self.db, _fake_session([]), "fake-key", {"shrimp": 12345})
+        self.assertEqual(self.db.query(IngredientNutrition).count(), 0)
+
+    def test_refreshes_incomplete_existing_usda_row(self):
+        self.db.add(IngredientNutrition(
+            ingredient_name="shrimp", unit_basis="100g", calories=None,
+            protein_g=1.0, carbs_g=1.0, fat_g=1.0, source="USDA", source_ref="999",
+        ))
+        self.db.commit()
+
+        result = import_usda(self.db, _fake_session([_DETAIL_RESPONSE]), "fake-key", {"shrimp": 12345})
+
+        row = self.db.query(IngredientNutrition).filter_by(ingredient_name="shrimp").one()
+        self.assertEqual(result["refreshed"], 1)
+        self.assertEqual(row.source_ref, "12345")
+        self.assertEqual(row.calories, 85.0)
+
+    def test_rejects_incomplete_macros_without_committing(self):
+        incomplete = {**_DETAIL_RESPONSE, "foodNutrients": _DETAIL_RESPONSE["foodNutrients"][1:]}
+        with self.assertRaisesRegex(ValueError, "missing required macros"):
+            import_usda(self.db, _fake_session([incomplete]), "fake-key", {"shrimp": 12345})
+        self.assertEqual(self.db.query(IngredientNutrition).count(), 0)
 
 
 class BackfillPortionsTests(unittest.TestCase):
@@ -147,8 +181,8 @@ class BackfillPortionsTests(unittest.TestCase):
         self.db.close()
 
     def test_backfills_portion_grams_by_food_code_without_changing_macros(self):
-        session = _fake_session({"foods": [{"fdcId": 99999, "dataType": "SR Legacy"}]}, _FISH_SAUCE_DETAIL)
-        result = backfill_portions(self.db, session, "fake-key", {"N72": "fish sauce"})
+        session = _fake_session([_FISH_SAUCE_DETAIL])
+        result = backfill_portions(self.db, session, "fake-key", {"N72": (99999, "fish sauce")})
 
         row = self.db.query(IngredientNutrition).filter_by(source_ref="N72").one()
         self.assertEqual(row.source, "INMU")
