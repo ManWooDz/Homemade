@@ -187,3 +187,8 @@
 - what: `python -m unittest tests.test_email_sender tests.test_password_reset_endpoints` imported `backend/venv/Lib/site-packages/tests/__init__.py`, then failed while Ultralytics tried to read its user settings; no Homemade test ran.
 - root cause: this repo's `backend/tests` directory is not a Python package, while a top-level package named `tests` exists in site-packages and wins dotted-name resolution.
 - correct: from `backend/`, run these tests through discovery (`python -m unittest discover -s tests -p "test_email_sender.py"` and the equivalent endpoint pattern); never address this repo's test files as `tests.<module>` unless `backend/tests` intentionally becomes a package.
+
+**External delivery inside an open OTP transaction can hide a PostgreSQL row-lock queue (2026-10-05):**
+- what: the first password-reset request stayed on Sending while awaiting SMTP, a second same-user request hung without backend output, and stopping PostgreSQL finally produced `AdminShutdown` at the `password_reset_otps` UPDATE.
+- root cause: `create_otp_for_user()` updated/flushed before SMTP and the endpoint intentionally deferred commit until Delivery Accepted, so it held the OTP row lock across external I/O; PostgreSQL lock waits are not exceptions and therefore produced no log while waiting.
+- correct: whenever this flow must keep commit-after-delivery semantics, acquire the owning user row with `FOR UPDATE NOWAIT` before OTP mutation, catch preparation failures around cooldown/create, rollback and return the generic response, and keep the browser request single-flight. Pin both the NOWAIT call and the generic rollback path with regression tests; do not rely on sequential SQLite tests to reveal PostgreSQL lock waits.

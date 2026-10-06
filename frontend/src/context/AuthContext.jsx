@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
     const [resetTicket, setResetTicket] = useState(null);
 
     const refreshInFlightRef = useRef(null);
+    const otpRequestInFlightRef = useRef(null);
 
     const clearAuthState = useCallback(() => {
         setIsAuthenticated(false);
@@ -147,38 +148,48 @@ export function AuthProvider({ children }) {
         [login]
     );
 
+    const sendOtpRequest = useCallback(async (email) => {
+        if (otpRequestInFlightRef.current?.email === email) {
+            return otpRequestInFlightRef.current.promise;
+        }
+        const promise = safeFetch("/api/auth/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        }).then(({ response, networkError }) => !networkError && response.ok);
+        const flight = { email, promise };
+        otpRequestInFlightRef.current = flight;
+        try {
+            return await promise;
+        } finally {
+            if (otpRequestInFlightRef.current === flight) {
+                otpRequestInFlightRef.current = null;
+            }
+        }
+    }, []);
+
     const requestOtp = useCallback(async (email) => {
         if (!isValidEmail(email)) {
             return { success: false, error: "Enter a valid email" };
         }
         const trimmedEmail = email.trim();
-        const { response, networkError } = await safeFetch("/api/auth/forgot-password", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: trimmedEmail }),
-        });
-        if (networkError || !response.ok) {
-            return { success: false, error: "ส่งคำขอไม่สำเร็จ กรุณาลองอีกครั้ง" };
-        }
         setPendingResetEmail(trimmedEmail);
         setResetTicket(null);
-        return { success: true };
-    }, []);
+        const success = await sendOtpRequest(trimmedEmail);
+        return success
+            ? { success: true }
+            : { success: false, error: "ส่งคำขอไม่สำเร็จ กรุณาลองอีกครั้ง" };
+    }, [sendOtpRequest]);
 
     const resendOtp = useCallback(async () => {
         if (!pendingResetEmail) {
             return { success: false, error: "Session expired — start over" };
         }
-        const { response, networkError } = await safeFetch("/api/auth/forgot-password", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: pendingResetEmail }),
-        });
-        if (networkError || !response.ok) {
-            return { success: false, error: "ส่งรหัสใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง" };
-        }
-        return { success: true };
-    }, [pendingResetEmail]);
+        const success = await sendOtpRequest(pendingResetEmail);
+        return success
+            ? { success: true }
+            : { success: false, error: "ส่งรหัสใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง" };
+    }, [pendingResetEmail, sendOtpRequest]);
 
     const verifyOtp = useCallback(
         async (code) => {

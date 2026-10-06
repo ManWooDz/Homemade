@@ -13,6 +13,7 @@ export default function OtpVerify() {
     const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""));
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isResending, setIsResending] = useState(false);
     const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
     const inputRefs = useRef([]);
 
@@ -59,16 +60,21 @@ export default function OtpVerify() {
     };
 
     const handleResend = async () => {
-        if (cooldown > 0) return;
+        if (cooldown > 0 || isResending) return;
         setError("");
-        const result = await resendOtp();
-        if (!result.success) {
-            setError(result.error);
-            return;
+        setIsResending(true);
+        try {
+            const result = await resendOtp();
+            if (!result.success) {
+                setError(result.error);
+                return;
+            }
+            setCooldown(RESEND_COOLDOWN_SECONDS);
+            setDigits(Array(OTP_LENGTH).fill(""));
+            inputRefs.current[0]?.focus();
+        } finally {
+            setIsResending(false);
         }
-        setCooldown(RESEND_COOLDOWN_SECONDS);
-        setDigits(Array(OTP_LENGTH).fill(""));
-        inputRefs.current[0]?.focus();
     };
 
     return (
@@ -88,6 +94,10 @@ export default function OtpVerify() {
                         <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">
                             Enter OTP
                         </h1>
+
+                        <p className="w-full text-body-medium text-text-neutral mb-4">
+                            รหัสอาจใช้เวลาสักครู่ หากยังไม่ได้รับ ให้รอหมดเวลานับถอยหลังแล้วกดส่งใหม่
+                        </p>
 
                         <div className="w-full flex flex-col items-center gap-3">
                             <div className="flex gap-2">
@@ -109,10 +119,14 @@ export default function OtpVerify() {
                             <button
                                 type="button"
                                 onClick={handleResend}
-                                disabled={cooldown > 0}
+                                disabled={cooldown > 0 || isResending}
                                 className="h-11 px-4 bg-button-neutral rounded-full border border-stroke-brands text-text-brands text-body-medium font-normal flex justify-center items-center whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {cooldown > 0 ? `Resend (${cooldown}s)` : "Resend"}
+                                {isResending
+                                    ? "กำลังส่งใหม่..."
+                                    : cooldown > 0
+                                      ? `ส่งใหม่ได้ใน ${cooldown} วินาที`
+                                      : "ส่งใหม่"}
                             </button>
                         </div>
 

@@ -3,25 +3,23 @@ import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../../components/HeaderLogo";
 import BackButton from "../../components/BackButton";
 import { useAuth } from "../../context/AuthContext";
+import { isValidEmail } from "../../utils/authValidation";
 
 export default function ResetPasswordEmail() {
     const navigate = useNavigate();
     const { requestOtp } = useAuth();
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         setError("");
-        setIsSubmitting(true);
-        const result = await requestOtp(email);
-        setIsSubmitting(false);
-        if (result.success) {
-            navigate("/reset-password/otp");
-        } else {
-            setError(result.error);
+        if (!isValidEmail(email)) {
+            setError("กรุณากรอกอีเมลให้ถูกต้อง");
+            return;
         }
+        void requestOtp(email);
+        navigate("/reset-password/otp");
     };
 
     return (
@@ -59,10 +57,9 @@ export default function ResetPasswordEmail() {
 
                         <button
                             type="submit"
-                            disabled={isSubmitting}
-                            className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
+                            className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer"
                         >
-                            {isSubmitting ? "Sending..." : "Send OTP"}
+                            Send OTP
                         </button>
                     </form>
                 </div>

@@ -1269,10 +1269,26 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     if user is None:
         return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
-    if otp.get_recent_otp_request(db, user.id, otp.RESEND_COOLDOWN_SECONDS) is not None:
+    try:
+        # Serialize requests for one account without making duplicates wait
+        # behind the SMTP-held transaction. PostgreSQL raises immediately;
+        # the generic response keeps the account-existence signal unchanged.
+        # ponytail: this holds one user-row lock during SMTP; use a durable
+        # delivery reservation/worker only if OTP throughput grows.
+        db.query(User).filter_by(id=user.id).with_for_update(nowait=True).one()
+        if otp.get_recent_otp_request(db, user.id, otp.RESEND_COOLDOWN_SECONDS) is not None:
+            db.rollback()
+            return _GENERIC_FORGOT_PASSWORD_RESPONSE
+        _row, code = otp.create_otp_for_user(db, user.id)
+    except Exception as exc:
+        db.rollback()
+        logging.error(
+            "forgot-password: OTP prepare failed for user_id=%s error_type=%s",
+            user.id,
+            type(exc).__name__,
+        )
         return _GENERIC_FORGOT_PASSWORD_RESPONSE
 
-    _row, code = otp.create_otp_for_user(db, user.id)
     try:
         await run_in_threadpool(send_otp_email, email, code)
     except Exception as exc:

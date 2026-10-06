@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Query, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database.db import get_db
@@ -184,6 +185,49 @@ class PasswordResetEndpointTests(unittest.TestCase):
         self.assertIn("RuntimeError", joined)
         self.assertNotIn("fp5@example.com", joined)
         self.assertNotIn("smtp down", joined)
+
+    def test_database_prepare_failure_returns_generic_response_and_rolls_back(self):
+        client = TestClient(app)
+        self._register(client, "locked@example.com")
+        lock_error = OperationalError("UPDATE password_reset_otps", {}, RuntimeError("locked"))
+
+        with self.assertLogs(level="ERROR") as captured:
+            with mock.patch("main.otp.create_otp_for_user", side_effect=lock_error):
+                res = client.post(
+                    "/api/auth/forgot-password",
+                    json={"email": "locked@example.com"},
+                    headers=self.origin_headers,
+                )
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json(), {
+            "status": "success",
+            "message": "If that email exists, a code has been sent.",
+        })
+        self.assertEqual(self.Session().query(PasswordResetOtp).count(), 0)
+        joined = "\n".join(captured.output)
+        self.assertIn("user_id=1", joined)
+        self.assertIn("OperationalError", joined)
+        self.assertNotIn("locked@example.com", joined)
+        self.assertNotIn("RuntimeError", joined)
+
+    def test_forgot_password_uses_nonblocking_user_lock(self):
+        client = TestClient(app)
+        self._register(client, "nowait@example.com")
+        original = Query.with_for_update
+
+        with (
+            mock.patch.object(Query, "with_for_update", autospec=True, side_effect=original) as lock,
+            mock.patch("main.send_otp_email"),
+        ):
+            res = client.post(
+                "/api/auth/forgot-password",
+                json={"email": "nowait@example.com"},
+                headers=self.origin_headers,
+            )
+
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(any(call.kwargs.get("nowait") is True for call in lock.call_args_list))
 
     def test_commit_failure_after_delivery_returns_generic_response_and_rolls_back(self):
         client = TestClient(app)
