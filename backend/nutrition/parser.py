@@ -1,21 +1,17 @@
-"""Thai ingredient-string parser. A numeric range ("1-2") or a vague word
-("เล็กน้อย") is `unparsed`, never guessed a default."""
+"""Parse explicit quantities only; ambiguous amounts/identity notes abstain."""
 import re
 from dataclasses import dataclass
+from math import isfinite
 from typing import Literal
 
 _VAGUE_QUANTITY_WORDS = ["เล็กน้อย", "ตามชอบ", "พอประมาณ", "ตามต้องการ"]
 
-# (Step 5, real Gemini output, 2026-09-25) A parenthetical clarifying note
-# can appear anywhere in the string -- not only trailing at the very end
-# (e.g. "กะปิเจ (ทำจากถั่วเหลืองหรือธัญพืช) 1 ช้อนโต๊ะ", where the note sits
-# before the quantity/unit). Stripped globally, not anchored to `$`, so a
-# mid-string note doesn't get folded into the name by the name group's
-# backtracking.
-_PARENTHETICAL_NOTE_RE = re.compile(r"\s*\([^)]*\)\s*")
 _RANGE_RE = re.compile(r"\d+\s*-\s*\d+")
+_NUMERIC_COMMA_RE = re.compile(r"\d\s*,\s*\d")
+_BAD_AMOUNT_PREFIX_RE = re.compile(r"(?:[+\-−–/]\s*|\d[.,]\s*|(?:^|\s)\d+(?:\.\d+)?[eE][+\-]?\s*)$")
+_MASS_SUFFIXES = {"g": "กรัม", "kg": "กิโลกรัม", "mg": "มิลลิกรัม"}
 _QUANTITY_UNIT_RE = re.compile(
-    r"^(?P<name>.+?)\s*(?P<quantity>\d+/\d+|\d+(?:[.,]\d+)?)\s*(?P<unit>[ก-๙\.]+)\s*$"
+    r"^(?P<name>.+?)\s+(?P<quantity>\d+/\d+|\d+(?:\.\d+)?)\s*(?P<unit>kg|mg|g|[ก-๙\.]+)\s*$"
 )
 
 
@@ -29,22 +25,27 @@ class ParsedIngredient:
 
 
 def _parse_quantity_token(token: str) -> float | None:
-    if "/" in token:
-        num, _, den = token.partition("/")
-        try:
-            denominator = float(den)
-            return float(num) / denominator if denominator else None
-        except ValueError:
-            return None
     try:
-        return float(token.replace(",", "."))
-    except ValueError:
+        if "/" in token:
+            num, _, den = token.partition("/")
+            numerator = float(num)
+            denominator = float(den)
+            if not isfinite(numerator) or not isfinite(denominator) or denominator <= 0:
+                return None
+            quantity = numerator / denominator
+        else:
+            quantity = float(token)
+        return quantity if isfinite(quantity) and quantity >= 0 else None
+    except (ValueError, OverflowError):
         return None
 
 
 def parse_ingredient_string(raw: str) -> ParsedIngredient:
     text = raw.strip()
-    core_text = _PARENTHETICAL_NOTE_RE.sub(" ", text).strip()
+    # shortcut: notes may change ingredient identity; parse them only after a reviewed note contract.
+    if "(" in text or ")" in text or _NUMERIC_COMMA_RE.search(text):
+        return ParsedIngredient(raw, text, None, None, "unparsed")
+    core_text = text
 
     for vague_word in _VAGUE_QUANTITY_WORDS:
         if vague_word in core_text:
@@ -60,12 +61,14 @@ def parse_ingredient_string(raw: str) -> ParsedIngredient:
     if not match:
         return ParsedIngredient(raw=raw, name=core_text, quantity=None, unit=None, parse_status="unparsed")
 
-    name = match.group("name").strip(" ,()")
-    if not name:
+    name = match.group("name").strip()
+    token = match.group("quantity")
+    if not name or _BAD_AMOUNT_PREFIX_RE.search(name) or ("/" in token and re.search(r"(?:^|\s)\d+$", name)):
         return ParsedIngredient(raw=raw, name=core_text, quantity=None, unit=None, parse_status="unparsed")
 
-    quantity = _parse_quantity_token(match.group("quantity"))
+    quantity = _parse_quantity_token(token)
     if quantity is None:
         return ParsedIngredient(raw=raw, name=core_text, quantity=None, unit=None, parse_status="unparsed")
 
-    return ParsedIngredient(raw=raw, name=name, quantity=quantity, unit=match.group("unit").strip(), parse_status="ok")
+    unit = match.group("unit")
+    return ParsedIngredient(raw=raw, name=name, quantity=quantity, unit=_MASS_SUFFIXES.get(unit, unit), parse_status="ok")

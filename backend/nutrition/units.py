@@ -1,33 +1,68 @@
-"""GLOBAL_UNIT_GRAMS: ingredient-independent conversions (exact SI
-multiples, plus มล./ลิตร treated 1:1 with grams as a documented
-water-density approximation). The Thai measuring units ถ้วยตวง (1 US cup
-= 240 mL), ช้อนโต๊ะ (1 tbsp = 15 mL) and ช้อนชา (1 tsp = 5 mL) are exact
-volume definitions (values from a standard home-cooking unit-conversion
-reference supplied by the user -- widely published, not a USDA/INMU
-citation) and use the SAME 1 mL ~ 1 g water-density approximation: it
-over-counts less-dense ingredients (oil ~0.92 g/mL, granulated sugar
-~0.85 g/mL) and is only a fallback -- an ingredient's own portion_grams
-entry for the same unit (e.g. น้ำตาล's curated "ช้อนโต๊ะ") is checked
-first and wins. Any other unit depends on the specific
-ingredient and is only resolved via that ingredient's own portion_grams
--- checked first, so a curated override always wins. No default is ever
-guessed for an unresolvable unit."""
+"""Exact mass factors and legacy water-density volume approximations.
+Ingredient-specific portions take precedence; legacy entries lack evidence.
+The numeric wrapper preserves usable estimates; detailed resolution keeps
+them distinct from source-backed mass. Unknown/invalid units stay unresolved."""
+from dataclasses import dataclass
+from collections.abc import Mapping
+from math import isfinite
 
-GLOBAL_UNIT_GRAMS: dict[str, float] = {
+_MASS_UNIT_GRAMS: dict[str, float] = {
     "กรัม": 1.0, "ก.": 1.0, "กิโลกรัม": 1000.0, "กก.": 1000.0,
     "ขีด": 100.0, "มิลลิกรัม": 0.001, "มก.": 0.001,
+}
+
+GLOBAL_UNIT_GRAMS: dict[str, float] = {
+    **_MASS_UNIT_GRAMS,
     "มล.": 1.0, "มิลลิลิตร": 1.0, "ลิตร": 1000.0,
-    "ถ้วยตวง": 240.0,  # 1 US cup = 240 mL, water-density approximation (same policy as มล./ลิตร above)
-    "ช้อนโต๊ะ": 15.0,  # 1 tablespoon = 15 mL, water-density approximation
-    "ช้อนชา": 5.0,  # 1 teaspoon = 5 mL, water-density approximation
+    "ถ้วยตวง": 240.0,
+    "ช้อนโต๊ะ": 15.0,
+    "ช้อนชา": 5.0,
 }
 
 
-def resolve_grams(quantity: float | None, unit: str | None, portion_grams: dict | None) -> float | None:
-    if quantity is None or unit is None:
-        return None
+@dataclass(frozen=True)
+class GramResolution:
+    grams: float | None
+    method: str
+    source_backed: bool | None
+
+
+def is_nonnegative_finite(value) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return isfinite(value) and value >= 0
+    except OverflowError:
+        return False
+
+
+def resolve_grams_detailed(quantity: float | None, unit: str | None, portion_grams: dict | None,
+                           *, verified_portion_grams: Mapping[str, float] | None = None) -> GramResolution:
+    unresolved = GramResolution(None, "unresolved", None)
+    if not is_nonnegative_finite(quantity) or not isinstance(unit, str) or not unit:
+        return unresolved
+    if portion_grams is not None and not isinstance(portion_grams, dict):
+        return unresolved
     if portion_grams and unit in portion_grams:
-        return quantity * portion_grams[unit]
-    if unit in GLOBAL_UNIT_GRAMS:
-        return quantity * GLOBAL_UNIT_GRAMS[unit]
-    return None
+        factor = portion_grams[unit]
+        method, source_backed = "ingredient_portion", None
+        if isinstance(verified_portion_grams, Mapping):
+            verified_factor = verified_portion_grams.get(unit)
+            if is_nonnegative_finite(verified_factor) and verified_factor > 0 and verified_factor == factor:
+                source_backed = True
+    elif unit in GLOBAL_UNIT_GRAMS:
+        factor = GLOBAL_UNIT_GRAMS[unit]
+        source_backed = unit in _MASS_UNIT_GRAMS
+        method = "direct_mass" if source_backed else "water_density_approximation"
+    else:
+        return unresolved
+    if not is_nonnegative_finite(factor) or factor == 0:
+        return unresolved
+    grams = quantity * factor
+    if not is_nonnegative_finite(grams):
+        return unresolved
+    return GramResolution(grams, method, source_backed)
+
+
+def resolve_grams(quantity: float | None, unit: str | None, portion_grams: dict | None) -> float | None:
+    return resolve_grams_detailed(quantity, unit, portion_grams).grams

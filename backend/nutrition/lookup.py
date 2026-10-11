@@ -22,6 +22,8 @@ class NutritionMatch:
     source_ref: str | None
     derivation: dict | None
     portion_grams: dict | None
+    unit_basis: str | None = None
+    ingredient_name: str | None = None
 
 
 def match_ingredient(db, name: str) -> NutritionMatch | None:
@@ -38,4 +40,5 @@ def match_ingredient(db, name: str) -> NutritionMatch | None:
         ingredient_nutrition_id=row.id,
         macros=MacroValues(calories=row.calories, protein_g=row.protein_g, carbs_g=row.carbs_g, fat_g=row.fat_g),
         source=row.source, source_ref=row.source_ref, derivation=row.derivation, portion_grams=row.portion_grams,
+        unit_basis=row.unit_basis, ingredient_name=row.ingredient_name,
     )

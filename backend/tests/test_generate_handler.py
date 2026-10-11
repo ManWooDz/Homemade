@@ -11,7 +11,9 @@ from main import (
     save_generate_history,
     validate_recipe,
 )
-from nutrition.calculator import NutritionResult
+from nutrition.calculator import NutritionResult, compute_recipe_nutrition
+from nutrition.lookup import MacroValues, NutritionMatch
+from test_nutrition_evidence import synthetic_match
 
 _STUB_NUTRITION_RESULT = NutritionResult(
     nutrition={"basis": "per_serving", "calories": 1.0, "protein_g": 1.0, "carbs_g": 1.0, "fat_g": 1.0},
@@ -322,6 +324,28 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response["data"]["nutrition"], VALID_RECIPE["nutrition"])
                 self.assertEqual(response["data"]["computed_nutrition"], insane.nutrition)
 
+    async def test_real_calculator_provenance_reaches_existing_partial_api_branch(self):
+        self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
+        for basis, derivation, expected_reason, expected_calories in (
+            ("100g", None, "source unverified", 107.5),
+            ("100g", {"proxy": "synthetic substitute"}, "proxy composition", 107.5),
+            ("100g", {"energy_kcal": "atwater"}, "project-filled energy_kcal (atwater)", 107.5),
+            ("100ml", None, "unsupported macro basis", 0),
+        ):
+            with self.subTest(basis=basis, derivation=derivation):
+                match = NutritionMatch(1, MacroValues(100, 5, 10, 1), "INMU", "synthetic", derivation, None, basis)
+                with patch("nutrition.calculator.match_ingredient", return_value=match), \
+                        patch("main.call_agentic_llm", return_value=deepcopy(VALID_RECIPE)), \
+                        patch("builtins.print") as print_log:
+                    response = await call_handler(self.make_request())
+                data = response["data"]
+                self.assertEqual(response["status"], "success")
+                self.assertIs(data["nutrition_partially_estimated"], True)
+                self.assertEqual(data["nutrition"], VALID_RECIPE["nutrition"])
+                self.assertEqual(data["llm_estimated_nutrition"], VALID_RECIPE["nutrition"])
+                self.assertEqual(data["computed_nutrition"]["calories"], expected_calories)
+                self.assertTrue(any(expected_reason in str(call) for call in print_log.call_args_list))
+
     async def test_engine_failure_keeps_llm_guess_and_flags_instead_of_erroring(self):
         self.mock_compute_nutrition.side_effect = RuntimeError("db exploded")
         with patch("main.call_agentic_llm", side_effect=[deepcopy(VALID_RECIPE)]):
@@ -331,6 +355,35 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response["data"]["nutrition"], VALID_RECIPE["nutrition"])
         self.assertEqual(response["data"]["nutrition_partially_estimated"], True)
         self.assertNotIn("computed_nutrition", response["data"])
+
+    async def test_real_calculator_synthetic_qualified_result_enters_computed_branch(self):
+        self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
+        recipe = deepcopy(VALID_RECIPE)
+        recipe["adjusted_ingredients"] = ["หมูสับ 200 กรัม"]
+        with patch("nutrition.calculator.match_ingredient", return_value=synthetic_match(alias="หมูสับ")), \
+             patch("main.call_agentic_llm", return_value=recipe):
+            response = await call_handler(self.make_request())
+        data = response["data"]
+        self.assertEqual(response["status"], "success")
+        self.assertIs(data["nutrition_partially_estimated"], False)
+        self.assertEqual(data["nutrition"], data["computed_nutrition"])
+        self.assertEqual(data["nutrition"]["calories"], 100)
+        self.assertEqual(data["llm_estimated_nutrition"], VALID_RECIPE["nutrition"])
+
+    async def test_real_calculator_stale_synthetic_evidence_keeps_llm_branch(self):
+        self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
+        recipe = deepcopy(VALID_RECIPE)
+        recipe["adjusted_ingredients"] = ["หมูสับ 200 กรัม"]
+        match = synthetic_match(alias="หมูสับ")
+        match.macros.calories = 200
+        with patch("nutrition.calculator.match_ingredient", return_value=match), \
+             patch("main.call_agentic_llm", return_value=recipe):
+            response = await call_handler(self.make_request())
+        data = response["data"]
+        self.assertEqual(response["status"], "success")
+        self.assertIs(data["nutrition_partially_estimated"], True)
+        self.assertEqual(data["nutrition"], VALID_RECIPE["nutrition"])
+        self.assertEqual(data["computed_nutrition"]["calories"], 200)
 
     async def test_shared_valid_recipe_fixture_is_not_mutated(self):
         # (rev 3) Regression test: test_handler_sends_presence_names_
