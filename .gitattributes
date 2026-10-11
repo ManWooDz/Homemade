@@ -1,0 +1,3 @@
+# These maintenance modules have byte pins in the private reviewed evidence bundle.
+/backend/nutrition/activate_reviewed.py -text
+/backend/nutrition/correct_reviewed_g4.py -text
