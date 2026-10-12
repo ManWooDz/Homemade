@@ -13,6 +13,7 @@ import sys
 
 from database.db import SessionLocal
 from database.models import IngredientNutrition, IngredientNutritionAlias
+from nutrition.evidence import has_reviewed_metadata
 from nutrition.lookup import MacroValues
 from nutrition.text import normalize_alias
 
@@ -31,26 +32,51 @@ ZERO_NUTRITION_CONSTANTS: dict[str, MacroValues] = {
 def apply_curated_aliases(db, entries: list[dict]) -> dict:
     applied = 0
     skipped_missing_row = 0
+    planned_owners = {}
+    planned_portions = {}
+    prepared = []
 
     for entry in entries:
-        row = db.query(IngredientNutrition).filter_by(source_ref=entry["food_code"]).first()
-        if not row:
+        rows = db.query(IngredientNutrition).filter_by(source_ref=entry["food_code"]).all()
+        if len(rows) > 1:
+            raise ValueError(f"Curated aliases have ambiguous food code: {entry['food_code']}")
+        if not rows:
             skipped_missing_row += 1
             continue
+        row = rows[0]
 
         normalized = normalize_alias(entry["alias"])
+        if normalized not in planned_owners:
+            existing = db.query(IngredientNutritionAlias).filter_by(alias=normalized).first()
+            planned_owners[normalized] = db.get(IngredientNutrition, existing.ingredient_nutrition_id) if existing else None
+        owner = planned_owners[normalized]
+        if owner is not None and owner.id != row.id and (has_reviewed_metadata(owner) or has_reviewed_metadata(row)):
+            raise ValueError(f"Curated alias remap involves protected nutrition rows id={owner.id}/{row.id}; review required")
+        planned_owners[normalized] = row
+
+        merged = None
+        if "portion_grams" in entry:
+            merged = {**planned_portions.get(row.id, row.portion_grams or {}), **entry["portion_grams"]}
+            if has_reviewed_metadata(row) and merged != (row.portion_grams or {}):
+                raise ValueError(f"Curated portions cannot modify protected nutrition row id={row.id}; review required")
+            planned_portions[row.id] = merged
+        prepared.append((row, normalized, merged))
+
+    for normalized, row in planned_owners.items():
         existing = db.query(IngredientNutritionAlias).filter_by(alias=normalized).first()
         if existing:
             existing.ingredient_nutrition_id = row.id
         else:
             db.add(IngredientNutritionAlias(alias=normalized, ingredient_nutrition_id=row.id))
-        if "portion_grams" in entry:
+
+    for row, _, merged in prepared:
+        if merged is not None and not has_reviewed_metadata(row):
             # Curated, ingredient-specific unit weights (e.g. 1 ฟอง egg ~ 50 g).
             # Merged -- never replaces -- whatever portions the row already
             # has (e.g. from seed_usda.py's backfill_portions); a curated
             # value for the same unit key wins. Reassigned as a new dict so
             # SQLAlchemy sees the JSON column change.
-            row.portion_grams = {**(row.portion_grams or {}), **entry["portion_grams"]}
+            row.portion_grams = merged
         applied += 1
 
     db.commit()

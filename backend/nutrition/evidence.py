@@ -21,6 +21,14 @@ _DEFINITIONS = {
 _MARKERS = ("proxy", "energy_kcal", "carbs_g")
 
 
+def has_reviewed_metadata(row):
+    """Protect review history even when qualification fails or is incomplete."""
+    derivation = row.derivation if row is not None else None
+    return isinstance(derivation, dict) and any(
+        key in derivation for key in ("nutrition_evidence", "g4_correction")
+    )
+
+
 @dataclass(frozen=True)
 class EvidenceQualification:
     identity_verified: bool

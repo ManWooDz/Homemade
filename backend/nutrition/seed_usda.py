@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 
 from database.db import SessionLocal
 from database.models import IngredientNutrition, IngredientNutritionAlias
+from nutrition.evidence import has_reviewed_metadata
 from nutrition.lookup import match_ingredient
 from nutrition.text import normalize_alias
 
@@ -194,6 +195,8 @@ def import_usda(db, session, api_key: str, food_ids: dict[str, int]) -> dict:
             if _row_is_current(existing, fdc_id):
                 skipped_existing += 1
             elif existing.source == "USDA":
+                if has_reviewed_metadata(existing):
+                    raise ValueError(f"USDA refresh cannot modify protected nutrition row id={existing.id}; review required")
                 pending.append((ingredient_name, fdc_id, existing))
             else:
                 skipped_existing += 1
@@ -204,6 +207,13 @@ def import_usda(db, session, api_key: str, food_ids: dict[str, int]) -> dict:
             skipped_existing += 1
             continue
         pending.append((ingredient_name, fdc_id, None))
+
+    for ingredient_name, _, existing in pending:
+        alias = db.query(IngredientNutritionAlias).filter_by(alias=normalize_alias(ingredient_name)).first()
+        if alias is not None and (existing is None or alias.ingredient_nutrition_id != existing.id):
+            owner = db.get(IngredientNutrition, alias.ingredient_nutrition_id)
+            if has_reviewed_metadata(owner):
+                raise ValueError(f"USDA alias remap cannot modify protected nutrition row id={owner.id}; review required")
 
     details = fetch_foods(session, api_key, [fdc_id for _, fdc_id, _ in pending])
     prepared: list[tuple[str, int, IngredientNutrition | None, dict, dict[str, float]]] = []
@@ -250,18 +260,29 @@ def backfill_portions(db, session, api_key: str, portion_sources: dict[str, tupl
     backfilled = skipped_row_not_found = 0
     rows_and_sources = []
     for food_code, (fdc_id, marker) in portion_sources.items():
-        row = db.query(IngredientNutrition).filter_by(source_ref=food_code).first()
-        if not row:
+        rows = db.query(IngredientNutrition).filter_by(source_ref=food_code).all()
+        if len(rows) > 1:
+            raise ValueError(f"USDA portion backfill has ambiguous food code: {food_code}")
+        if not rows:
             skipped_row_not_found += 1
             continue
+        row = rows[0]
         rows_and_sources.append((row, fdc_id, marker))
 
     details = fetch_foods(session, api_key, [fdc_id for _, fdc_id, _ in rows_and_sources])
+    prepared = []
     for row, fdc_id, marker in rows_and_sources:
         portions = _extract_portion_grams(details[fdc_id], marker)
         if portions:
-            row.portion_grams = {**(row.portion_grams or {}), **portions}
-            backfilled += 1
+            merged = {**(row.portion_grams or {}), **portions}
+            if has_reviewed_metadata(row) and merged != (row.portion_grams or {}):
+                raise ValueError(f"USDA portion backfill cannot modify protected nutrition row id={row.id}; review required")
+            prepared.append((row, merged))
+
+    for row, merged in prepared:
+        if not has_reviewed_metadata(row):
+            row.portion_grams = merged
+        backfilled += 1
 
     db.commit()
     return {"backfilled": backfilled, "skipped_row_not_found": skipped_row_not_found}

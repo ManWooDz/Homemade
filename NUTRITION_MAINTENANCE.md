@@ -43,6 +43,29 @@ Windows/Linux checkout without changing global Git settings. No docs allowlist,
 PDF publication or deployment-secret copying is needed for default tests.
 
 This commit does not distribute live DB contents or reproduce C2/G4 on a fresh DB.
-Seeds/importers remain historical; G4's missing total carbohydrate remains partial.
+Seeds/importers still contain historical inputs; G4's missing total carbohydrate remains partial.
 Independent source QA, clinical safety, browser/provider behavior and held-out
 coverage are not established by these tests.
+
+## Preserving reviewed rows during import
+
+Ordinary USDA refresh, portion backfill and curated alias writes protect any row
+whose derivation contains nutrition_evidence or g4_correction, even if that value
+is partial, stale or malformed. This is preservation, not evidence qualification.
+Protected USDA refresh raises ValueError before fetching; portion additions or
+changes and alias remaps involving a protected owner or target require a separate
+review. Identical portions/same-owner aliases remain no-ops. New aliases may be
+added without adding certified identity entries; qualification rules are unchanged.
+
+Each function preflights its batch before its own mutations, including duplicate
+curated alias intents. Food codes resolving to multiple rows raise ValueError
+rather than selecting the first row. Unambiguous non-reviewed rows retain their
+existing behavior and result shapes; processed no-ops retain the existing counts.
+There is no bypass flag or atomic transaction across USDA's two CLI functions.
+Use a dedicated maintenance session; this does not suppress caller-owned pending
+changes, direct SQL, concurrent external writers or deletion/recreation of a DB.
+
+INMU import already skips existing ingredient names and preserves existing aliases.
+These guards do not activate reviewed records on an empty DB or certify legacy
+values. Fresh-DB activation and any live transition still need a separately
+reviewed snapshot and the original private evidence bundle.

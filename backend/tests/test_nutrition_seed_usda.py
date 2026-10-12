@@ -1,3 +1,4 @@
+from copy import deepcopy
 import unittest
 from unittest.mock import MagicMock
 
@@ -53,6 +54,23 @@ def _fake_session(batch_json):
 
     session.get.side_effect = fake_get
     return session
+
+
+_REVIEW_METADATA = (
+    {"nutrition_evidence": {"review": {"status": "accepted"}}},
+    {"nutrition_evidence": {"macros": [], "review": {"status": "accepted"}}},
+    {"nutrition_evidence": {"row_binding": {"source_ref": "stale"}}},
+    {"nutrition_evidence": None},
+    {"g4_correction": None},
+)
+
+
+def _snapshot(db):
+    return [
+        [{col.name: deepcopy(getattr(row, col.name)) for col in model.__table__.columns}
+         for row in db.query(model).order_by(model.id)]
+        for model in (IngredientNutrition, IngredientNutritionAlias)
+    ]
 
 
 class ImportUsdaTests(unittest.TestCase):
@@ -164,6 +182,64 @@ class ImportUsdaTests(unittest.TestCase):
             import_usda(self.db, _fake_session([incomplete]), "fake-key", {"shrimp": 12345})
         self.assertEqual(self.db.query(IngredientNutrition).count(), 0)
 
+    def test_protected_refresh_rejects_entire_batch_before_api(self):
+        row = IngredientNutrition(ingredient_name="shrimp", unit_basis="100g", calories=85.0,
+                                  protein_g=20.1, carbs_g=None, fat_g=0.5, source="USDA", source_ref="999")
+        self.db.add(row)
+        for metadata in _REVIEW_METADATA:
+            for reverse in (False, True):
+                with self.subTest(metadata=metadata, reverse=reverse):
+                    row.derivation = deepcopy(metadata)
+                    self.db.commit()
+                    before = _snapshot(self.db)
+                    entries = [("new food", 54321), ("shrimp", 12345)]
+                    session = _fake_session([_DETAIL_RESPONSE])
+                    with self.assertRaisesRegex(ValueError, "USDA refresh.*protected") as ctx:
+                        import_usda(self.db, session, "secret-key", dict(reversed(entries) if reverse else entries))
+                    self.assertNotIn("secret-key", str(ctx.exception))
+                    session.get.assert_not_called()
+                    self.db.commit()
+                    self.assertEqual(_snapshot(self.db), before)
+
+    def test_current_protected_row_is_skipped_unchanged(self):
+        row = IngredientNutrition(ingredient_name="shrimp", unit_basis="100g", calories=85.0,
+                                  protein_g=20.1, carbs_g=0.2, fat_g=0.5, source="USDA", source_ref="12345",
+                                  derivation={"nutrition_evidence": None})
+        self.db.add(row)
+        self.db.commit()
+        before = _snapshot(self.db)
+        session = _fake_session([])
+        result = import_usda(self.db, session, "fake-key", {"shrimp": 12345})
+        self.assertEqual(result, {"imported": 0, "refreshed": 0, "skipped_existing": 1})
+        session.get.assert_not_called()
+        self.assertEqual(_snapshot(self.db), before)
+
+    def test_refresh_cannot_steal_alias_from_protected_owner(self):
+        owner = IngredientNutrition(ingredient_name="reviewed owner", unit_basis="100g",
+                                    source="INMU", source_ref="TEST", derivation={"g4_correction": {}})
+        target = IngredientNutrition(ingredient_name="shrimp", unit_basis="100g", source="USDA", source_ref="999")
+        self.db.add_all([owner, target])
+        self.db.flush()
+        self.db.add(IngredientNutritionAlias(alias="shrimp", ingredient_nutrition_id=owner.id))
+        self.db.commit()
+        before = _snapshot(self.db)
+        session = _fake_session([_DETAIL_RESPONSE])
+        with self.assertRaisesRegex(ValueError, "USDA alias remap.*protected"):
+            import_usda(self.db, session, "fake-key", {"new food": 54321, "shrimp": 12345})
+        session.get.assert_not_called()
+        self.db.commit()
+        self.assertEqual(_snapshot(self.db), before)
+
+    def test_nonreviewed_alias_remap_remains_supported(self):
+        owner = IngredientNutrition(ingredient_name="old owner", unit_basis="100g", source="INMU", source_ref="TEST")
+        target = IngredientNutrition(ingredient_name="shrimp", unit_basis="100g", source="USDA", source_ref="999")
+        self.db.add_all([owner, target])
+        self.db.flush()
+        self.db.add(IngredientNutritionAlias(alias="shrimp", ingredient_nutrition_id=owner.id))
+        self.db.commit()
+        import_usda(self.db, _fake_session([_DETAIL_RESPONSE]), "fake-key", {"shrimp": 12345})
+        self.assertEqual(self.db.query(IngredientNutritionAlias).one().ingredient_nutrition_id, target.id)
+
 
 class BackfillPortionsTests(unittest.TestCase):
     def setUp(self):
@@ -190,6 +266,46 @@ class BackfillPortionsTests(unittest.TestCase):
         self.assertEqual(row.portion_grams["ช้อนโต๊ะ"], 18.0)
         self.assertEqual(row.portion_grams["ช้อนชา"], 6.0)
         self.assertEqual(result["backfilled"], 1)
+
+    def test_protected_portion_change_rejects_whole_batch(self):
+        other = IngredientNutrition(ingredient_name="other sauce", unit_basis="100g", source="INMU", source_ref="OTHER")
+        self.db.add(other)
+        for metadata in _REVIEW_METADATA:
+            for portions in (None, {"ช้อนโต๊ะ": 17.0}, {"ช้อนโต๊ะ": 18.0}):
+                for reverse in (False, True):
+                    with self.subTest(metadata=metadata, portions=portions, reverse=reverse):
+                        self.fish_sauce.derivation = deepcopy(metadata)
+                        self.fish_sauce.portion_grams = deepcopy(portions)
+                        self.db.commit()
+                        before = _snapshot(self.db)
+                        entries = [("OTHER", (99999, "fish sauce")), ("N72", (99999, "fish sauce"))]
+                        with self.assertRaisesRegex(ValueError, "portion backfill.*protected"):
+                            backfill_portions(self.db, _fake_session([_FISH_SAUCE_DETAIL]), "fake-key",
+                                              dict(reversed(entries) if reverse else entries))
+                        self.db.commit()
+                        self.assertEqual(_snapshot(self.db), before)
+
+    def test_identical_protected_portions_and_no_source_portions_are_noops(self):
+        self.fish_sauce.derivation = {"nutrition_evidence": None}
+        self.fish_sauce.portion_grams = {"ช้อนโต๊ะ": 18.0, "ช้อนชา": 6.0}
+        self.db.commit()
+        before = _snapshot(self.db)
+        for detail in (_FISH_SAUCE_DETAIL, _FISH_SAUCE_DETAIL, {**_FISH_SAUCE_DETAIL, "foodPortions": []}):
+            result = backfill_portions(self.db, _fake_session([detail]), "fake-key", {"N72": (99999, "fish sauce")})
+            self.assertEqual(result["backfilled"], 1 if detail["foodPortions"] else 0)
+            self.assertEqual(_snapshot(self.db), before)
+
+    def test_ambiguous_food_code_rejects_before_api(self):
+        self.db.add(IngredientNutrition(ingredient_name="other publisher row", unit_basis="100g",
+                                       source="USDA", source_ref="N72"))
+        self.db.commit()
+        before = _snapshot(self.db)
+        session = _fake_session([])
+        with self.assertRaisesRegex(ValueError, "ambiguous food code"):
+            backfill_portions(self.db, session, "fake-key", {"N72": (99999, "fish sauce")})
+        session.get.assert_not_called()
+        self.db.commit()
+        self.assertEqual(_snapshot(self.db), before)
 
 
 if __name__ == "__main__":

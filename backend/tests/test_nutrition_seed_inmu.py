@@ -115,6 +115,28 @@ class ImportCsvTests(unittest.TestCase):
         self.assertEqual(result["imported"], 0)
         self.assertEqual(len(self.db.query(IngredientNutrition).filter_by(ingredient_name="ทดสอบซ้ำ").all()), 1)
 
+    def test_historical_reimport_preserves_reviewed_row_and_aliases(self):
+        row = IngredientNutrition(ingredient_name="กุ้งก้ามกราม, สด", unit_basis="100g", calories=108.0,
+                                  protein_g=17.9, carbs_g=None, fat_g=3.7, source="INMU", source_ref="G4",
+                                  portion_grams={"ตัว": 15.0},
+                                  derivation={"nutrition_evidence": {"macros": []}, "g4_correction": {"previous": 88.0}})
+        self.db.add(row)
+        self.db.flush()
+        self.db.add(IngredientNutritionAlias(alias="reviewed shrimp", ingredient_nutrition_id=row.id))
+        self.db.commit()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "historical.csv"
+            _write_fixture_csv(path, [["G4", "กุ้งก้ามกราม, สด", "Shrimp fresh", "-", "-", "17.9", "3.7", "88", "-", "-"]])
+            for _ in range(2):
+                self.assertEqual(import_csv(self.db, str(path))["imported"], 0)
+        self.db.expire_all()
+        self.assertEqual((row.calories, row.protein_g, row.carbs_g, row.fat_g), (108.0, 17.9, None, 3.7))
+        self.assertEqual((row.source, row.source_ref, row.unit_basis), ("INMU", "G4", "100g"))
+        self.assertEqual(row.portion_grams, {"ตัว": 15.0})
+        self.assertEqual(row.derivation, {"nutrition_evidence": {"macros": []}, "g4_correction": {"previous": 88.0}})
+        self.assertEqual([(a.alias, a.ingredient_nutrition_id) for a in self.db.query(IngredientNutritionAlias)],
+                         [("reviewed shrimp", row.id)])
+
 
 if __name__ == "__main__":
     unittest.main()
