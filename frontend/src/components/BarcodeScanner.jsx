@@ -1,209 +1,161 @@
-import { useEffect, useId, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    prepareZXingModule,
+    Scanner,
+} from "@yudiel/react-qr-scanner";
+import { isValidBarcode } from "../utils/barcodeValidation";
 
-// Module-level chain: serializes start/stop across mounts of this widget so
-// React StrictMode's dev double-invoke (mount -> cleanup -> mount, back to
-// back, without awaiting the cleanup) can never run two Html5Qrcode camera
-// sessions concurrently against getUserMedia.
-let scannerTurnstile = Promise.resolve();
+// Keep these objects outside the component: the scanner treats changed object
+// identities as new camera settings and would otherwise restart on each render.
+const RETAIL_FORMATS = [
+    "ean_13",
+    "ean_8",
+    "upc_a",
+    "upc_e",
+    "itf",
+    "itf_14",
+    "code_128",
+];
 
-// This widget can unmount (e.g. the parent flips away from "scanning" the
-// instant a code is detected/submitted) while html5-qrcode's internal
-// <video>.play() promise is still pending. Chromium then rejects that
-// promise once the element is torn out of the DOM ("play() request was
-// interrupted because the media was removed from the document") — a
-// benign, Chrome-documented artifact (https://goo.gl/LdLk22) of
-// intentional teardown, not a real error, but it surfaces as an uncaught
-// rejection. The rejection can land after our own effect cleanup has
-// already run, so this is installed once for the page's lifetime rather
-// than scoped to a single mount — it only ever swallows this one exact,
-// known-benign message.
-if (typeof window !== "undefined") {
-    window.addEventListener("unhandledrejection", (event) => {
-        if (
-            typeof event.reason?.message === "string" &&
-            event.reason.message.includes("play() request was interrupted")
-        ) {
-            event.preventDefault();
-        }
-    });
-}
+const CAMERA_CONSTRAINTS = {
+    facingMode: "environment",
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 30 },
+};
+
+const SCANNER_COMPONENTS = {
+    finder: true,
+    torch: true,
+    zoom: true,
+    onOff: false,
+};
+
+const SCANNER_STYLES = {
+    container: {
+        width: "100%",
+        height: "100%",
+        aspectRatio: "16 / 9",
+        borderRadius: "0.75rem",
+    },
+    video: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+    },
+};
 
 // Pure scanning widget: camera feed + manual-digit fallback. No page chrome,
 // no API call — the parent page owns navigation and the barcode-lookup call.
-export default function BarcodeScanner({ onDetected }) {
-    const [manualCode, setManualCode] = useState("");
+export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, focusInput }) {
     const [cameraError, setCameraError] = useState("");
-    const elementId = useId().replace(/:/g, "");
-    const onDetectedRef = useRef(onDetected);
-    onDetectedRef.current = onDetected;
+    const [codeError, setCodeError] = useState("");
+    const manualInput = useRef(null);
+    const scanLockedRef = useRef(false);
 
     useEffect(() => {
-        let cancelled = false;
-        let startPromise = null;
-        // useBarCodeDetectorIfSupported belongs HERE (2nd constructor arg),
-        // not in start()'s config — verified in html5-qrcode's own source
-        // (html5-qrcode.js: Html5Qrcode constructor reads it, not start()).
-        // Omitting it (as this code did before) silently defaults to true,
-        // meaning it tries the browser's native BarcodeDetector API — whose
-        // per-format support (EAN/UPC specifically) varies unpredictably
-        // across devices/browsers and isn't actually verified by the
-        // library before use. Forcing the bundled ZXing-JS decoder instead
-        // trades a rare native-speed win for real cross-device consistency.
-        const html5QrCode = new Html5Qrcode(elementId, {
-            useBarCodeDetectorIfSupported: false,
-        });
-        const myTurn = scannerTurnstile;
+        // Start downloading/compiling ZXing-C++ while camera permission and
+        // playback are being established, reducing time to the first decode.
+        void prepareZXingModule({ fireImmediately: true }).catch(() => {});
+    }, []);
 
-        const ready = myTurn.then(() => {
-            if (cancelled) return;
-            startPromise = html5QrCode.start(
-                { facingMode: "environment" },
-                {
-                    fps: 10,
-                    // A square box crops out most of a 1D barcode's width in
-                    // the actual decoded region (verified in html5-qrcode's
-                    // own source: foreverScan() draws only this box's pixels
-                    // to the decode canvas — nothing outside it is ever
-                    // seen, regardless of what the live preview shows). EAN/
-                    // UPC barcodes are wide relative to their height, so the
-                    // box needs to be too.
-                    qrbox: (viewfinderWidth, viewfinderHeight) => ({
-                        width: Math.floor(viewfinderWidth * 0.85),
-                        height: Math.floor(viewfinderHeight * 0.65),
-                    }),
-                    // Confirmed via source (html5-qrcode.js start()): when
-                    // videoConstraints is set, it REPLACES the first-arg
-                    // camera selection entirely — facingMode has to be
-                    // repeated here or it's silently dropped. Requesting
-                    // higher resolution matters specifically for 1D barcodes
-                    // (EAN/UPC): decode reliability scales with how many
-                    // pixels the bars actually span, unlike QR codes which
-                    // are far more tolerant of low resolution.
-                    videoConstraints: {
-                        facingMode: "environment",
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 },
-                    },
-                },
-                (decodedText) => {
-                    // Stop after the first hit; the callback otherwise fires
-                    // on every decoded frame and would re-trigger lookups.
-                    html5QrCode
-                        .stop()
-                        .catch(() => {})
-                        .finally(() => {
-                            try {
-                                html5QrCode.clear();
-                            } catch {
-                                // clear() is synchronous and can throw if the
-                                // scanner never fully initialized — harmless.
-                            }
-                            onDetectedRef.current(decodedText);
-                        });
-                },
-                () => {
-                    // per-frame "nothing decoded yet" noise, not a real error
-                },
+    useEffect(() => {
+        if (focusInput || cameraError) manualInput.current?.focus();
+    }, [focusInput, cameraError]);
+
+    const handleScan = useCallback(
+        (detectedCodes) => {
+            if (scanLockedRef.current) return;
+
+            const detected = detectedCodes.find(({ rawValue }) =>
+                isValidBarcode(rawValue),
             );
-            startPromise.then(() => {
-                // html5-qrcode's own createVideoElement() snapshots the
-                // container's clientWidth ONCE at creation and hardcodes it
-                // as an inline px width on the <video> forever — it never
-                // re-measures (confirmed: no resize listener in its source).
-                // If the container's real width differs even slightly by
-                // the time layout settles (e.g. a scrollbar appearing or
-                // disappearing between that measurement and final paint),
-                // the video is left permanently smaller than its container,
-                // showing as a thin dark border. Overriding to fill
-                // responsively removes any dependence on that one-time
-                // snapshot being exactly right.
-                const videoEl = document.getElementById(elementId)?.querySelector("video");
-                if (videoEl) {
-                    videoEl.style.width = "100%";
-                    videoEl.style.height = "100%";
-                    videoEl.style.objectFit = "cover";
-                }
-            });
-            startPromise.catch(() => {
-                if (!cancelled) {
-                    setCameraError(
-                        "เปิดกล้องไม่ได้ ลองพิมพ์เลขบาร์โค้ดด้านล่างแทน",
-                    );
-                }
-            });
-        });
+            if (!detected) return;
 
-        scannerTurnstile = ready
-            .then(() => startPromise)
-            .catch(() => {});
+            scanLockedRef.current = true;
+            onDetected(detected.rawValue);
+        },
+        [onDetected],
+    );
 
-        return () => {
-            cancelled = true;
-            scannerTurnstile = ready
-                .then(() => startPromise)
-                .then(() => html5QrCode.stop())
-                .catch(() => {})
-                .finally(() => {
-                    try {
-                        html5QrCode.clear();
-                    } catch {
-                        // same as above — safe to ignore
-                    }
-                });
-        };
-    }, [elementId]);
+    const handleCameraError = useCallback(() => {
+        setCameraError(
+            "เปิดกล้องหรือระบบสแกนไม่ได้ คุณยังพิมพ์เลขหรือเพิ่มวัตถุดิบเองได้",
+        );
+    }, []);
 
     const handleManualSubmit = (e) => {
         e.preventDefault();
         const trimmed = manualCode.trim();
-        if (!trimmed) return;
+        if (!isValidBarcode(trimmed)) {
+            setCodeError("กรุณากรอกเลขบาร์โค้ด 8–14 หลัก โดยใช้ตัวเลข 0–9 เท่านั้น");
+            manualInput.current?.focus();
+            return;
+        }
+        if (scanLockedRef.current) return;
+        scanLockedRef.current = true;
         onDetected(trimmed);
     };
 
     return (
         <div>
-            <div
-                id={elementId}
-                // html5-qrcode's <video> only gets an explicit width — its
-                // height auto-follows the real camera stream's aspect ratio
-                // (confirmed 16:9 on the webcam tested against). A square
-                // container is taller than that, leaving real empty space
-                // below the video (not a shading artifact) — matching the
-                // container's own aspect ratio to the camera's fills it.
-                className="w-full aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3"
-            />
+            {!cameraError && <div className="barcode-camera w-full aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3">
+                <Scanner
+                    onScan={handleScan}
+                    onError={handleCameraError}
+                    constraints={CAMERA_CONSTRAINTS}
+                    formats={RETAIL_FORMATS}
+                    components={SCANNER_COMPONENTS}
+                    styles={SCANNER_STYLES}
+                    retryDelay={50}
+                    sound={false}
+                />
+            </div>}
 
             {cameraError && (
-                <p className="text-sm text-red-500 mb-3">{cameraError}</p>
+                <p role="alert" className="text-sm text-red-700 mb-4">{cameraError}</p>
             )}
 
             {!cameraError && (
-                <p className="text-xs text-gray-400 mb-3 text-center">
-                    วางบาร์โค้ดในแนวนอน ให้เห็นเต็มแท่งในกรอบ
+                <p className="text-sm text-gray-600 mb-6 text-center">
+                    ให้เห็นบาร์โค้ดครบทั้งแถบ ถือกล้องให้นิ่ง ไม่ต้องเข้าใกล้มาก
                 </p>
             )}
 
-            <p className="text-xs text-gray-400 mb-2">
-                กล้องเปิดไม่ได้? พิมพ์เลขบาร์โค้ดเอง:
-            </p>
-            <form onSubmit={handleManualSubmit} className="flex gap-2">
+            <form onSubmit={handleManualSubmit} noValidate>
+                <label htmlFor="barcode-code" className="block text-sm font-semibold text-gray-900 mb-1">
+                    เลขบาร์โค้ด
+                </label>
+                <p id="barcode-code-hint" className="text-sm text-gray-600 mb-3">
+                    พิมพ์เลข 8–14 หลักใต้บาร์โค้ดแทนการสแกนได้
+                </p>
+                <div className="flex flex-col min-[360px]:flex-row gap-3">
                 <input
+                    ref={manualInput}
+                    id="barcode-code"
                     type="text"
                     inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="8850999327015"
-                    className="flex-1 bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#EF5A3A]"
+                    autoComplete="off"
+                    pattern="[0-9]{8,14}"
+                    aria-invalid={Boolean(codeError)}
+                    aria-describedby={codeError ? "barcode-code-hint barcode-code-error" : "barcode-code-hint"}
+                    placeholder="เช่น 8850999327015"
+                    className="min-w-0 flex-1 min-h-11 bg-gray-50 border border-gray-500 rounded-xl px-3 py-2 text-base placeholder:text-gray-600 focus:outline-2 focus:outline-offset-2 focus:outline-[#B93E25]"
                     value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
+                    onChange={(e) => {
+                        onCodeChange(e.target.value.replace(/[^0-9]/g, ""));
+                        setCodeError("");
+                    }}
                 />
                 <button
                     type="submit"
                     disabled={!manualCode.trim()}
-                    className="bg-[#EF5A3A] text-white px-4 rounded-xl text-sm font-medium disabled:opacity-50"
+                    className="min-h-11 bg-[#B93E25] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#9F341F] disabled:bg-gray-100 disabled:text-gray-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25] transition"
                 >
-                    Look up
+                    ค้นหาสินค้า
                 </button>
+                </div>
+                {codeError && <p id="barcode-code-error" role="alert" className="text-sm text-red-700 mt-3">{codeError}</p>}
             </form>
         </div>
     );

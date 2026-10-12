@@ -41,6 +41,30 @@
   display: none;
 }
 
+/* shortcut: scanner 2.6 exposes no finder styles; recheck this selector on upgrade.
+   Keep its built-in finder mounted so torch/zoom controls remain available. */
+.barcode-camera [style*="border: 2px dashed"] {
+  width: 82% !important;
+  aspect-ratio: 3 / 1 !important;
+  border-color: rgb(255 255 255 / 50%) !important;
+}
+.barcode-camera [style*="border: 2px dashed"] > div {
+  width: 20px !important;
+  height: 20px !important;
+}
+.barcode-camera [style*="border: 2px dashed"] > div:nth-child(1) {
+  border-color: #fff transparent transparent #fff !important;
+}
+.barcode-camera [style*="border: 2px dashed"] > div:nth-child(2) {
+  border-color: #fff #fff transparent transparent !important;
+}
+.barcode-camera [style*="border: 2px dashed"] > div:nth-child(3) {
+  border-color: transparent transparent #fff #fff !important;
+}
+.barcode-camera [style*="border: 2px dashed"] > div:nth-child(4) {
+  border-color: transparent #fff #fff transparent !important;
+}
+
 @keyframes shake {
   10%, 90% { transform: translateX(-1px); }
   20%, 80% { transform: translateX(2px); }
