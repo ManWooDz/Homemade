@@ -10,7 +10,7 @@ from typing import Literal, Optional
 
 from sqlalchemy.orm import Session
 
-from allergen_kg.floor import FLOOR_BLOCKS, detect_flagged_allergens
+from allergen_kg.floor import FLOOR_BLOCKS, detect_flagged_allergens, parse_allergy_preferences
 from allergen_kg.graph import get_allergen_closure
 
 log = logging.getLogger("allergen_kg")
@@ -70,6 +70,29 @@ def resolve_blocks_for_keys(db: Session, keys: list[str]) -> dict[str, ResolvedA
 
 def resolve_allergy_blocks(db: Session, user_prefs) -> dict[str, ResolvedAllergen]:
     return resolve_blocks_for_keys(db, detect_flagged_allergens(user_prefs))
+
+
+def allergy_blocks_ready(user_prefs, resolved_blocks) -> bool:
+    """Require the declared keys' known seed vocabulary, not merely a nonempty KG."""
+    keys, ambiguous = parse_allergy_preferences(user_prefs)
+    if ambiguous:
+        return False
+    if not keys:
+        return True
+    from database.seed_allergen_graph import EDGES
+
+    for key in keys:
+        resolved = (resolved_blocks or {}).get(key)
+        if resolved is None or resolved.graph_status != "ok":
+            return False
+        root = "allergen:" + key
+        reachable = {root}
+        for _ in range(6):  # Same hop limit as get_allergen_closure.
+            reachable.update({source for source, target, _ in EDGES if target in reachable})
+        kg_terms = {name for name, info in resolved.terms.items() if info.matched_via == "kg"}
+        if not (reachable - {root}).issubset(kg_terms):
+            return False
+    return True
 
 
 def unavailable_blocks(user_prefs) -> dict[str, ResolvedAllergen]:

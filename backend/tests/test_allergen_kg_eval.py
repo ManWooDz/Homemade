@@ -4,7 +4,8 @@ import unittest
 
 from allergen_kg.fixtures import add_edges, make_memory_db
 from allergen_kg.resolve import resolve_blocks_for_keys
-from eval.allergen_kg_eval import assert_graph_status, collision_scan, empty_resolver, score_pairs, seeded_resolver
+from eval.allergen_kg_eval import (HISTORICAL_KEYS, V2_KEYS, assert_graph_status, collision_scan,
+    empty_resolver, load_labels, score_pairs, seeded_resolver)
 from eval.build_allergen_label_pool import canonical_sha256
 
 
@@ -153,8 +154,7 @@ class ScorePairsBreakdownTests(unittest.TestCase):
 
 
 def _all_keys():
-    from allergen_kg.floor import ALLERGEN_MAP
-    return ALLERGEN_MAP
+    return HISTORICAL_KEYS
 
 
 class CollisionScanTests(unittest.TestCase):

@@ -31,8 +31,7 @@ export const CUISINE_EMOJI = {
 // the labels reach the backend as preferences.allergies, which feeds both the
 // LLM prompt and the rule-based allergy check — detect_flagged_allergens in
 // backend/allergen_kg/floor.py reads the "allergies" key and matches these
-// labels against ALLERGEN_MAP triggers. "แพ้งา" has no matching trigger yet,
-// so sesame is only enforced by the LLM prompt, not by the rule-based check.)
+// labels against ALLERGEN_MAP triggers, including the tenth key, sesame.)
 const RESTRICTION_ITEMS = [
   { label: "แพ้ถั่ว", emoji: "🥜", isAllergy: true },
   { label: "แพ้นม / ผลิตภัณฑ์จากนม", emoji: "🥛", isAllergy: true },

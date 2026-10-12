@@ -1,6 +1,7 @@
 import unittest
 from dataclasses import FrozenInstanceError
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 from personalization.repository import HistorySignal
 
@@ -41,6 +42,59 @@ APPROVED_FOOTER = "<<<END_PERSONALIZATION_REFERENCE_DATA>>>"
 
 
 class PersonalizationContextContractTests(unittest.TestCase):
+    def test_public_builder_filters_literal_and_derived_history_with_real_matcher(self):
+        from allergen_kg.fixtures import make_memory_db
+        from allergen_kg.resolve import resolve_allergy_blocks
+        from database.seed_allergen_graph import seed_allergen_graph
+        from personalization.context import build_personalization_context
+
+        graph = make_memory_db()
+        self.addCleanup(graph.bind.dispose)
+        self.addCleanup(graph.close)
+        seed_allergen_graph(graph)
+        preferences = {"allergies": "แพ้งา"}
+        blocks = resolve_allergy_blocks(graph, preferences)
+        rows = []
+        for identity, name, ingredients, stars in (
+            (1, "Safe positive A", ["หมูสับ"], 5),
+            (2, "Safe positive B", ["ข้าว"], 4),
+            (3, "Safe negative", ["เงาะ"], 1),
+            (4, "Unsafe literal", ["งาดำ"], 5),
+            (5, "Unsafe derived", ["ทาฮินี (ไม่มีงา)"], 1),
+        ):
+            history = SimpleNamespace(id=identity, recipe_name=name,
+                adjusted_ingredients=ingredients, diet_tags=["Thai"])
+            rating = SimpleNamespace(stars=stars, tag=None, feedback=None)
+            rows.append((history, rating, None))
+        db = MagicMock()
+        db.get_bind.return_value.dialect.name = "postgresql"
+        db.execute.side_effect = [SimpleNamespace(scalar_one=lambda: 5),
+            SimpleNamespace(all=lambda: [row for row in rows if row[1].stars in (4, 5)]),
+            SimpleNamespace(all=lambda: [row for row in rows if row[1].stars in (1, 2)]),
+            SimpleNamespace(all=lambda: rows)]
+        context = build_personalization_context(db, 7, query_embedding=[0.1] * 768,
+            user_prefs=preferences, resolved_blocks=blocks)
+        self.assertIsNotNone(context)
+        self.assertEqual((context.positives, context.negatives), (2, 1))
+        self.assertIn("Safe positive A", context.prompt_block)
+        self.assertIn("Safe negative", context.prompt_block)
+        self.assertNotIn("Unsafe literal", context.prompt_block)
+        self.assertNotIn("Unsafe derived", context.prompt_block)
+
+    def test_uncheckable_allergy_does_not_query_history(self):
+        from allergen_kg.resolve import floor_only
+        from personalization.context import build_personalization_context
+
+        db = MagicMock()
+        db.execute.side_effect = AssertionError("History must not be queried")
+        context = build_personalization_context(
+            db, 7, query_embedding=[0.1] * 768,
+            user_prefs={"allergies": "shellfish"},
+            resolved_blocks={"shellfish": floor_only("shellfish", "unavailable")},
+        )
+        self.assertIsNone(context)
+        db.execute.assert_not_called()
+
     def test_public_context_interface_is_importable(self):
         from personalization.context import (
             PersonalizationContext,
@@ -57,8 +111,17 @@ class PersonalizationContextContractTests(unittest.TestCase):
 
 class PersonalizationContextClassificationAllergyAndProfileTests(unittest.TestCase):
     def _build(self, *, candidates, profile_rows=None, allergy_checker=None):
+        from allergen_kg.fixtures import make_memory_db
+        from allergen_kg.resolve import resolve_allergy_blocks
+        from database.seed_allergen_graph import seed_allergen_graph
         from personalization.context import build_personalization_context
 
+        graph = make_memory_db()
+        self.addCleanup(graph.bind.dispose)
+        self.addCleanup(graph.close)
+        seed_allergen_graph(graph)
+        preferences = {"allergies": "shellfish"}
+        blocks = resolve_allergy_blocks(graph, preferences)
         retrieval_calls = []
 
         def retrieve(_db, _user_id, _query_embedding, stars, limit=20):
@@ -80,8 +143,8 @@ class PersonalizationContextClassificationAllergyAndProfileTests(unittest.TestCa
                 object(),
                 17,
                 query_embedding=[0.1] * 768,
-                user_prefs={"allergies": ["shellfish"]},
-                resolved_blocks={"shrimp": object()},
+                user_prefs=preferences,
+                resolved_blocks=blocks,
             )
         self.assertEqual(retrieval_calls, [(4, 5), (1, 2)])
         return context

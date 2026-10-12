@@ -19,9 +19,9 @@ no Open Food Facts listing was re-fetched when writing this file, so none is
 cited. Replace/augment a citation with a specific OFF product listing only
 after actually checking that listing.
 
-Substring safety: recipe text is matched by substring against node names, so
-names are deliberately specific (no very short syllables). Known accepted
-limitations are noted next to the edges concerned.
+Matching uses the shared ingredient-scoped policy (allergen_kg/match.py), with
+English token boundaries and reviewed Thai compound exclusions. Node names
+remain deliberately specific; composition limitations are noted below.
 """
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -250,6 +250,16 @@ _add(["เม็ดมะม่วง"], "มะม่วงหิมพาน�
 _add(["มาร์ซิปัน", "marzipan"], "almond", f"{GTK} (marzipan is almond paste)")
 _add(["นูเทลล่า", "นูเทลลา", "nutella"], "hazelnut", "general knowledge of Nutella's published ingredient list (hazelnuts); Open Food Facts listing not re-fetched here")
 _add(["นูเทลล่า", "นูเทลลา", "nutella"], "นม", "general knowledge of Nutella's published ingredient list (skimmed milk powder); Open Food Facts listing not re-fetched here")
+
+# ---- sesame (composition sources checked 2026-10-07) ----------------------
+_add(["เมล็ดงา", "sesame seeds"], "allergen:sesame",
+     "FDA sesame allergen identity: https://www.fda.gov/consumers/consumer-updates/allergic-sesame-food-labels-now-must-list-sesame-allergen")
+_add(["น้ำมันงา", "sesame oil"], "เมล็ดงา",
+     "Kikkoman toasted sesame oil, sesame-seed ingredient: https://kikkomanusa.com/foodservice/products/preservative-free-non-gmo-toasted-sesame-oil/")
+_add(["ทาฮินี", "tahini"], "เมล็ดงา",
+     "Soom Premium Tahini, 100% roasted sesame seeds: https://soomfoods.com/collections/taste-the-difference/products/11oz-premium-tahini")
+_add(["ซอสงา", "sesame sauce"], "น้ำมันงา",
+     "Kikkoman sesame sauce recipe includes sesame oil (typical named sauce, not all sauces): https://kikkomanusa.com/foodservice/wp-content/uploads/sites/2/2021/11/kikkoman_recipes_kids_love_brochure-v5.2.pdf")
 
 
 # ---------------------------------------------------------------------------

@@ -28,7 +28,7 @@ class FindViolationTests(unittest.TestCase):
             "beta": TermInfo("kg", ("beta", "alpha")),
         })
         v = find_allergy_violation(recipe("beta 1 ช้อน"), {"allergy": "แพ้กุ้ง"}, blocks)
-        self.assertEqual(v, Violation("beta", "shrimp", "kg", ("beta", "alpha")))
+        self.assertEqual(v, Violation("beta", "shrimp", "kg", ("beta", "alpha"), "derived"))
 
     def test_deepest_chain_preferred_when_several_terms_match(self):
         blocks = shrimp_with({"beta": TermInfo("kg", ("beta", "alpha"))})
@@ -38,7 +38,7 @@ class FindViolationTests(unittest.TestCase):
     def test_floor_term_still_blocks_when_graph_empty(self):
         blocks = {"shrimp": floor_only("shrimp", "empty")}
         v = find_allergy_violation(recipe("กะปิ 1 ช้อนชา"), {"allergy": "แพ้กุ้ง"}, blocks)
-        self.assertEqual(v, Violation("กะปิ", "shrimp", "floor", None))
+        self.assertEqual(v, Violation("กะปิ", "shrimp", "floor", None, "derived"))
 
     def test_detected_key_missing_from_resolved_uses_floor(self):
         v = find_allergy_violation(recipe("นมสด"), {"allergy": "แพ้นม"}, {})
@@ -67,7 +67,7 @@ class FindViolationTests(unittest.TestCase):
         self.assertNotIn("shrimp", _norm(text))
         self.assertIn("shrimp", text.lower())
         v = find_allergy_violation(recipe(text), {"allergy": "แพ้กุ้ง"}, {"shrimp": floor_only("shrimp", "ok")})
-        self.assertEqual(v, Violation("shrimp", "shrimp", "floor", None))
+        self.assertEqual(v, Violation("shrimp", "shrimp", "floor", None, uncertain=True))
 
     def test_matcher_never_misses_what_raw_lowercase_check_catches(self):
         cases = [
@@ -124,10 +124,10 @@ class NonRedundancyHelperTests(unittest.TestCase):
 
 
 class CheckAllergyWrapperTests(unittest.TestCase):
-    def test_legacy_path_unchanged_when_resolved_blocks_is_none(self):
+    def test_floor_path_uses_shared_derived_reason_when_resolved_blocks_is_none(self):
         self.assertEqual(
             check_allergy(recipe("กะปิ 1 ช้อนชา"), {"allergy": "แพ้กุ้ง"}),
-            (False, "Allergy violation: พบ 'กะปิ' ในสูตร (ผู้ใช้แพ้ shrimp)"),
+            (False, "Allergy violation: พบ 'กะปิ' ที่มีส่วนประกอบของ กุ้ง (ผู้ใช้แพ้ shrimp)"),
         )
         self.assertEqual(check_allergy(recipe("หมูสับ"), {"allergy": "แพ้กุ้ง"}), (True, "OK"))
 

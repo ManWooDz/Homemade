@@ -161,9 +161,8 @@ class FrontendShapedAllergiesKeyTests(unittest.TestCase):
     def test_soy_pill(self):
         self.assertIn("soy", detect_flagged_allergens(frontend_prefs("แพ้ถั่วเหลือง")))
 
-    def test_sesame_pill_flags_nothing_known_scope_limit_no_sesame_key(self):
-        # KNOWN SCOPE LIMIT: ALLERGEN_MAP has no sesame key, so the "แพ้งา" pill maps to nothing.
-        self.assertEqual(detect_flagged_allergens(frontend_prefs("แพ้งา")), [])
+    def test_sesame_pill_activates_the_tenth_key(self):
+        self.assertEqual(detect_flagged_allergens(frontend_prefs("แพ้งา")), ["sesame"])
 
     def test_none_pill_and_empty_flag_nothing(self):
         for text in ("ไม่มีข้อจำกัด", ""):
@@ -179,7 +178,7 @@ class FrontendShapedAllergiesKeyTests(unittest.TestCase):
         expected = [key for key, mapping in ALLERGEN_MAP.items()
                     if any(t in lowered for t in mapping["triggers"])]
         # Hand-checked: none of these 7 pills mentions egg (separate "แพ้ไข่" pill) or tree
-        # nuts, and sesame has no key, so those add nothing; the rest follow ALLERGEN_MAP order.
+        # nuts; sesame now activates its own key. All results follow map order.
         self.assertEqual(expected, [k for k in ALLERGEN_MAP if k not in ("egg", "nut")])
         self.assertEqual(detect_flagged_allergens(frontend_prefs(joined)), expected)
 
@@ -235,11 +234,9 @@ CUSTOM_COOKING_PILLS = {
     "นม/ผลิตภัณฑ์จากนม": ["milk"],
     "ไข่": ["egg"],
     "แป้งสาลี/กลูเตน": ["gluten"],
-    # The generic trigger "ถั่ว" is a substring of "ถั่วเหลือง", so peanut is flagged as well
-    # as soy. Over-flagging is the safe direction (extra block terms), documented not fixed.
-    "ถั่วเหลือง": ["peanut", "soy"],
-    # KNOWN SCOPE LIMIT: ALLERGEN_MAP has no sesame key, so "งา" maps to nothing.
-    "งา": [],
+    # Specific soybean identity does not imply peanut.
+    "ถั่วเหลือง": ["soy"],
+    "งา": ["sesame"],
 }
 
 

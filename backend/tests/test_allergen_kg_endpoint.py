@@ -87,7 +87,9 @@ class ForbiddenWordingScopeTests(unittest.TestCase):
 
     def test_wording_scopes_the_ban_to_the_ingredient_list(self):
         self.assertIn("adjusted_ingredients", LLM_FORBIDDEN_KEY)
-        self.assertIn("ไม่มี...", LLM_FORBIDDEN_KEY)  # rejected even inside a negation note
+        self.assertIn("ตัวตนและส่วนประกอบ", LLM_FORBIDDEN_SUFFIX)
+        self.assertIn("ปลาหมึกไม่ใช่ปลา", LLM_FORBIDDEN_SUFFIX)
+        self.assertIn("ห้ามใช้คำว่าไม่มีเพื่อซ่อนส่วนประกอบที่ทราบ", LLM_FORBIDDEN_SUFFIX)
         self.assertIn("adjusted_ingredients", LLM_FORBIDDEN_SUFFIX)
 
     def test_wording_does_not_forbid_steps_or_safety_warning(self):
@@ -249,7 +251,7 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
         self.assertEqual(
             message,
             "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
-            "น้ำมันหอย (ตรงกับที่แพ้: สัตว์มีเปลือก) กรุณาลองเอาออกแล้วสร้างใหม่")
+            "น้ำมันหอย (มีสัตว์มีเปลือก) กรุณาลองเอาออกแล้วสร้างใหม่")
 
     def test_case_a_duplicate_ingredients_listed_once_in_order(self):
         message = build_allergy_exhaustion_message(
@@ -257,7 +259,7 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
         self.assertEqual(
             message,
             "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
-            "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่")
+            "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (มีกุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่")
 
     def test_real_seeded_graph_causes_never_leak_ascii_arrows_or_internal_names(self):
         db = make_memory_db()
@@ -277,12 +279,13 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
             self.assertTrue(heads, key)
             for head in heads:
                 message = build_allergy_exhaustion_message([head], prefs, {key: resolved})
-                prefix = "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
+                explanation = "ยังยืนยันความปลอดภัยของวัตถุดิบไม่ได้" if head in ("แป้ง", "flour") else "มีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ"
+                prefix = f"ไม่สามารถสร้างสูตรได้ เพราะ{explanation}: "
                 suffix = " กรุณาลองเอาออกแล้วสร้างใหม่"
                 self.assertTrue(message.startswith(prefix + head + " ("), message)
                 self.assertTrue(message.endswith(")" + suffix), message)
                 cause = message[len(prefix) + len(head) + 2:-len(suffix) - 1]
-                self.assertTrue(cause.startswith("มี") or cause.startswith("ตรงกับที่แพ้: "), cause)
+                self.assertTrue(cause.startswith(("มี", "ตรงกับที่แพ้: ", "ยังยืนยันส่วนประกอบไม่ได้")), cause)
                 self.assertIsNone(re.search(r"[A-Za-z]", cause), (key, head, cause))
                 self.assertNotIn("→", cause)
                 self.assertNotIn("allergen:", cause)
@@ -297,6 +300,13 @@ class AllergyExhaustionMessageTests(unittest.TestCase):
 
 
 class EndpointTests(unittest.IsolatedAsyncioTestCase):
+    def seeded_db(self):
+        db = make_memory_db()
+        self.addCleanup(db.bind.dispose)
+        self.addCleanup(db.close)
+        seed_allergen_graph(db)
+        return db
+
     def setUp(self):
         personalization_patcher = patch(
             "main.get_personalization_for_request",
@@ -314,7 +324,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(history_patcher.stop)
 
     async def test_endpoint_feeds_kg_chain_reason_back_to_generator(self):
-        db = make_memory_db()
+        db = self.seeded_db()
         add_edges(db, [("alpha", "allergen:shrimp"), ("beta", "alpha")])
         outputs = [with_ingredient("beta"), deepcopy(SAFE)]
         feedbacks = []
@@ -337,7 +347,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             ingredients=[{"id": 1, "name": "หมูสับ"}],
             preferences={"taste": "", "allergies": allergies, "equipment": "", "extra": ""},
         )
-        db = make_memory_db()
+        db = self.seeded_db()
         outputs = [with_ingredient("กุ้ง"), deepcopy(SAFE)]
         feedbacks = []
 
@@ -373,7 +383,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             calls.append(user_prefs)
             return produce()
 
-        with patch("main.SessionLocal", lambda: make_memory_db()), \
+        with patch("main.SessionLocal", self.seeded_db), \
                 patch("main.call_agentic_llm", side_effect=fake):
             response = await generate_recipe_text(req, current_user=SimpleNamespace(id=7), db=MagicMock())
         return response, calls
@@ -394,7 +404,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response, {
             "status": "error",
             "message": "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
-                       "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (ตรงกับที่แพ้: กุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่",
+                       "กุ้งสด (ตรงกับที่แพ้: กุ้ง), กะปิ (มีกุ้ง) กรุณาลองเอาออกแล้วสร้างใหม่",
         })
 
     async def test_allergy_exhaustion_without_violating_user_ingredient(self):
@@ -425,19 +435,12 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
             ["หมูสับ"], "แพ้กุ้ง", lambda: {"error": "no key"})
         self.assertEqual(response, {"status": "error", "message": "no key"})
 
-    async def test_endpoint_still_blocks_floor_when_db_unset(self):
-        outputs = [with_ingredient("กุ้ง"), deepcopy(SAFE)]
-        feedbacks = []
-
-        def fake(ingredients, user_prefs, base_recipe, feedback=None):
-            feedbacks.append(feedback)
-            return outputs.pop(0)
-
-        with patch("main.SessionLocal", None), patch("main.call_agentic_llm", side_effect=fake):
+    async def test_endpoint_refuses_declared_allergy_when_db_unset(self):
+        with patch("main.SessionLocal", None), patch("main.call_agentic_llm") as provider:
             response = await generate_recipe_text(request("แพ้กุ้ง"), current_user=SimpleNamespace(id=7), db=MagicMock())
-
-        self.assertEqual(response["status"], "success")
-        self.assertEqual(feedbacks[1], "Allergy violation: พบ 'กุ้ง' ในสูตร (ผู้ใช้แพ้ shrimp)")
+        self.assertEqual(response["code"], "allergy_validation_unavailable")
+        provider.assert_not_called()
+        self.mock_personalization.assert_not_called()
 
 
 if __name__ == "__main__":

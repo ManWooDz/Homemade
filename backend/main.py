@@ -167,9 +167,9 @@ BAD_FLAVOR_PAIRS = [
     ("chocolate", "garlic"),
 ]
 
-from allergen_kg.floor import ALLERGEN_LABELS, ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens
+from allergen_kg.floor import ALLERGEN_LABELS, ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens, parse_allergy_preferences
 from allergen_kg.match import find_allergy_violation, format_violation_reason
-from allergen_kg.resolve import resolve_allergy_blocks, unavailable_blocks
+from allergen_kg.resolve import allergy_blocks_ready, resolve_allergy_blocks, unavailable_blocks
 
 # -------------------------------
 # 1. Ingredient Check (No hallucination)
@@ -262,17 +262,15 @@ def check_nutrition(recipe):
 # 5. Allergy Check
 # -------------------------------
 def _legacy_check_allergy(recipe, user_prefs):
-    ingredients_text = " ".join(recipe["adjusted_ingredients"]).lower()
-    for allergen_key in detect_flagged_allergens(user_prefs):
-        for block_term in ALLERGEN_MAP[allergen_key]["blocks"]:
-            if block_term in ingredients_text:
-                return False, f"Allergy violation: พบ '{block_term}' ในสูตร (ผู้ใช้แพ้ {allergen_key})"
+    # Compatibility export; floor-only callers now share the production matcher.
+    violation = find_allergy_violation(recipe, user_prefs, unavailable_blocks(user_prefs))
+    if violation is not None:
+        return False, format_violation_reason(violation)
     return True, "OK"
 
 
 def check_allergy(recipe, user_prefs, resolved_blocks=None):
-    # resolved_blocks=None is the legacy path for callers not yet passing
-    # resolved blocks; the endpoint always passes a dict (see resolve_blocks_for_request).
+    # Both floor-only and KG callers use the same identity/absence policy.
     if resolved_blocks is None:
         return _legacy_check_allergy(recipe, user_prefs)
     violation = find_allergy_violation(recipe, user_prefs, resolved_blocks)
@@ -921,21 +919,20 @@ def save_generate_history(db, user, request, final_output):
 
 # The checker (allergen_kg/match.py) scans ONLY recipe["adjusted_ingredients"]; steps and
 # safety_warning are never checked, so the wording must not forbid the words there.
-_LLM_FORBIDDEN_KEY = ("ห้ามมีในรายการวัตถุดิบ adjusted_ingredients "
-                      "(ระบบตรวจอัตโนมัติจะปฏิเสธสูตรที่รายการวัตถุดิบมีคำเหล่านี้ "
-                      "แม้อยู่ในหมายเหตุหรือคำปฏิเสธ เช่น 'ไม่มี...' ภายในบรรทัดวัตถุดิบ)")
-_LLM_FORBIDDEN_SUFFIX = (" — ห้ามพิมพ์คำเหล่านี้ในบรรทัดใดๆ ของ adjusted_ingredients "
-                         "ให้ตัดวัตถุดิบนั้นออกหรือใช้ทางเลือกที่ชื่อไม่มีคำเหล่านี้ "
+_LLM_FORBIDDEN_KEY = "วัตถุดิบหรือส่วนประกอบที่ต้องหลีกเลี่ยงใน adjusted_ingredients"
+_LLM_FORBIDDEN_SUFFIX = (" — ใน adjusted_ingredients ให้ตรวจตามตัวตนและส่วนประกอบ ไม่ใช่ตัวอักษรที่ซ้อนกัน "
+                         "เช่น ปลาหมึกไม่ใช่ปลา, eggplant ไม่ใช่ egg, แป้งข้าวเจ้าไม่ใช่แป้งสาลี "
+                         "แต่ส่วนประกอบอื่นบนบรรทัดยังต้องตรวจ ห้ามใช้คำว่าไม่มีเพื่อซ่อนส่วนประกอบที่ทราบ "
+                         "ถ้าจำเป็นต้องระบุการไม่มีส่วนผสม ให้ใช้หมายเหตุชัดเจน เช่น (ไม่มีนมวัว) "
                          "ส่วน safety_warning และขั้นตอนการทำ (instructions) "
                          "ยังกล่าวถึงเรื่องอาการแพ้ได้ตามปกติ")
 
 
 def build_llm_prefs(user_prefs, resolved_blocks):
-    """Prefs as shown to the generator: user_prefs plus the exact terms the checker rejects.
+    """Prefs as shown to the generator: restrictions plus the shared matching policy.
 
-    The validator rejects any recipe containing a resolved block term, even inside a
-    note or a negation ("ไม่มีกุ้ง"). Telling the model the terms up front avoids
-    burning retries on them. Returns user_prefs itself when nothing is resolved;
+    These are ingredient/composition restrictions, not unconditional substrings.
+    Returns user_prefs itself when nothing is resolved;
     otherwise a NEW dict (user_prefs is never mutated; validation keeps using it).
     Pure: no DB access.
     """
@@ -1032,7 +1029,7 @@ async def get_personalization_for_request(
 
 def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_blocks):
     """Thai message for a retry loop that ran out on an allergy violation."""
-    violating = []
+    violating, has_uncertain = [], False
     for name in dict.fromkeys(ingredient_names):  # de-duplicate, keep order
         violation = find_allergy_violation({"adjusted_ingredients": [name]}, user_prefs, resolved_blocks)
         if violation is None:
@@ -1041,13 +1038,19 @@ def build_allergy_exhaustion_message(ingredient_names, user_prefs, resolved_bloc
         # path[-1] is the ingredient node that directly implies the allergen. Graph
         # node names can be English (e.g. "oyster"); the user-facing cause must be
         # Thai only, so those fall back to the allergen label.
-        if path and len(path) >= 2 and re.search(r"[A-Za-z]", path[-1]) is None:
+        if violation.uncertain:
+            has_uncertain = True
+            cause = f"ยังยืนยันส่วนประกอบไม่ได้สำหรับผู้แพ้{ALLERGEN_LABELS[violation.allergen_key]}"
+        elif violation.match_kind == "derived" and path and len(path) >= 2 and re.search(r"[A-Za-z]", path[-1]) is None:
             cause = f"มี{path[-1]}"
+        elif violation.match_kind == "derived":
+            cause = f"มี{ALLERGEN_LABELS[violation.allergen_key]}"
         else:
             cause = f"ตรงกับที่แพ้: {ALLERGEN_LABELS[violation.allergen_key]}"
         violating.append(f"{name} ({cause})")
     if violating:
-        return (f"ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: {', '.join(violating)} "
+        explanation = "ยังยืนยันความปลอดภัยของวัตถุดิบไม่ได้" if has_uncertain else "มีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ"
+        return (f"ไม่สามารถสร้างสูตรได้ เพราะ{explanation}: {', '.join(violating)} "
                 "กรุณาลองเอาออกแล้วสร้างใหม่")
     return ("ไม่สามารถสร้างสูตรได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "
             "กรุณาลองเปลี่ยนวัตถุดิบแล้วสร้างใหม่")
@@ -1081,6 +1084,26 @@ def run_generation_with_validation(generate_fn, ingredients, ingredients_name_on
     return None, attempts_log
 
 
+def allergy_preferences_error(preferences):
+    if parse_allergy_preferences(preferences)[1]:
+        return {
+            "status": "error", "code": "allergy_preferences_ambiguous",
+            "field": "preferences.allergies",
+            "message": "กรุณาระบุอาหารที่แพ้ให้ชัดเจน หรือเลือกไม่มีอาการแพ้",
+        }
+    return None
+
+
+class AllergyPreferencesRequest(BaseModel):
+    preferences: Dict[str, str]
+
+
+@app.post("/api/validate-allergy-preferences", dependencies=[Depends(verify_same_origin)])
+def validate_allergy_preferences(request: AllergyPreferencesRequest, current_user: User = Depends(get_current_user)):
+    # Pure preflight: preserve the mounted form and its values on input errors.
+    return allergy_preferences_error(request.preferences) or {"status": "success"}
+
+
 class GenerateRecipeTextRequest(BaseModel):
     recipe: Dict[str, Any]
     ingredients: List[Any]
@@ -1105,6 +1128,9 @@ async def generate_recipe_text(
                 for key, value in user_prefs.items()
                 if key != _PERSONALIZATION_CONTEXT_KEY
             }
+        preference_error = allergy_preferences_error(user_prefs)
+        if preference_error:
+            return preference_error
         ingredients_list_for_llm = ingredient_names(request.ingredients)
         ingredients_name_only = [name.lower() for name in ingredients_list_for_llm]
         
@@ -1115,6 +1141,11 @@ async def generate_recipe_text(
         print(f"[3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
 
         resolved_blocks = resolve_blocks_for_request(user_prefs)
+        if not allergy_blocks_ready(user_prefs, resolved_blocks):
+            return {
+                "status": "error", "code": "allergy_validation_unavailable",
+                "message": "ระบบตรวจสอบสารก่อภูมิแพ้ยังไม่พร้อม จึงยังสร้างสูตรไม่ได้ กรุณาลองใหม่ภายหลัง",
+            }
         personalization = await get_personalization_for_request(
             db,
             current_user.id,

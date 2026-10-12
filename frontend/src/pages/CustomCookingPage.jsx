@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -53,6 +53,10 @@ export default function CustomCookingPage({
     const [tasteOther, setTasteOther] = useState("");
     const [allergies, setAllergies] = useState([]);
     const [allergiesOther, setAllergiesOther] = useState("");
+    const [allergyError, setAllergyError] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const submitting = useRef(false);
+    const allergyInput = useRef(null);
     const [equipment, setEquipment] = useState([]);
     const [equipmentOther, setEquipmentOther] = useState("");
     const [extra, setExtra] = useState("");
@@ -84,19 +88,29 @@ export default function CustomCookingPage({
     const resolveOtherInList = (list, otherText) =>
         list.map((item) => resolveOther(item, otherText));
 
-    const handleGenerateClick = () => {
+    const handleGenerateClick = async () => {
+        if (submitting.current || selectedIngredients.length === 0) return;
+        submitting.current = true;
+        setIsSubmitting(true);
         const selectedObjs = userIngredients.filter((ing) =>
             selectedIngredients.includes(ing.id),
         );
-        onGenerate(
-            {
-                taste: resolveOther(taste, tasteOther),
-                allergies: resolveOtherInList(allergies, allergiesOther).join(", "),
-                equipment: resolveOtherInList(equipment, equipmentOther).join(", "),
-                extra,
-            },
-            selectedObjs,
-        );
+        try {
+            const error = await onGenerate(
+                {
+                    taste: resolveOther(taste, tasteOther),
+                    allergies: resolveOtherInList(allergies, allergiesOther).join(", "),
+                    equipment: resolveOtherInList(equipment, equipmentOther).join(", "),
+                    extra,
+                },
+                selectedObjs,
+            );
+            setAllergyError(error || null);
+            if (error) allergyInput.current?.focus();
+        } finally {
+            submitting.current = false;
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -228,9 +242,10 @@ export default function CustomCookingPage({
                                 <button
                                     key={option}
                                     type="button"
-                                    onClick={() =>
-                                        toggleInList(allergies, setAllergies, option, ALLERGY_NONE)
-                                    }
+                                    onClick={() => {
+                                        toggleInList(allergies, setAllergies, option, ALLERGY_NONE);
+                                        setAllergyError(null);
+                                    }}
                                     className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
                                         allergies.includes(option)
                                             ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
@@ -244,11 +259,24 @@ export default function CustomCookingPage({
                         {allergies.includes(OTHER_OPTION) && (
                             <input
                                 type="text"
+                                ref={allergyInput}
                                 value={allergiesOther}
-                                onChange={(e) => setAllergiesOther(e.target.value)}
+                                aria-label="ระบุอาการแพ้อาหาร"
+                                aria-invalid={Boolean(allergyError)}
+                                aria-describedby={allergyError ? "allergy-error" : undefined}
+                                maxLength={1000}
+                                onChange={(e) => {
+                                    setAllergiesOther(e.target.value);
+                                    setAllergyError(null);
+                                }}
                                 placeholder="ระบุอาการแพ้อาหาร"
                                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
                             />
+                        )}
+                        {allergyError && (
+                            <p id="allergy-error" role="alert" className="text-sm text-red-700 mb-4 break-words">
+                                {allergyError}
+                            </p>
                         )}
                         {!allergies.includes(OTHER_OPTION) && <div className="mb-2" />}
                         <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
@@ -298,7 +326,8 @@ export default function CustomCookingPage({
                     {/* Action Button */}
                     <button
                         onClick={handleGenerateClick}
-                        disabled={selectedIngredients.length === 0}
+                        disabled={selectedIngredients.length === 0 || isSubmitting}
+                        aria-busy={isSubmitting}
                         className="w-full bg-[#EF5A3A] text-white py-4.5 rounded-full text-lg font-medium shadow-md flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 transition cursor-pointer"
                     >
                         <svg
@@ -314,7 +343,7 @@ export default function CustomCookingPage({
                                 d="M12 4v2m-6 4v2m12-2v2M4 14a8 8 0 0016 0H4zm0 0h16v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-1z"
                             />
                         </svg>
-                        สร้างเมนูจากวัตถุดิบในตู้เย็น
+                        {isSubmitting ? "กำลังตรวจสอบอาการแพ้…" : "สร้างเมนูจากวัตถุดิบในตู้เย็น"}
                     </button>
                 </div>
 

@@ -24,7 +24,7 @@ import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import HistoryDetail from "./pages/HistoryDetail";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
-import { toUserFacingGenerateError } from "./utils/generateError";
+import { toUserFacingGenerateError, validateAllergyPreferences } from "./utils/generateError";
 import { getTagColor } from "./utils/tagColors";
 import { useAuth } from "./context/AuthContext";
 
@@ -459,6 +459,8 @@ function App() {
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView("recipe-detail")}
                 onGenerate={async (preferences, updatedIngredients) => {
+                    const preferenceError = await validateAllergyPreferences(apiFetch, preferences);
+                    if (preferenceError) return preferenceError;
                     setCurrentView("cooking-page");
                     setCookingSource("create-recipe");
                     setGeneratedRecipe(null);
@@ -646,6 +648,8 @@ function App() {
                     setActiveTab("home");
                 }}
                 onGenerate={async (preferences, selectedIngredients) => {
+                    const preferenceError = await validateAllergyPreferences(apiFetch, preferences);
+                    if (preferenceError) return preferenceError;
                     setCurrentView("cooking-page");
                     setCookingSource("custom-cooking");
                     setGeneratedRecipe(null);

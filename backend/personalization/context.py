@@ -4,6 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from allergen_kg.match import find_allergy_violation
+from allergen_kg.resolve import allergy_blocks_ready
 from personalization.repository import (
     HistorySignal,
     count_embedded_signals,
@@ -316,6 +317,8 @@ def build_personalization_context(
     resolved_blocks,
 ) -> PersonalizationContext | None:
     try:
+        if not allergy_blocks_ready(user_prefs, resolved_blocks):
+            return None
         if count_embedded_signals(db, user_id) < 3:
             return None
 

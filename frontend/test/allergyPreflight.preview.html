@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline allergy form QA</title></head>
+<body><div id="root"></div>
+<script type="module">
+// Development-only QA fixture: real pages/helper, synthetic preferences and
+// intercepted APIs. No authentication, DB, generator or external API requests.
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { AuthProvider } from "../src/context/AuthContext.jsx";
+import CreateRecipe from "../src/pages/CreateRecipe.jsx";
+import CustomCookingPage from "../src/pages/CustomCookingPage.jsx";
+import CookingPage from "../src/pages/CookingPage.jsx";
+import { toUserFacingGenerateError, validateAllergyPreferences } from "../src/utils/generateError.js";
+import "../src/index.css";
+
+let preflightCalls = 0, generationCalls = 0;
+window.fetch = async (path, options) => {
+    if (path === "/api/auth/me") return Response.json({ data: { id: 0, name: "QA fixture" } });
+    if (path === "/api/user-preferences") return Response.json({ data: { dietary_restrictions: [], equipment: [] } });
+    if (path !== "/api/validate-allergy-preferences") throw new Error("Unexpected API call blocked by QA fixture");
+    preflightCalls++;
+    const { preferences } = JSON.parse(options.body);
+    // UI-only simulation; backend parsing semantics are checked by unittest.
+    return Response.json(["แพ้นม", "แพ้งา", "งา"].includes(preferences.allergies)
+        ? { status: "success" }
+        : { status: "error", code: "allergy_preferences_ambiguous" });
+};
+
+function Preview() {
+    const [success, setSuccess] = React.useState(false);
+    const params = new URLSearchParams(location.search);
+    const ingredients = [{ id: 1, name: "หมูสับ", quantity: 100, unit: "กรัม" }];
+    const onGenerate = async (preferences) => {
+        const error = await validateAllergyPreferences(window.fetch, preferences);
+        if (error) return error;
+        generationCalls++;
+        setSuccess(true);
+    };
+    if (success && params.get("mode") === "unavailable") return React.createElement(CookingPage, {
+        recipe: { name: "QA fixture" }, generatedRecipe: null, isGenerating: false,
+        generateError: toUserFacingGenerateError("ระบบตรวจสอบสารก่อภูมิแพ้ยังไม่พร้อม จึงยังสร้างสูตรไม่ได้ กรุณาลองใหม่ภายหลัง"),
+        onBack: () => setSuccess(false), activeTab: "cooking", setActiveTab: () => {},
+        isCustom: params.get("flow") === "custom",
+    });
+    if (success) return React.createElement("p", { role: "status" },
+        `ผ่าน preflight (mock): ${preflightCalls} requests; generation ${generationCalls} call; ไม่มี API จริง`);
+    const Page = params.get("flow") === "custom" ? CustomCookingPage : CreateRecipe;
+    return React.createElement(Page, { recipe: { name: "เมนูทดสอบ", tags: [] },
+        selectedIngredients: ingredients, userIngredients: ingredients,
+        activeTab: "cooking", setActiveTab: () => {}, onBack: () => {}, onGenerate });
+}
+createRoot(document.getElementById("root")).render(React.createElement(AuthProvider, null, React.createElement(Preview)));
+</script></body></html>
