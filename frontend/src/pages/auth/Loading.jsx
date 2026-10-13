@@ -30,7 +30,7 @@ export default function Loading() {
                 <div className="w-full flex-1 flex flex-col justify-center items-center bg-background-primary overflow-hidden">
                     <img
                         src={logo}
-                        alt="HomeMade Logo"
+                        alt="HomeMade"
                         className="w-56 h-auto object-contain animate-pulse"
                     />
                 </div>

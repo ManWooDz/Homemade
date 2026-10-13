@@ -1,3 +1,4 @@
+import { useLocale } from "../../context/LocaleContext";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -8,6 +9,7 @@ const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function OtpVerify() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     const { pendingResetEmail, verifyOtp, resendOtp } = useAuth();
     const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""));
@@ -91,13 +93,9 @@ export default function OtpVerify() {
                         onSubmit={handleSubmit}
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
-                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">
-                            Enter OTP
-                        </h1>
+                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t("Enter OTP")}</h1>
 
-                        <p className="w-full text-body-medium text-text-neutral mb-4">
-                            รหัสอาจใช้เวลาสักครู่ หากยังไม่ได้รับ ให้รอหมดเวลานับถอยหลังแล้วกดส่งใหม่
-                        </p>
+                        <p className="w-full text-body-medium text-text-neutral mb-4">{t("รหัสอาจใช้เวลาสักครู่ หากยังไม่ได้รับ ให้รอหมดเวลานับถอยหลังแล้วกดส่งใหม่")}</p>
 
                         <div className="w-full flex flex-col items-center gap-3">
                             <div className="flex gap-2">
@@ -123,15 +121,15 @@ export default function OtpVerify() {
                                 className="h-11 px-4 bg-button-neutral rounded-full border border-stroke-brands text-text-brands text-body-medium font-normal flex justify-center items-center whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isResending
-                                    ? "กำลังส่งใหม่..."
+                                    ? t("กำลังส่งใหม่...")
                                     : cooldown > 0
-                                      ? `ส่งใหม่ได้ใน ${cooldown} วินาที`
-                                      : "ส่งใหม่"}
+                                      ? t("ส่งใหม่ได้ใน {seconds} วินาที", { seconds: cooldown })
+                                      : t("ส่งใหม่")}
                             </button>
                         </div>
 
                         {error && (
-                            <p className="w-full text-body-medium text-red-500 mt-4">{error}</p>
+                            <p className="w-full text-body-medium text-red-500 mt-4">{t(error)}</p>
                         )}
 
                         <button
@@ -139,7 +137,7 @@ export default function OtpVerify() {
                             disabled={isSubmitting || digits.some((d) => !d)}
                             className="w-full h-11 mt-24 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "Verifying..." : "Verify"}
+                            {isSubmitting ? t("Verifying...") : t("Verify")}
                         </button>
                     </form>
                 </div>

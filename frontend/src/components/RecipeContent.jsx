@@ -1,18 +1,20 @@
+import { useLocale } from "../context/LocaleContext";
 import { Flame, AlertTriangle, Clock } from "lucide-react";
 import { getTagColor } from "../utils/tagColors";
 
 export default function RecipeContent({ recipe, onDone }) {
+    const { t } = useLocale();
   return (
     <>
       <h2 className="text-[26px] font-bold text-black mb-2 leading-tight">
         {recipe.recipe_name}
       </h2>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-gray-500">สำหรับ {recipe.servings} ที่</p>
+        <p className="text-sm text-gray-500">{t("สำหรับ")} {recipe.servings} {t("ที่")}</p>
         <div className="flex items-center gap-1.5">
           <Clock className="w-4 h-4 text-gray-400" />
           <span className="text-gray-500 text-sm">
-            {recipe.usage_time || "error"}
+            {recipe.usage_time || t("error")}
           </span>
         </div>
       </div>
@@ -47,8 +49,8 @@ export default function RecipeContent({ recipe, onDone }) {
         <div className="mb-6">
           <h3 className="text-xl font-medium text-black mb-4">
             {recipe.nutrition.basis === "per_serving"
-              ? "โภชนาการต่อ 1 ที่ (คาดการณ์)"
-              : "โภชนาการที่คาดการณ์"}
+              ? t("โภชนาการต่อ 1 ที่ (คาดการณ์)")
+              : t("โภชนาการที่คาดการณ์")}
           </h3>
           <div className="flex flex-col gap-3">
             <div className="bg-[#FFF6F2] rounded-3xl p-5 flex justify-between items-center shadow-sm">
@@ -58,35 +60,26 @@ export default function RecipeContent({ recipe, onDone }) {
                 </span>
                 <span className="text-lg text-gray-500 font-medium">
                   {recipe.nutrition.basis === "per_serving"
-                    ? "แคลอรี่ต่อ 1 ที่"
-                    : "แคลอรี่"}
+                    ? t("แคลอรี่ต่อ 1 ที่")
+                    : t("แคลอรี่")}
                 </span>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#e4fbec] rounded-3xl p-4 flex flex-col justify-center items-center shadow-sm h-25">
                 <span className="text-2xl font-bold text-black leading-none mb-1">
-                  {recipe.nutrition.carbs_g}g
-                </span>
-                <span className="text-[12px] font-medium text-[#767676]">
-                  คาร์บ
-                </span>
+                  {recipe.nutrition.carbs_g}{t("g")}</span>
+                <span className="text-[12px] font-medium text-[#767676]">{t("คาร์บ")}</span>
               </div>
               <div className="bg-[#eaf3ff] rounded-3xl p-4 flex flex-col justify-center items-center shadow-sm h-25">
                 <span className="text-2xl font-bold text-black leading-none mb-1">
-                  {recipe.nutrition.protein_g}g
-                </span>
-                <span className="text-[12px] font-medium text-[#767676]">
-                  โปรตีน
-                </span>
+                  {recipe.nutrition.protein_g}{t("g")}</span>
+                <span className="text-[12px] font-medium text-[#767676]">{t("โปรตีน")}</span>
               </div>
               <div className="bg-[#fffad8] rounded-3xl p-4 flex flex-col justify-center items-center shadow-sm h-25">
                 <span className="text-2xl font-bold text-black leading-none mb-1">
-                  {recipe.nutrition.fat_g}g
-                </span>
-                <span className="text-[12px] font-medium text-[#767676]">
-                  ไขมัน
-                </span>
+                  {recipe.nutrition.fat_g}{t("g")}</span>
+                <span className="text-[12px] font-medium text-[#767676]">{t("ไขมัน")}</span>
               </div>
             </div>
 
@@ -133,7 +126,7 @@ export default function RecipeContent({ recipe, onDone }) {
                   return (
                     <div key={n.key} className="flex items-center gap-3">
                       <span className="text-sm font-medium text-[#767676] w-20 shrink-0">
-                        {n.label}
+                        {t(n.label)}
                       </span>
                       <div className="flex-1 h-2 bg-black/10 rounded-full overflow-hidden">
                         <div
@@ -155,12 +148,8 @@ export default function RecipeContent({ recipe, onDone }) {
 
       {/* Ingredients */}
       <div className="mb-6">
-        <h3 className="text-xl font-medium text-black mb-4">
-          วัตถุดิบที่ปรับแก้แล้ว
-        </h3>
-        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          ตรวจสอบวัตถุดิบและปริมาณจริงก่อนเริ่มทำอาหาร
-        </div>
+        <h3 className="text-xl font-medium text-black mb-4">{t("วัตถุดิบที่ปรับแก้แล้ว")}</h3>
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{t("ตรวจสอบวัตถุดิบและปริมาณจริงก่อนเริ่มทำอาหาร")}</div>
         <ul className="flex flex-col gap-2">
           {recipe.adjusted_ingredients?.map((ing, idx) => (
             <li
@@ -177,9 +166,7 @@ export default function RecipeContent({ recipe, onDone }) {
       {/* Instructions */}
       <div className="mb-6">
         <h3 className="text-xl font-medium text-black mb-4 flex items-center gap-2">
-          <Flame className="w-5 h-5 text-[#EF5A3A]" />
-          วิธีทำ
-        </h3>
+          <Flame className="w-5 h-5 text-[#EF5A3A]" />{t("วิธีทำ")}</h3>
         <div className="flex flex-col gap-4">
           {recipe.instructions?.map((step, idx) => {
             const cleanedStep = step.replace(/^\d+\.\s*/, "");
@@ -202,9 +189,7 @@ export default function RecipeContent({ recipe, onDone }) {
         <button
           onClick={onDone}
           className="bg-[#EF5A3A] text-white px-5 py-4.5 rounded-full text-lg font-bold shadow-md mt-6 w-full mb-8 hover:bg-orange-600 transition"
-        >
-          เสร็จสิ้น
-        </button>
+        >{t("เสร็จสิ้น")}</button>
       )}
     </>
   );

@@ -1,5 +1,25 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Run application smoke imports from their observed runtime cwd (2026-10-13):**
+- what: first PostgreSQL API postcheck imported main from project-root cwd and failed on its existing StaticFiles(directory="images") before creating synthetic test rows. Corrected to backend cwd and17checks passed with complete rollback and unchanged legacy/sequence hashes; retained the failed and corrected logs. A guessed auth_utils.py inspection was also corrected through bounded file discovery.
+- root cause: imported application paths were treated as module-relative even though the observed server/test runner uses backend-relative working directory; a conventional helper filename was guessed instead of discovered.
+- correct: inspect entry-point relative paths and runner cwd before importing the app, use the observed backend cwd, discover helper filenames with bounded rg paths, isolate real-schema API tests inside one rollback transaction with per-request savepoints, and assign synthetic IDs explicitly so rollback cannot advance persistent sequences.
+
+**Separate source verification from live activation and await actual UI completion (2026-10-13):**
+- what: sandboxed Python checks stalled without usable output and Vite build failed EPERM; equivalent reviewed offline checks passed. A changed-files lint invocation used root-relative pathspecs from frontend cwd and selected nothing. Browser QA asserted an image before asynchronous canvas export finished, compared transported DOM objects with cross-realm strict prototypes, and captured one320px form while its inner scroller hid the heading. All were corrected; no live schema/data changes occurred.
+- root cause: assumed sandbox/runtime, pathspec cwd and async UI/capture state were interchangeable with verified execution results. Transported objects can have a different prototype even when their fields match.
+- correct: record native exit codes immediately, verify cwd/pathspec output before linting, keep the offline network/SQLite guard on reviewed tests, wait for the exact visible completion state before assertions, compare transported fields or normalized JSON, and return inner scrolling to the top before validating every capture. Treat unavailable live target/revision as unverified; never equate offline migration SQL with applied schema.
+
+**Keep lookup-based error allowlists strict and recovery controls usable (2026-10-13):**
+- what: finish review found a crop error promising retry while its error flag disabled confirmation, and custom radio roles lacked arrow navigation. Contract checking also identified inherited object keys bypassing a plain-object unknown-error fallback. Fixed crop decode/export separation, native radios/focus and own-property allowlists; exercised retry/keyboard behavior and prototype-key fallbacks.
+- root cause: one flag represented fatal and recoverable errors; ARIA roles supplied semantics without browser behavior; object indexing was treated as an allowlist.
+- correct: distinguish fatal decode errors from retryable exports, test a failed export followed by success, prefer native radio behavior and preserve focus through async persistence, and use Map or Object.hasOwn when mapping untrusted error keys to safe copy.
+
+**Keep filesystem and AST traversal names distinct (2026-10-13):**
+- what: first profile/language UI inventory failed before writing its JSON because a directory walker and AST walker shared the same function name; the following read masked the native command exit status. No application source was transformed.
+- root cause: CommonJS block-function hoisting replaced the AST walker with the filesystem walker, and the shell did not stop on Node failure.
+- correct: use distinct walkDirectory/walkAst names and immediately check LASTEXITCODE before reading generated inventory. Consume only a completed JSON inventory; do not interpret a failed traversal as missing UI strings.
+
 รูปแบบ: what (เกิดอะไรขึ้น) / root cause (ทำไมถึงพลาด) / correct (สิ่งที่ต้องทำแทน)
 
 ---

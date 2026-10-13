@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useState, useRef } from "react";
 import { ChevronLeft, Heart, Star, CheckSquare, Clock } from "lucide-react";
 import { motion, useMotionValue, animate } from "framer-motion";
@@ -15,6 +16,7 @@ export default function RecipeDetail({
   isFavorite,
   onToggleFavorite,
 }) {
+    const { t } = useLocale();
   const [ingredients, setIngredients] = useState(() => {
     if (recipe && recipe.ingredients) {
       return recipe.ingredients.map((ing, index) => ({
@@ -120,7 +122,7 @@ export default function RecipeDetail({
             onClick={() => onToggleFavorite?.(recipe?.id)}
             disabled={recipe?.id == null}
             aria-label={
-              isFavorite ? "เอาออกจากรายการโปรด" : "เพิ่มในรายการโปรด"
+              isFavorite ? t("เอาออกจากรายการโปรด") : t("เพิ่มในรายการโปรด")
             }
             aria-pressed={!!isFavorite}
             className={
@@ -144,7 +146,7 @@ export default function RecipeDetail({
           <div className="w-64 h-64 rounded-full overflow-hidden shadow-sm">
             <img
               src={recipe?.image || "backend/images/No-image-available.png"}
-              alt={recipe?.name || "Error Recipe Name"}
+              alt={recipe?.name || t("Error Recipe Name")}
               className="w-full h-full object-cover"
             />
           </div>
@@ -170,22 +172,21 @@ export default function RecipeDetail({
             className="px-6 h-full overflow-y-auto pb-50 scrollbar-hide"
           >
             <h2 className="text-[28px] font-bold text-black mb-2 leading-tight">
-              {recipe?.name || "Dishes Name"}
+              {recipe?.name || t("Dishes Name")}
             </h2>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-orange-400 fill-orange-400" />
                 <span className="font-bold text-black text-sm">
-                  {recipe?.ratings || "error"}
+                  {recipe?.ratings || t("error")}
                 </span>
                 <span className="text-gray-500 text-sm mb-0">
-                  ({recipe?.review || "error"} Reviews)
-                </span>
+                  ({recipe?.review || t("error")}{t("Reviews)")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-500 text-sm">
-                  {recipe?.usage_time || "error"}
+                  {recipe?.usage_time || t("error")}
                 </span>
               </div>
             </div>
@@ -203,17 +204,15 @@ export default function RecipeDetail({
               </div>
             )}
 
-            <h3 className="text-xl font-medium text-black mb-2">Description</h3>
+            <h3 className="text-xl font-medium text-black mb-2">{t("Description")}</h3>
             <p className="text-black text-sm mb-6 leading-relaxed">
-              {recipe?.short_description || "error"}
+              {recipe?.short_description || t("error")}
             </p>
 
             {/* Nutrition Section */}
             {recipe?.nutrition && (
               <div className="mb-6">
-                <h3 className="text-[26px] font-medium text-black mb-4">
-                  Nutrition
-                </h3>
+                <h3 className="text-[26px] font-medium text-black mb-4">{t("Nutrition")}</h3>
 
                 <div className="flex flex-col gap-3">
                   {/* Calories Header */}
@@ -222,13 +221,9 @@ export default function RecipeDetail({
                       <span className="text-4xl font-semibold text-[#EF5A3A] leading-none">
                         {recipe.nutrition.calories}
                       </span>
-                      <span className="text-lg text-gray-500 font-medium">
-                        แคลอรี่ทั้งหมด
-                      </span>
+                      <span className="text-lg text-gray-500 font-medium">{t("แคลอรี่ทั้งหมด")}</span>
                     </div>
-                    <span className="text-lg text-gray-500 font-medium items-center flex mt-6">
-                      ต่อ 1 เสิร์ฟ (400g)
-                    </span>
+                    <span className="text-lg text-gray-500 font-medium items-center flex mt-6">{t("ต่อ 1 เสิร์ฟ (400g)")}</span>
                   </div>
 
                   {/* Macros Grid */}
@@ -236,11 +231,8 @@ export default function RecipeDetail({
                     {/* Carbs */}
                     <div className="bg-[#e4fbec] rounded-3xl p-4 flex flex-col justify-center items-center relative overflow-hidden h-25 shadow-sm">
                       <span className="text-2xl font-bold text-black leading-none mb-1">
-                        {recipe.nutrition.carbs_g}g
-                      </span>
-                      <span className="text-sm font-medium text-[#767676] mb-2">
-                        คาร์โบไฮเดรต
-                      </span>
+                        {recipe.nutrition.carbs_g}{t("g")}</span>
+                      <span className="text-sm font-medium text-[#767676] mb-2">{t("คาร์โบไฮเดรต")}</span>
                       <div className="absolute bottom-4 left-4 right-4 h-1.5 bg-black/10 rounded-full">
                         <div
                           className="h-full bg-[#00D740] rounded-full"
@@ -252,11 +244,8 @@ export default function RecipeDetail({
                     {/* Protein */}
                     <div className="bg-[#eaf3ff] rounded-3xl p-4 flex flex-col justify-center items-center relative overflow-hidden h-25 shadow-sm">
                       <span className="text-2xl font-bold text-black leading-none mb-1">
-                        {recipe.nutrition.protein_g}g
-                      </span>
-                      <span className="text-sm font-medium text-[#767676] mb-2">
-                        โปรตีน
-                      </span>
+                        {recipe.nutrition.protein_g}{t("g")}</span>
+                      <span className="text-sm font-medium text-[#767676] mb-2">{t("โปรตีน")}</span>
                       <div className="absolute bottom-4 left-4 right-4 h-1.5 bg-black/10 rounded-full">
                         <div
                           className="h-full bg-[#1975FF] rounded-full"
@@ -268,11 +257,8 @@ export default function RecipeDetail({
                     {/* Fat */}
                     <div className="bg-[#fffad8] rounded-3xl p-4 flex flex-col justify-center items-center relative overflow-hidden h-25 shadow-sm">
                       <span className="text-2xl font-bold text-black leading-none mb-1">
-                        {recipe.nutrition.fat_g}g
-                      </span>
-                      <span className="text-sm font-medium text-[#767676] mb-2">
-                        ไขมัน
-                      </span>
+                        {recipe.nutrition.fat_g}{t("g")}</span>
+                      <span className="text-sm font-medium text-[#767676] mb-2">{t("ไขมัน")}</span>
                       <div className="absolute bottom-4 left-4 right-4 h-1.5 bg-black/10 rounded-full">
                         <div
                           className="h-full bg-[#FFB901] rounded-full"
@@ -323,7 +309,7 @@ export default function RecipeDetail({
                         return (
                           <div key={n.key} className="flex items-center gap-3">
                             <span className="text-sm font-medium text-[#767676] w-20 shrink-0">
-                              {n.label}
+                              {t(n.label)}
                             </span>
                             <div className="flex-1 h-2 bg-black/10 rounded-full overflow-hidden">
                               <div
@@ -343,7 +329,7 @@ export default function RecipeDetail({
               </div>
             )}
 
-            <h3 className="text-xl font-medium text-black mb-4">Ingredient</h3>
+            <h3 className="text-xl font-medium text-black mb-4">{t("Ingredient")}</h3>
             <div className="flex flex-col gap-3">
               {ingredients.map((ing) => (
                 <div
@@ -395,9 +381,7 @@ export default function RecipeDetail({
                   onConfirm(ingredients.filter((ing) => ing.selected))
                 }
                 className="bg-[#EF5A3A] text-white px-5 py-3 rounded-full text-base font-bold shadow-md mt-4 w-full"
-              >
-                Confirm
-              </button>
+              >{t("Confirm")}</button>
             </div>
           </div>
         </motion.div>

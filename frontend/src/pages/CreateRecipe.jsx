@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { ChevronLeft, Plus, Refrigerator } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -22,6 +23,7 @@ export default function CreateRecipe({
   setActiveTab,
   onGenerate,
 }) {
+    const { t, locale } = useLocale();
   // Taste has no onboarding/Profile equivalent (user picks fresh every
   // generation, per explicit decision — see spec) so it stays local here,
   // not moved to the shared constants module.
@@ -162,16 +164,16 @@ export default function CreateRecipe({
                   recipe?.image ||
                   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
                 }
-                alt={recipe?.name || "Food Menu"}
+                alt={recipe?.name || t("Food Menu")}
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="flex flex-col flex-1 pl-2 overflow-hidden">
               <h3 className="text-lg font-bold text-black mb-1 truncate">
-                {recipe?.name || "Food Menu's name"}
+                {recipe?.name || t("Food Menu's name")}
               </h3>
               <p className="text-[12px] text-gray-500 mb-2 line-clamp-2">
-                {recipe?.short_description || "short-description"}
+                {recipe?.short_description || t("short-description")}
               </p>
               <div className="flex gap-2">
                 {recipe?.tags &&
@@ -194,15 +196,13 @@ export default function CreateRecipe({
           {/* Description Textarea */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-black mb-0">
-                วัตถุดิบที่เลือก
-              </h3>
+              <h3 className="text-lg font-bold text-black mb-0">{t("วัตถุดิบที่เลือก")}</h3>
               <button
                 onClick={() => setShowFridge(!showFridge)}
                 className={`flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-full transition ${showFridge ? "bg-orange-100 text-[#EF5A3A]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
                 <Refrigerator className="w-4 h-4" />
-                {showFridge ? "ปิดตู้เย็น" : "+ จากตู้เย็น"}
+                {showFridge ? t("ปิดตู้เย็น") : t("+ จากตู้เย็น")}
               </button>
             </div>
             {/* Display Selected Ingredients */}
@@ -247,9 +247,7 @@ export default function CreateRecipe({
             {/* Fridge Items Selection UI */}
             {showFridge && (
               <div className="bg-gray-50 border border-gray-200 rounded-3xl p-4 mb-6 shadow-inner">
-                <h4 className="text-sm font-bold text-gray-700 mb-3">
-                  วัตถุดิบใน My Fridge
-                </h4>
+                <h4 className="text-sm font-bold text-gray-700 mb-3">{t("วัตถุดิบใน My Fridge")}</h4>
                 {userIngredients && userIngredients.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {userIngredients.map((ing) => {
@@ -273,9 +271,9 @@ export default function CreateRecipe({
                             }
                           />
                           {ing.name}
-                          {expiryBadgeLabel(ing.expiry_date) && (
+                          {expiryBadgeLabel(ing.expiry_date, locale) && (
                             <span className="text-[10px] font-medium text-red-500">
-                              ({expiryBadgeLabel(ing.expiry_date)})
+                              ({expiryBadgeLabel(ing.expiry_date, locale)})
                             </span>
                           )}
                           {!isSelected && (
@@ -286,15 +284,12 @@ export default function CreateRecipe({
                     })}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-2">
-                    ไม่มีวัตถุดิบในตู้เย็น (คุณสามารถกดเพิ่มได้ที่แถบ My Fridge
-                    ด้านล่าง)
-                  </p>
+                  <p className="text-sm text-gray-500 text-center py-2">{t("ไม่มีวัตถุดิบในตู้เย็น (คุณสามารถกดเพิ่มได้ที่แถบ My Fridge ด้านล่าง)")}</p>
                 )}
               </div>
             )}
 
-            <h3 className="text-lg font-bold text-black mt-2 mb-2">รสชาติ</h3>
+            <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("รสชาติ")}</h3>
             <div className="flex flex-wrap gap-2 mb-2">
               {TASTE_OPTIONS.map((option) => (
                 <button
@@ -307,7 +302,7 @@ export default function CreateRecipe({
                       : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
                   }`}
                 >
-                  {option}
+                  {t(option)}
                 </button>
               ))}
             </div>
@@ -316,17 +311,13 @@ export default function CreateRecipe({
                 type="text"
                 value={tasteOther}
                 onChange={(e) => setTasteOther(e.target.value)}
-                placeholder="ระบุรสชาติที่ต้องการ"
+                placeholder={t("ระบุรสชาติที่ต้องการ")}
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
             )}
             {taste !== OTHER_OPTION && <div className="mb-2" />}
 
-            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
-              อาการแพ้อาหาร
-              <span className="text-xs font-normal text-gray-400">
-                เลือกได้มากกว่า 1 ข้อ
-              </span>
+            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อาการแพ้อาหาร")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
             </h3>
             <div className="flex flex-wrap gap-2 mb-2">
               {ALLERGY_OPTIONS.map((option) => (
@@ -343,7 +334,7 @@ export default function CreateRecipe({
                       : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
                   }`}
                 >
-                  {option}
+                  {t(option)}
                 </button>
               ))}
             </div>
@@ -352,7 +343,7 @@ export default function CreateRecipe({
                 type="text"
                 ref={allergyInput}
                 value={allergiesOther}
-                aria-label="ระบุอาการแพ้อาหาร"
+                aria-label={t("ระบุอาการแพ้อาหาร")}
                 aria-invalid={Boolean(allergyError)}
                 aria-describedby={allergyError ? "allergy-error" : undefined}
                 maxLength={1000}
@@ -360,21 +351,17 @@ export default function CreateRecipe({
                   setAllergiesOther(e.target.value);
                   setAllergyError(null);
                 }}
-                placeholder="ระบุอาการแพ้อาหาร"
+                placeholder={t("ระบุอาการแพ้อาหาร")}
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
             )}
             {allergyError && (
               <p id="allergy-error" role="alert" className="text-sm text-red-700 mb-4 break-words">
-                {allergyError}
+                {t(allergyError)}
               </p>
             )}
             {!allergies.includes(OTHER_OPTION) && <div className="mb-2" />}
-            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
-              อุปกรณ์ที่มี
-              <span className="text-xs font-normal text-gray-400">
-                เลือกได้มากกว่า 1 ข้อ
-              </span>
+            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อุปกรณ์ที่มี")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
             </h3>
             <div className="flex flex-wrap gap-2 mb-2">
               {EQUIPMENT_OPTIONS.map((option) => (
@@ -390,7 +377,7 @@ export default function CreateRecipe({
                       : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
                   }`}
                 >
-                  {option}
+                  {t(option)}
                 </button>
               ))}
             </div>
@@ -399,16 +386,14 @@ export default function CreateRecipe({
                 type="text"
                 value={equipmentOther}
                 onChange={(e) => setEquipmentOther(e.target.value)}
-                placeholder="ระบุอุปกรณ์ที่มี"
+                placeholder={t("ระบุอุปกรณ์ที่มี")}
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
             )}
-            <h3 className="text-lg font-bold text-black mt-2 mb-2">
-              ความต้องการอื่นๆ (ถ้ามี)
-            </h3>
+            <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("ความต้องการอื่นๆ (ถ้ามี)")}</h3>
             <textarea
               className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-              placeholder="เช่น สิ่งที่ต้องระวัง"
+              placeholder={t("เช่น สิ่งที่ต้องระวัง")}
               value={extra}
               onChange={(e) => setExtra(e.target.value)}
             ></textarea>
@@ -435,7 +420,7 @@ export default function CreateRecipe({
                 d="M12 4v2m-6 4v2m12-2v2M4 14a8 8 0 0016 0H4zm0 0h16v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-1z"
               />
             </svg>
-            {isSubmitting ? "กำลังตรวจสอบอาการแพ้…" : "สร้างเมนูอาหารกันเลย"}
+            {isSubmitting ? t("กำลังตรวจสอบอาการแพ้…") : t("สร้างเมนูอาหารกันเลย")}
           </button>
         </div>
 

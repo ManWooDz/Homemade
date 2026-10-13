@@ -1,3 +1,4 @@
+import { useLocale } from "../../context/LocaleContext";
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -5,6 +6,7 @@ import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
@@ -36,7 +38,7 @@ export default function Login() {
 
                         {successMessage && (
                             <p className="w-full text-body-medium text-green-600 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-center">
-                                {successMessage}
+                                {t(successMessage)}
                             </p>
                         )}
 
@@ -47,7 +49,7 @@ export default function Login() {
                             <div className="w-full h-auto flex flex-col justify-start items-center gap-3">
                                 <input
                                     type="email"
-                                    placeholder="Email"
+                                    placeholder={t("Email")}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full h-11 px-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
@@ -56,36 +58,32 @@ export default function Login() {
                                 <PasswordInput
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Password"
+                                    placeholder={t("Password")}
                                     required
                                 />
                                 <div className="w-full flex justify-end">
                                     <Link
                                         to="/reset-password"
                                         className="text-text-black text-caption font-normal hover:underline"
-                                    >
-                                        Forgot password?
-                                    </Link>
+                                    >{t("Forgot password?")}</Link>
                                 </div>
                             </div>
 
-                            {error && <p className="text-body-medium text-red-500">{error}</p>}
+                            {error && <p className="text-body-medium text-red-500">{t(error)}</p>}
 
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
                                 className="w-full h-11 mt-2 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                             >
-                                {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "Login"}
+                                {isSubmitting ? t("กำลังเข้าสู่ระบบ...") : t("Login")}
                             </button>
 
                             <div className="w-full flex justify-center items-center text-caption mt-1">
                                 <Link
                                     to="/register"
                                     className="text-text-brands font-normal hover:underline"
-                                >
-                                    Sign Up
-                                </Link>
+                                >{t("Sign Up")}</Link>
                             </div>
                         </form>
                     </div>

@@ -10,7 +10,7 @@ test("KG unavailability stays actionable Thai copy in both generation handlers",
     assert.equal(toUserFacingGenerateError(message), message);
     const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
     for (const handler of app.split("onGenerate={async ").slice(1)) {
-        assert.match(handler, /toUserFacingGenerateError\(result.message\)/);
+        assert.match(handler, /toUserFacingGenerateError\(result.message, locale\)/);
     }
 });
 

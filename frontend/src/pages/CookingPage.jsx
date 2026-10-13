@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useRef, useState } from "react";
 import { ChevronLeft, ChefHat, Heart, Star } from "lucide-react";
 import { motion, useMotionValue, animate } from "framer-motion";
@@ -18,6 +19,7 @@ export default function CookingPage({
   historyItem,
   onToggleFavorite,
 }) {
+    const { t } = useLocale();
   console.log("CookingPage");
 
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -154,12 +156,8 @@ export default function CookingPage({
           >
             <ChefHat className="w-24 h-24 text-[#EF5A3A] drop-shadow-lg" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-gray-800 tracking-wide">
-            กำลังคิดค้นเมนู...
-          </h2>
-          <p className="text-gray-500 text-center px-8">
-            เชฟ AI กำลังนำวัตถุดิบและเงื่อนไขของคุณมาปรุงเป็นสูตรพิเศษ
-          </p>
+          <h2 className="text-2xl font-bold text-gray-800 tracking-wide">{t("กำลังคิดค้นเมนู...")}</h2>
+          <p className="text-gray-500 text-center px-8">{t("เชฟ AI กำลังนำวัตถุดิบและเงื่อนไขของคุณมาปรุงเป็นสูตรพิเศษ")}</p>
         </div>
       </div>
     );
@@ -170,7 +168,7 @@ export default function CookingPage({
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl items-center justify-center space-y-4">
-          <p className="text-gray-500">เกิดข้อผิดพลาดในการสร้างสูตรอาหาร</p>
+          <p className="text-gray-500">{t("เกิดข้อผิดพลาดในการสร้างสูตรอาหาร")}</p>
           {typeof generateError === "string" && generateError && (
             <p className="text-sm text-gray-600 text-center px-8 max-w-full break-words">
               {generateError}
@@ -179,9 +177,7 @@ export default function CookingPage({
           <button
             onClick={onBack}
             className="bg-[#EF5A3A] text-white px-6 py-2 rounded-full font-medium shadow-sm"
-          >
-            กลับไปแก้ไข
-          </button>
+          >{t("กลับไปแก้ไข")}</button>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       </div>
@@ -219,20 +215,14 @@ export default function CookingPage({
 
           {selectedRating === 0 ? (
             <>
-              <h3 className="text-xl font-bold text-[#EF5A3A] text-center mb-1">
-                How do you like it?
-              </h3>
-              <p className="text-sm text-gray-500 text-center mb-6">
-                Rate your meal with this recipe?
-              </p>
+              <h3 className="text-xl font-bold text-[#EF5A3A] text-center mb-1">{t("How do you like it?")}</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">{t("Rate your meal with this recipe?")}</p>
             </>
           ) : (
             <>
-              <p className="text-sm text-gray-500 text-center mb-1">
-                How do you like it?
-              </p>
+              <p className="text-sm text-gray-500 text-center mb-1">{t("How do you like it?")}</p>
               <h3 className="text-xl font-bold text-[#EF5A3A] text-center mb-6">
-                {RATING_MESSAGES[selectedRating]}
+                {t(RATING_MESSAGES[selectedRating])}
               </h3>
             </>
           )}
@@ -276,15 +266,13 @@ export default function CookingPage({
                         : "bg-white text-gray-700 border-gray-300"
                     }`}
                   >
-                    {tag}
+                    {t(tag)}
                   </button>
                 ))}
               </div>
 
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-[#EF5A3A] font-medium">
-                  Tell us more about your meals ...
-                </span>
+                <span className="text-sm text-[#EF5A3A] font-medium">{t("Tell us more about your meals ...")}</span>
                 <span className="text-xs text-gray-400">
                   {FEEDBACK_MAX_LEN - feedbackText.length}/{FEEDBACK_MAX_LEN}
                 </span>
@@ -293,19 +281,17 @@ export default function CookingPage({
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
                 maxLength={FEEDBACK_MAX_LEN}
-                placeholder="เช่น เผ็ด"
+                placeholder={t("เช่น เผ็ด")}
                 className="w-full h-24 border border-gray-300 rounded-2xl p-3 text-sm text-gray-700 resize-none mb-6 focus:outline-none focus:border-[#EF5A3A]"
               />
             </>
           )}
 
           {generatedRecipe?._historyId == null && (
-            <p className="text-xs text-gray-400 text-center mb-2">
-              บันทึกคะแนนสำหรับสูตรนี้ไม่ได้
-            </p>
+            <p className="text-xs text-gray-400 text-center mb-2">{t("บันทึกคะแนนสำหรับสูตรนี้ไม่ได้")}</p>
           )}
           {ratingError && (
-            <p className="text-sm text-red-600 text-center mb-2">{ratingError}</p>
+            <p className="text-sm text-red-600 text-center mb-2">{t(ratingError)}</p>
           )}
           <button
             onClick={submitRating}
@@ -316,14 +302,12 @@ export default function CookingPage({
             }
             className="bg-[#EF5A3A] text-white px-5 py-3 rounded-full text-base font-bold shadow-md w-full disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orange-600 transition"
           >
-            {ratingSubmitting ? "กำลังส่ง..." : "ส่งคะแนน"}
+            {ratingSubmitting ? t("กำลังส่ง...") : t("ส่งคะแนน")}
           </button>
           <button
             onClick={skipRating}
             className="text-gray-400 text-sm font-medium w-full text-center mt-3"
-          >
-            ข้าม
-          </button>
+          >{t("ข้าม")}</button>
         </div>
       </motion.div>
     );
@@ -342,7 +326,7 @@ export default function CookingPage({
           <button
             onClick={handleToggleFavorite}
             disabled={!historyItem || favoritePending}
-            aria-label={historyItem?.is_favorite ? "เอาออกจากสูตรที่ชอบ" : "บันทึกเป็นสูตรที่ชอบ"}
+            aria-label={historyItem?.is_favorite ? t("เอาออกจากสูตรที่ชอบ") : t("บันทึกเป็นสูตรที่ชอบ")}
             className="absolute right-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Heart className={`w-5 h-5 ${historyItem?.is_favorite ? "fill-current" : ""}`} />

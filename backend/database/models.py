@@ -16,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     JSON,
     String,
     Text,
@@ -24,7 +25,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, column_property, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -39,6 +40,15 @@ class User(Base):
     # nullable: additive Google OAuth later without a schema change (spec.md:17)
     hashed_password: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    display_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    locale: Mapped[str] = mapped_column(String(2), nullable=False, server_default="th")
+    avatar_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    has_avatar: Mapped[bool] = column_property(avatar_bytes.is_not(None))
+
+    __table_args__ = (
+        CheckConstraint("locale IN ('th', 'en')", name="ck_users_locale"),
+        CheckConstraint("avatar_bytes IS NULL OR length(avatar_bytes) <= 262144", name="ck_users_avatar_size"),
+    )
 
 
 class UserIngredient(Base):

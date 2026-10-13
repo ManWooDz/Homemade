@@ -1,4 +1,6 @@
+import { useLocale } from "../context/LocaleContext";
 export function OptionChips({ options, selected, multiple, onToggle, emojiMap }) {
+    const { t } = useLocale();
   return (
     <div className="w-full flex justify-center items-center gap-2 flex-wrap max-w-[358px]">
       {options.map((option) => {
@@ -17,7 +19,7 @@ export function OptionChips({ options, selected, multiple, onToggle, emojiMap })
             }`}
           >
             {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
-            {option}
+            {t(option)}
           </button>
         );
       })}
@@ -26,6 +28,7 @@ export function OptionChips({ options, selected, multiple, onToggle, emojiMap })
 }
 
 export function OptionList({ options, selected, multiple, onToggle, emojiMap }) {
+    const { t } = useLocale();
   return (
     <div className="w-full flex flex-col gap-2.5 max-w-[358px]">
       {options.map((option) => {
@@ -45,7 +48,7 @@ export function OptionList({ options, selected, multiple, onToggle, emojiMap }) 
           >
             <span className="text-body-medium font-normal truncate">
               {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
-              {option}
+              {t(option)}
             </span>
           </button>
         );

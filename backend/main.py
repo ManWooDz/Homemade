@@ -5,7 +5,7 @@ import math
 
 logging.basicConfig(level=logging.INFO)
 
-from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response, UploadFile, File, status
+from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response, UploadFile, File, Form, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,6 +51,7 @@ import otp
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
+from user_profile import MAX_UPLOAD_BYTES, ProfileValidationError, normalize_avatar, user_payload, validate_display_name
 from history_repository import (
     get_history_embedding_snapshot,
     insert_generate_history,
@@ -1280,7 +1281,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"status": "success", "data": {"id": user.id, "email": user.email}}
+    return {"status": "success", "data": user_payload(user)}
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -1434,7 +1435,7 @@ async def login(
     db.commit()
     set_auth_cookies(response, access_token, refresh_token)
     response.headers["Cache-Control"] = "no-store"
-    return {"status": "success", "data": {"id": user.id, "email": user.email}}
+    return {"status": "success", "data": user_payload(user)}
 
 
 @app.post("/api/auth/refresh", dependencies=[Depends(verify_same_origin)])
@@ -1492,7 +1493,78 @@ async def logout(request: Request, response: Response, db: Session = Depends(get
 @app.get("/api/auth/me")
 async def read_current_user(response: Response, current_user: User = Depends(get_current_user)):
     response.headers["Cache-Control"] = "no-store"
-    return {"status": "success", "data": {"id": current_user.id, "email": current_user.email}}
+    return {"status": "success", "data": user_payload(current_user)}
+
+
+@app.put("/api/user-profile", dependencies=[Depends(verify_same_origin)])
+async def update_user_profile(
+    response: Response,
+    display_name: str = Form(...),
+    avatar_action: Literal["keep", "replace", "remove"] = Form("keep"),
+    avatar: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        name = validate_display_name(display_name)
+        if (avatar_action == "replace") != (avatar is not None):
+            raise ProfileValidationError("profile_image_action_invalid")
+        normalized = None
+        if avatar is not None:
+            raw = bytearray()
+            while chunk := await avatar.read(64 * 1024):
+                raw.extend(chunk)
+                if len(raw) > MAX_UPLOAD_BYTES:
+                    raise ProfileValidationError("profile_image_too_large", 413)
+            normalized = await run_in_threadpool(normalize_avatar, bytes(raw))
+        current_user.display_name = name
+        if avatar_action != "keep":
+            current_user.avatar_bytes = normalized
+        db.commit()
+        db.refresh(current_user)
+        response.headers["Cache-Control"] = "no-store"
+        return {"status": "success", "data": user_payload(current_user)}
+    except ProfileValidationError as error:
+        db.rollback()
+        return JSONResponse(status_code=error.status, content={"status": "error", "code": error.code})
+    except Exception:
+        db.rollback()
+        logging.error("profile: save failed")
+        return JSONResponse(status_code=500, content={"status": "error", "code": "profile_save_failed"})
+    finally:
+        if avatar is not None:
+            await avatar.close()
+
+
+class ProfileLanguageUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+    locale: Literal["th", "en"]
+
+
+@app.patch("/api/user-profile/language", dependencies=[Depends(verify_same_origin)])
+def update_profile_language(
+    body: ProfileLanguageUpdate,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        current_user.locale = body.locale
+        db.commit()
+        db.refresh(current_user)
+        response.headers["Cache-Control"] = "no-store"
+        return {"status": "success", "data": user_payload(current_user)}
+    except Exception:
+        db.rollback()
+        return JSONResponse(status_code=500, content={"status": "error", "code": "profile_save_failed"})
+
+
+@app.get("/api/user-profile/avatar")
+def read_profile_avatar(current_user: User = Depends(get_current_user)):
+    private_headers = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"}
+    if not current_user.has_avatar:
+        return Response(status_code=404, headers=private_headers)
+    return Response(content=current_user.avatar_bytes, media_type="image/jpeg", headers=private_headers)
 
 
 class UserPreferenceUpdate(BaseModel):

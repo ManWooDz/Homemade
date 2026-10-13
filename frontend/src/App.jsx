@@ -1,3 +1,4 @@
+import { useLocale } from "./context/LocaleContext";
 import { useState, useEffect, useRef, useLayoutEffect, useMemo } from "react";
 import {
     Home,
@@ -40,6 +41,7 @@ const toHistoryItem = (row) => ({
 });
 
 function App() {
+    const { t, locale } = useLocale();
     const { apiFetch } = useAuth();
 
     const [activeTab, setActiveTab] = useState("home");
@@ -498,7 +500,7 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
-                            setGenerateError(toUserFacingGenerateError(result.message));
+                            setGenerateError(toUserFacingGenerateError(result.message, locale));
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
@@ -685,7 +687,7 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
-                            setGenerateError(toUserFacingGenerateError(result.message));
+                            setGenerateError(toUserFacingGenerateError(result.message, locale));
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
@@ -752,7 +754,7 @@ function App() {
                             <Search className="w-5 h-5 text-gray-500 mr-2" />
                             <input
                                 type="text"
-                                placeholder="Find the menu"
+                                placeholder={t("Find the menu")}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full outline-none text-gray-600 bg-transparent text-base"
@@ -773,31 +775,21 @@ function App() {
                     <div className="w-full h-48 bg-black rounded-3xl mb-6 relative overflow-hidden shadow-sm flex items-center">
                         <img
                             src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                            alt="Cooking Banner"
+                            alt={t("Cooking Banner")}
                             className="absolute inset-0 w-full h-full object-cover opacity-60"
                         />
                         <div className="absolute inset-0 bg-linear-to-r from-black/80 to-transparent z-0"></div>
                         <div className="relative z-10 text-white w-3/4 pl-6">
-                            <h2 className="text-[34px] font-black italic text-white leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                                TOP 10
-                            </h2>
-                            <h2 className="text-[34px] font-black italic text-yellow-400 leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                                COOKING
-                            </h2>
-                            <h2 className="text-[34px] font-black italic text-yellow-400 leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                                RECIPES
-                            </h2>
+                            <h2 className="text-[34px] font-black italic text-white leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{t("TOP 10")}</h2>
+                            <h2 className="text-[34px] font-black italic text-yellow-400 leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{t("COOKING")}</h2>
+                            <h2 className="text-[34px] font-black italic text-yellow-400 leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{t("RECIPES")}</h2>
                         </div>
                     </div>
 
                     {/* Categories */}
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">
-                            Categories
-                        </h3>
-                        <span className="text-[#EF5A3A] text-sm font-medium cursor-pointer">
-                            See all
-                        </span>
+                        <h3 className="text-lg font-bold text-gray-900">{t("Categories")}</h3>
+                        <span className="text-[#EF5A3A] text-sm font-medium cursor-pointer">{t("See all")}</span>
                     </div>
                     <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide mb-6 -mx-5 px-5">
                         {categories.map((category, index) => (
@@ -810,7 +802,7 @@ function App() {
                                         : "bg-white border border-[#EF5A3A] text-[#EF5A3A] hover:bg-orange-50"
                                 }`}
                             >
-                                {category}
+                                {t(category)}
                             </button>
                         ))}
                     </div>
@@ -884,9 +876,7 @@ function App() {
                             className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 flex flex-col"
                             style={{ top: filterPanelTop }}
                         >
-                            <p className="text-xs text-gray-400 font-medium px-5 pt-4">
-                                Explore recipe by
-                            </p>
+                            <p className="text-xs text-gray-400 font-medium px-5 pt-4">{t("Explore recipe by")}</p>
 
                             {/* Tab badges */}
                             <div
@@ -907,7 +897,7 @@ function App() {
                                                 : "bg-white border border-gray-300 text-gray-600"
                                         }`}
                                     >
-                                        {tab.label}
+                                        {t(tab.label)}
                                         {filterCounts[tab.key] > 0 &&
                                             ` (${filterCounts[tab.key]})`}
                                     </button>
@@ -922,7 +912,7 @@ function App() {
                                             <Search className="w-4 h-4 text-gray-400 mr-2" />
                                             <input
                                                 type="text"
-                                                placeholder="Search ingredient"
+                                                placeholder={t("Search ingredient")}
                                                 value={filterIngredientQuery}
                                                 onChange={(e) =>
                                                     setFilterIngredientQuery(
@@ -935,9 +925,7 @@ function App() {
 
                                         {selectedIngredientObjs.length > 0 && (
                                             <div className="mb-4">
-                                                <h4 className="text-sm font-bold text-gray-700 mb-2">
-                                                    Selected
-                                                </h4>
+                                                <h4 className="text-sm font-bold text-gray-700 mb-2">{t("Selected")}</h4>
                                                 <div className="grid grid-cols-4 gap-3">
                                                     {selectedIngredientObjs.map(
                                                         (ing) => (
@@ -978,9 +966,7 @@ function App() {
                                             </div>
                                         )}
 
-                                        <h4 className="text-sm font-bold text-gray-700 mb-2">
-                                            All Ingredient
-                                        </h4>
+                                        <h4 className="text-sm font-bold text-gray-700 mb-2">{t("All Ingredient")}</h4>
                                         <div className="grid grid-cols-4 gap-3">
                                             {visibleIngredients.map((ing) => {
                                                 const isSelected =
@@ -1096,15 +1082,11 @@ function App() {
                                 <button
                                     onClick={clearFilters}
                                     className="flex-1 py-3 rounded-full text-sm font-bold text-gray-600 border border-gray-300"
-                                >
-                                    Clear
-                                </button>
+                                >{t("Clear")}</button>
                                 <button
                                     onClick={() => setShowFilterPanel(false)}
                                     className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#EF5A3A] shadow-md hover:bg-orange-600 transition"
-                                >
-                                    Apply
-                                </button>
+                                >{t("Apply")}</button>
                             </div>
                         </div>
                     </>
@@ -1121,6 +1103,7 @@ function App() {
 }
 
 function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {
+    const { t } = useLocale();
     return (
         <div className="flex flex-col gap-3">
             {options.map((option) => {
@@ -1135,7 +1118,7 @@ function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {
                             {emojiMap?.[option] && (
                                 <span className="mr-2">{emojiMap[option]}</span>
                             )}
-                            {option}
+                            {t(option)}
                         </span>
                         <div
                             className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${

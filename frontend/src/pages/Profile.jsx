@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
@@ -12,12 +12,15 @@ import {
   ChefHat,
   Star,
   Heart,
+  UserRound,
 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { OptionChips, OptionList } from "../components/OptionPicker";
 import { getTagColor } from "../utils/tagColors";
 import { useAuth } from "../context/AuthContext";
+import { useLocale } from "../context/LocaleContext";
+import ProfileEditor from "../components/ProfileEditor";
 import {
   OTHER_OPTION,
   NO_RESTRICTION,
@@ -40,19 +43,14 @@ const LANGUAGE_OPTIONS = [
   { code: "en", label: "English" },
 ];
 
-const PLACEHOLDER_USER = {
-  username: "ผู้ใช้ HomeMade",
-  email: "user@example.com",
-  avatar:
-    "https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80",
-};
-
 function Header({ title, onBack }) {
+  const { t } = useLocale();
   return (
     <div className="pt-8 px-6 h-18 flex items-center justify-center relative z-20 mb-6">
       <button
         onClick={onBack}
-        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
+        aria-label={t("กลับ")}
+        className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
@@ -97,6 +95,7 @@ function FlagIcon({ code }) {
 }
 
 function MenuRow({ icon, label, onClick }) {
+    const { t } = useLocale();
   return (
     <button
       onClick={onClick}
@@ -106,7 +105,7 @@ function MenuRow({ icon, label, onClick }) {
         {icon}
       </div>
       <span className="flex-1 text-left text-[15px] font-medium text-gray-800">
-        {label}
+        {t(label)}
       </span>
       <ChevronRight className="w-5 h-5 text-gray-300" />
     </button>
@@ -123,13 +122,52 @@ export default function Profile({
   const [view, setView] = useState("main"); // main | history | language | preferences | helps
   const [historyFilter, setHistoryFilter] = useState("all"); // all | favorites
 
-  const [language, setLanguage] = useState("th");
+  const { locale: language, t } = useLocale();
+  const [languageSaving, setLanguageSaving] = useState(false);
+  const [languageError, setLanguageError] = useState("");
+  const languageRequest = useRef(false);
+  const [notice, setNotice] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [photoError, setPhotoError] = useState(false);
+  const [photoReload, setPhotoReload] = useState(0);
 
   const goMain = () => setView("main");
 
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateLanguage } = useAuth();
   const { apiFetch } = useAuth();
+  const avatarUrl = user?.has_avatar && photo?.owner === user.id ? photo.url : "";
+
+  useEffect(() => {
+    if (!user?.has_avatar) return;
+    const controller = new AbortController();
+    let createdUrl;
+    (async () => {
+      try {
+        const response = await apiFetch("/api/user-profile/avatar", { signal: controller.signal });
+        if (!response.ok) throw new Error("Avatar unavailable");
+        const blob = await response.blob();
+        if (controller.signal.aborted) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPhoto({ owner: user.id, url: createdUrl });
+        setPhotoError(false);
+      } catch {
+        if (!controller.signal.aborted) setPhotoError(true);
+      }
+    })();
+    return () => { controller.abort(); if (createdUrl) URL.revokeObjectURL(createdUrl); };
+  }, [apiFetch, user?.id, user?.has_avatar, photoReload]);
+
+  const changeLanguage = async code => {
+    if (languageRequest.current || code === language) return;
+    languageRequest.current = true;
+    setLanguageSaving(true);
+    setLanguageError("");
+    const result = await updateLanguage(code);
+    setLanguageSaving(false);
+    languageRequest.current = false;
+    if (!result.success) setLanguageError("บันทึกภาษาไม่สำเร็จ กรุณาลองอีกครั้ง");
+  };
 
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [age, setAge] = useState("");
@@ -234,11 +272,25 @@ export default function Profile({
       ? (cookingHistory || []).filter((item) => item.is_favorite)
       : cookingHistory || [];
 
+  if (view === "edit") {
+    return (
+      <div className="h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+          <Header onBack={goMain} />
+          <main className="flex-1 overflow-y-auto pb-32">
+            <ProfileEditor avatarUrl={avatarUrl} onCancel={goMain} onSaved={() => { setPhotoReload(value => value + 1); setNotice("บันทึกโปรไฟล์แล้ว"); goMain(); }} />
+          </main>
+          <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
+      </div>
+    );
+  }
+
   if (view === "history") {
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-          <Header title="Cooking History" onBack={goMain} />
+          <Header title={t("Cooking History")} onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32">
             <div className="flex gap-2 mb-4">
               {[
@@ -254,19 +306,19 @@ export default function Profile({
                       : "bg-white text-[#EF5A3A] border-[#EF5A3A]"
                   }`}
                 >
-                  {chip.label}
+                  {t(chip.label)}
                 </button>
               ))}
             </div>
             {!cookingHistory || cookingHistory.length === 0 ? (
               <div className="text-center text-gray-400 mt-10">
                 <ChefHat className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p>ยังไม่มีเมนูที่เคยสร้าง</p>
+                <p>{t("ยังไม่มีเมนูที่เคยสร้าง")}</p>
               </div>
             ) : visibleHistory.length === 0 ? (
               <div className="text-center text-gray-400 mt-10">
                 <Heart className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p>ยังไม่มีสูตรที่กด ♥ ไว้</p>
+                <p>{t("ยังไม่มีสูตรที่กด ♥ ไว้")}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
@@ -340,22 +392,23 @@ export default function Profile({
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-          <Header title="Language" onBack={goMain} />
+          <Header title={t("Language")} onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32">
-            <div className="flex flex-col gap-2">
+            <div role="radiogroup" aria-label={t("ภาษา")} className="flex flex-col gap-2">
               {LANGUAGE_OPTIONS.map((opt) => (
-                <button
+                <label
                   key={opt.code}
-                  onClick={() => setLanguage(opt.code)}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border transition ${
+                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border transition focus-within:outline-2 focus-within:outline-[#B93E25] ${languageSaving ? "opacity-60" : "cursor-pointer"} ${
                     language === opt.code
                       ? "bg-orange-50 border-[#EF5A3A]"
                       : "bg-gray-50 border-transparent hover:border-gray-200"
                   }`}
                 >
+                  <input type="radio" name="profile-language" value={opt.code} checked={language === opt.code}
+                    onChange={() => changeLanguage(opt.code)} aria-disabled={languageSaving} className="sr-only" />
                   <span className="text-[15px] font-medium text-gray-800 flex items-center gap-2">
                     <FlagIcon code={opt.code} />
-                    {opt.label}
+                    {t(opt.label)}
                   </span>
                   <span
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
@@ -368,9 +421,11 @@ export default function Profile({
                       <span className="w-2.5 h-2.5 rounded-full bg-[#EF5A3A]" />
                     )}
                   </span>
-                </button>
+                </label>
               ))}
             </div>
+            <p role="status" className="mt-4 text-sm text-gray-600">{languageSaving ? t("กำลังบันทึกภาษา...") : ""}</p>
+            {languageError && <p role="alert" className="mt-3 text-sm text-red-700">{t(languageError)}</p>}
           </div>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
@@ -382,9 +437,9 @@ export default function Profile({
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-          <Header title="Preferences" onBack={goMain} />
+          <Header title={t("Preferences")} onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32">
-            <h3 className="text-base font-bold text-black mb-2">อายุ</h3>
+            <h3 className="text-base font-bold text-black mb-2">{t("อายุ")}</h3>
             <input
               type="number"
               min="1"
@@ -392,11 +447,11 @@ export default function Profile({
               value={age}
               onChange={(e) => setAge(e.target.value)}
               onBlur={() => savePreferences({ age: age === "" ? null : Number(age) })}
-              placeholder="ระบุอายุ"
+              placeholder={t("ระบุอายุ")}
               className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-6 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
             />
 
-            <h3 className="text-base font-bold text-black mb-2">คุณชอบอาหารแบบไหน?</h3>
+            <h3 className="text-base font-bold text-black mb-2">{t("คุณชอบอาหารแบบไหน?")}</h3>
             <div className="mb-6">
               <OptionChips
                 options={CUISINE_OPTIONS}
@@ -411,7 +466,7 @@ export default function Profile({
               />
             </div>
 
-            <h3 className="text-base font-bold text-black mb-2">อาการแพ้ หรือข้อจำกัดของคุณ</h3>
+            <h3 className="text-base font-bold text-black mb-2">{t("อาการแพ้ หรือข้อจำกัดของคุณ")}</h3>
             <div className="mb-2">
               <OptionChips
                 options={RESTRICTION_OPTIONS}
@@ -438,13 +493,13 @@ export default function Profile({
                   setDietaryRestrictions(next);
                   savePreferences({ dietary_restrictions: next });
                 }}
-                placeholder="ระบุข้อจำกัดของคุณ"
+                placeholder={t("ระบุข้อจำกัดของคุณ")}
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-4 mt-2 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
             )}
             <div className="mb-4" />
 
-            <h3 className="text-base font-bold text-black mb-2">อุปกรณ์ที่มี</h3>
+            <h3 className="text-base font-bold text-black mb-2">{t("อุปกรณ์ที่มี")}</h3>
             <div className="mb-2">
               <OptionChips
                 options={EQUIPMENT_OPTIONS}
@@ -471,13 +526,13 @@ export default function Profile({
                   setEquipment(next);
                   savePreferences({ equipment: next });
                 }}
-                placeholder="ระบุอุปกรณ์ที่มี"
+                placeholder={t("ระบุอุปกรณ์ที่มี")}
                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm mb-4 mt-2 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
               />
             )}
             <div className="mb-4" />
 
-            <h3 className="text-base font-bold text-black mb-2">คุณทำอาหารบ่อยแค่ไหน?</h3>
+            <h3 className="text-base font-bold text-black mb-2">{t("คุณทำอาหารบ่อยแค่ไหน?")}</h3>
             <div className="mb-6">
               <OptionList
                 options={FREQUENCY_OPTIONS}
@@ -491,7 +546,7 @@ export default function Profile({
               />
             </div>
 
-            <h3 className="text-base font-bold text-black mb-2">คุณทำอาหารเพื่ออะไร?</h3>
+            <h3 className="text-base font-bold text-black mb-2">{t("คุณทำอาหารเพื่ออะไร?")}</h3>
             <div className="mb-2">
               <OptionList
                 options={GOAL_OPTIONS}
@@ -507,7 +562,7 @@ export default function Profile({
             </div>
 
             {prefsError && (
-              <p className="text-red-600 text-sm text-center mt-4">{prefsError}</p>
+              <p className="text-red-600 text-sm text-center mt-4">{t(prefsError)}</p>
             )}
           </div>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -520,31 +575,19 @@ export default function Profile({
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-          <Header title="Helps" onBack={goMain} />
+          <Header title={t("ช่วยเหลือ")} onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32 flex flex-col gap-5">
             <div>
-              <h3 className="text-base font-bold text-black mb-2">
-                วิธีใช้งาน
-              </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                เพิ่มวัตถุดิบใน My Fridge หรือเลือกเมนูจากหน้าแรก
-                แล้วกด "สร้างเมนูอาหารกันเลย" เพื่อให้ AI คิดสูตรอาหารจากวัตถุดิบที่มี
-              </p>
+              <h3 className="text-base font-bold text-black mb-2">{t("วิธีใช้งาน")}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{t("เพิ่มวัตถุดิบใน My Fridge หรือเลือกเมนูจากหน้าแรก แล้วกด \"สร้างเมนูอาหารกันเลย\" เพื่อให้ AI คิดสูตรอาหารจากวัตถุดิบที่มี")}</p>
             </div>
             <div>
-              <h3 className="text-base font-bold text-black mb-2">Tips</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                ระบุอาการแพ้อาหารและอุปกรณ์ที่มีให้ครบ เพื่อให้สูตรอาหารที่ได้ปลอดภัยและทำได้จริง
-              </p>
+              <h3 className="text-base font-bold text-black mb-2">{t("Tips")}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{t("ระบุอาการแพ้อาหารและอุปกรณ์ที่มีให้ครบ เพื่อให้สูตรอาหารที่ได้ปลอดภัยและทำได้จริง")}</p>
             </div>
             <div>
-              <h3 className="text-base font-bold text-black mb-2">
-                ข้อกำหนดการใช้งาน (TOS)
-              </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                สูตรอาหารและข้อมูลโภชนาการที่สร้างโดย AI เป็นการคาดการณ์เพื่อการอ้างอิงเท่านั้น
-                โปรดตรวจสอบวัตถุดิบและปริมาณจริงก่อนรับประทาน โดยเฉพาะผู้ที่มีอาการแพ้อาหาร
-              </p>
+              <h3 className="text-base font-bold text-black mb-2">{t("ข้อกำหนดการใช้งาน (TOS)")}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{t("สูตรอาหารและข้อมูลโภชนาการที่สร้างโดย AI เป็นการคาดการณ์เพื่อการอ้างอิงเท่านั้น โปรดตรวจสอบวัตถุดิบและปริมาณจริงก่อนรับประทาน โดยเฉพาะผู้ที่มีอาการแพ้อาหาร")}</p>
             </div>
           </div>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -560,58 +603,55 @@ export default function Profile({
 
         <div className="flex-1 overflow-y-auto px-5 pb-32">
           {/* Profile Card */}
+          {notice && <p role="status" className="text-sm text-green-700 mb-4">{t(notice)}</p>}
           <div className="bg-gray-100 rounded-3xl p-4 flex items-center gap-4 mb-8">
-            <div className="w-20 h-20 rounded-full overflow-hidden shadow-sm shrink-0 bg-white">
-              <img
-                src={PLACEHOLDER_USER.avatar}
-                alt={PLACEHOLDER_USER.username}
-                className="w-full h-full object-cover"
-              />
+            <div className="w-20 h-20 rounded-full overflow-hidden shadow-sm shrink-0 bg-white flex items-center justify-center">
+              {avatarUrl ? <img src={avatarUrl} alt={t("รูปโปรไฟล์")} className="w-full h-full object-cover" /> : <UserRound aria-hidden="true" className="w-10 h-10 text-gray-500" />}
             </div>
             <div className="flex flex-col flex-1 min-w-0">
               <h3 className="text-lg font-bold text-black truncate">
-                {PLACEHOLDER_USER.username}
+                {user?.display_name || t("ผู้ใช้ Homemade")}
               </h3>
               <div className="flex items-center gap-1.5 text-gray-500 text-sm truncate">
                 <Mail className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{user?.email ?? PLACEHOLDER_USER.email}</span>
+                <span className="truncate">{user?.email}</span>
               </div>
             </div>
           </div>
+          {photoError && user?.has_avatar && <button type="button" onClick={() => setPhotoReload(value => value + 1)} className="min-h-11 text-sm text-red-700 mb-3">{t("โหลดรูปไม่สำเร็จ ลองอีกครั้ง")}</button>}
+          <button type="button" onClick={() => { setNotice(""); setView("edit"); }} className="w-full min-h-11 mb-6 rounded-full border border-[#B93E25] text-[#B93E25] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]">{t("แก้ไขโปรไฟล์")}</button>
 
           {/* Menu */}
           <div className="flex flex-col gap-2 mb-6">
             <MenuRow
               icon={<History className="w-4.5 h-4.5" />}
-              label="Cooking History"
+              label={t("Cooking History")}
               onClick={() => setView("history")}
             />
           </div>
 
-          <h3 className="text-sm font-bold text-gray-400 mb-2 px-1">
-            Setting
-          </h3>
+          <h3 className="text-sm font-bold text-gray-400 mb-2 px-1">{t("การตั้งค่า")}</h3>
           <div className="flex flex-col gap-2 mb-8">
             <MenuRow
               icon={<Globe className="w-4.5 h-4.5" />}
-              label="Language"
+              label={t("Language")}
               onClick={() => setView("language")}
             />
             <MenuRow
               icon={<SlidersHorizontal className="w-4.5 h-4.5" />}
-              label="Preferences"
+              label={t("Preferences")}
               onClick={() => setView("preferences")}
             />
             <MenuRow
               icon={<HelpCircle className="w-4.5 h-4.5" />}
-              label="Helps"
+              label={t("ช่วยเหลือ")}
               onClick={() => setView("helps")}
             />
           </div>
 
           {/* Logout */}
           {logoutError && (
-            <p className="text-red-600 text-sm text-center mb-2">{logoutError}</p>
+            <p className="text-red-600 text-sm text-center mb-2">{t(logoutError)}</p>
           )}
           <button
             onClick={handleLogout}
@@ -619,7 +659,7 @@ export default function Profile({
             className="w-full bg-red-500 text-white py-3.5 rounded-full text-base font-bold shadow-md flex items-center justify-center gap-2 hover:bg-red-600 transition disabled:opacity-60"
           >
             <LogOut className="w-5 h-5" />
-            {isLoggingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
+            {isLoggingOut ? t("กำลังออกจากระบบ...") : t("ออกจากระบบ")}
           </button>
         </div>
 

@@ -39,7 +39,7 @@ test("empty, missing and non-string messages give null", () => {
 test("both generate handlers route the message through the helper", () => {
     assert.equal((app.match(/setGenerateError\(null\)/g) || []).length, 2);
     assert.equal(
-        (app.match(/setGenerateError\(toUserFacingGenerateError\(result\.message\)\)/g) || []).length,
+        (app.match(/setGenerateError\(toUserFacingGenerateError\(result\.message, locale\)\)/g) || []).length,
         2,
     );
     assert.match(app, /generateError=\{generateError\}/);

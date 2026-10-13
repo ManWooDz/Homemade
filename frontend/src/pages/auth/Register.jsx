@@ -1,3 +1,4 @@
+import { useLocale } from "../../context/LocaleContext";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -6,6 +7,7 @@ import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Register() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     const { register } = useAuth();
     const [email, setEmail] = useState("");
@@ -41,14 +43,12 @@ export default function Register() {
                         onSubmit={handleSubmit}
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
-                        <h1 className="text-h2 font-bold text-text-black text-center mb-4">
-                            Sign Up
-                        </h1>
+                        <h1 className="text-h2 font-bold text-text-black text-center mb-4">{t("Sign Up")}</h1>
 
                         <div className="w-full flex flex-col justify-start items-center gap-4.25">
                             <input
                                 type="email"
-                                placeholder="Email"
+                                placeholder={t("Email")}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-11 px-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
@@ -58,20 +58,20 @@ export default function Register() {
                             <PasswordInput
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
+                                placeholder={t("Password")}
                                 required
                             />
 
                             <PasswordInput
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm password"
+                                placeholder={t("Confirm password")}
                                 required
                             />
                         </div>
 
                         {error && (
-                            <p className="w-full text-body-medium text-red-500 mt-4">{error}</p>
+                            <p className="w-full text-body-medium text-red-500 mt-4">{t(error)}</p>
                         )}
 
                         <button
@@ -79,7 +79,7 @@ export default function Register() {
                             disabled={isSubmitting}
                             className="w-full h-11 mt-24.5 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "Creating account..." : "Sign Up"}
+                            {isSubmitting ? t("Creating account...") : t("Sign Up")}
                         </button>
                     </form>
                 </div>

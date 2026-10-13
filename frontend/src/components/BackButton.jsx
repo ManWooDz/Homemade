@@ -1,7 +1,9 @@
+import { useLocale } from "../context/LocaleContext";
 import { ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function BackButton({ to, onClick, size = "w-9 h-9", iconSize = "w-5 h-5" }) {
+    const { t } = useLocale();
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -20,7 +22,7 @@ export default function BackButton({ to, onClick, size = "w-9 h-9", iconSize = "
     <button
       type="button"
       onClick={handleBack}
-      aria-label="Back"
+      aria-label={t("Back")}
       className={`${size} bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer`}
     >
       <ChevronLeft className={iconSize} />

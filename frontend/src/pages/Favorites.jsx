@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useState } from "react";
 import { ChevronLeft, Heart, Plus, Search, Sparkles, Star } from "lucide-react";
 import { BiSolidFoodMenu } from "react-icons/bi";
@@ -20,6 +21,7 @@ export default function Favorites({
     onToggleHistoryFavorite,
     onOpenHistoryItem,
 }) {
+    const { t } = useLocale();
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -83,12 +85,9 @@ export default function Favorites({
 
                 <div className="flex-1 overflow-y-auto pb-32">
                     <div className="px-5 mb-4 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            Favorites
-                        </h2>
+                        <h2 className="text-2xl font-bold text-gray-900">{t("Favorites")}</h2>
                         <span className="text-sm font-medium text-gray-500">
-                            {tab === "base" ? favoriteRecipes.length : myRecipes.length} Items
-                        </span>
+                            {tab === "base" ? favoriteRecipes.length : myRecipes.length}{t("Items")}</span>
                     </div>
 
                     <div className="px-5 mb-4 flex gap-2">
@@ -105,7 +104,7 @@ export default function Favorites({
                                         : "bg-white text-[#EF5A3A] border-[#EF5A3A]"
                                 }`}
                             >
-                                {t.label}
+                                {t(t.label)}
                             </button>
                         ))}
                     </div>
@@ -116,7 +115,7 @@ export default function Favorites({
                             <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                             <input
                                 type="text"
-                                placeholder="Search favorites..."
+                                placeholder={t("Search favorites...")}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-2xl pl-10 pr-4 py-2.5 outline-none text-sm focus:border-[#EF5A3A] transition"
                                 value={searchQuery}
                                 onChange={(e) =>
@@ -140,7 +139,7 @@ export default function Favorites({
                                         : "bg-white border border-[#EF5A3A] text-[#EF5A3A] hover:bg-orange-50"
                                 }`}
                             >
-                                {cat}
+                                {t(cat)}
                             </button>
                         ))}
                     </div>
@@ -148,17 +147,15 @@ export default function Favorites({
                     {allFavoriteRecipes.length === 0 ? (
                         <div className="flex flex-col items-center text-center text-gray-400 mt-10">
                             <BiSolidFoodMenu className="w-12 h-12 mb-3" />
-                            <p>Add your favorite menus to get started</p>
+                            <p>{t("Add your favorite menus to get started")}</p>
                             <button
                                 onClick={onBack}
                                 className="mt-4 px-5 py-2 rounded-full text-sm font-medium bg-[#EF5A3A] text-white shadow-sm hover:bg-[#d94f30] transition"
-                            >
-                                Discover new menu
-                            </button>
+                            >{t("Discover new menu")}</button>
                         </div>
                     ) : favoriteRecipes.length === 0 ? (
                         <div className="text-center text-gray-400 mt-10">
-                            <p>No favorites found in '{selectedCategory}'.</p>
+                            <p>{t("No favorites found in '")}{t(selectedCategory)}'.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 px-5">
@@ -214,11 +211,11 @@ export default function Favorites({
                         (historyFavorites.length === 0 ? (
                             <div className="flex flex-col items-center text-center text-gray-400 mt-10">
                                 <Sparkles className="w-12 h-12 mb-3" />
-                                <p>ยังไม่มีสูตรที่กด ♥ ไว้</p>
+                                <p>{t("ยังไม่มีสูตรที่กด ♥ ไว้")}</p>
                             </div>
                         ) : myRecipes.length === 0 ? (
                             <div className="text-center text-gray-400 mt-10">
-                                <p>ไม่พบสูตรที่ค้นหา</p>
+                                <p>{t("ไม่พบสูตรที่ค้นหา")}</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 px-5">
@@ -237,7 +234,7 @@ export default function Favorites({
                                                 unfavoriteHistory(item.id);
                                             }}
                                             disabled={pendingHistoryIds.includes(item.id)}
-                                            aria-label="เอาออกจากสูตรที่ชอบ"
+                                            aria-label={t("เอาออกจากสูตรที่ชอบ")}
                                             className="absolute top-4 right-4 text-red-500 hover:text-gray-300 z-10 disabled:opacity-40"
                                         >
                                             <Heart className="w-6 h-6 fill-current" />

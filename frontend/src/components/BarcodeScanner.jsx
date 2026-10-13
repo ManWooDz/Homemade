@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     prepareZXingModule,
@@ -48,6 +49,7 @@ const SCANNER_STYLES = {
 // Pure scanning widget: camera feed + manual-digit fallback. No page chrome,
 // no API call — the parent page owns navigation and the barcode-lookup call.
 export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, focusInput }) {
+    const { t } = useLocale();
     const [cameraError, setCameraError] = useState("");
     const [codeError, setCodeError] = useState("");
     const manualInput = useRef(null);
@@ -113,22 +115,16 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
             </div>}
 
             {cameraError && (
-                <p role="alert" className="text-sm text-red-700 mb-4">{cameraError}</p>
+                <p role="alert" className="text-sm text-red-700 mb-4">{t(cameraError)}</p>
             )}
 
             {!cameraError && (
-                <p className="text-sm text-gray-600 mb-6 text-center">
-                    ให้เห็นบาร์โค้ดครบทั้งแถบ ถือกล้องให้นิ่ง ไม่ต้องเข้าใกล้มาก
-                </p>
+                <p className="text-sm text-gray-600 mb-6 text-center">{t("ให้เห็นบาร์โค้ดครบทั้งแถบ ถือกล้องให้นิ่ง ไม่ต้องเข้าใกล้มาก")}</p>
             )}
 
             <form onSubmit={handleManualSubmit} noValidate>
-                <label htmlFor="barcode-code" className="block text-sm font-semibold text-gray-900 mb-1">
-                    เลขบาร์โค้ด
-                </label>
-                <p id="barcode-code-hint" className="text-sm text-gray-600 mb-3">
-                    พิมพ์เลข 8–14 หลักใต้บาร์โค้ดแทนการสแกนได้
-                </p>
+                <label htmlFor="barcode-code" className="block text-sm font-semibold text-gray-900 mb-1">{t("เลขบาร์โค้ด")}</label>
+                <p id="barcode-code-hint" className="text-sm text-gray-600 mb-3">{t("พิมพ์เลข 8–14 หลักใต้บาร์โค้ดแทนการสแกนได้")}</p>
                 <div className="flex flex-col min-[360px]:flex-row gap-3">
                 <input
                     ref={manualInput}
@@ -139,7 +135,7 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
                     pattern="[0-9]{8,14}"
                     aria-invalid={Boolean(codeError)}
                     aria-describedby={codeError ? "barcode-code-hint barcode-code-error" : "barcode-code-hint"}
-                    placeholder="เช่น 8850999327015"
+                    placeholder={t("เช่น 8850999327015")}
                     className="min-w-0 flex-1 min-h-11 bg-gray-50 border border-gray-500 rounded-xl px-3 py-2 text-base placeholder:text-gray-600 focus:outline-2 focus:outline-offset-2 focus:outline-[#B93E25]"
                     value={manualCode}
                     onChange={(e) => {
@@ -151,11 +147,9 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
                     type="submit"
                     disabled={!manualCode.trim()}
                     className="min-h-11 bg-[#B93E25] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#9F341F] disabled:bg-gray-100 disabled:text-gray-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25] transition"
-                >
-                    ค้นหาสินค้า
-                </button>
+                >{t("ค้นหาสินค้า")}</button>
                 </div>
-                {codeError && <p id="barcode-code-error" role="alert" className="text-sm text-red-700 mt-3">{codeError}</p>}
+                {codeError && <p id="barcode-code-error" role="alert" className="text-sm text-red-700 mt-3">{t(codeError)}</p>}
             </form>
         </div>
     );

@@ -1,3 +1,4 @@
+import { useLocale } from "../../context/LocaleContext";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -36,6 +37,7 @@ function StepCounter({ step, total }) {
 }
 
 function StepShell({ title, hint, error, children }) {
+    const { t } = useLocale();
   return (
     <div className="w-full flex flex-col justify-start items-center mt-4">
       <h1 className="text-h2 font-semibold text-text-black text-center">
@@ -43,14 +45,14 @@ function StepShell({ title, hint, error, children }) {
       </h1>
       {hint && (
         <p className="text-body-medium text-text-brands text-center mt-1 mb-6">
-          {hint}
+          {t(hint)}
         </p>
       )}
       {!hint && <div className="mb-8" />}
       {children}
       {error && (
         <p className="w-full max-w-[358px] text-body-medium text-red-500 text-center mt-2">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>
@@ -58,6 +60,7 @@ function StepShell({ title, hint, error, children }) {
 }
 
 export default function Onboarding() {
+    const { t } = useLocale();
   const navigate = useNavigate();
   const { apiFetch } = useAuth();
   const [step, setStep] = useState(1);
@@ -205,7 +208,7 @@ export default function Onboarding() {
           </div>
 
           {step === 1 && (
-            <StepShell title="คุณอายุเท่าไหร่?">
+            <StepShell title={t("คุณอายุเท่าไหร่?")}>
               <div
                 className="w-full max-w-[200px] custom-picker-container cursor-grab active:cursor-grabbing select-none"
                 onPointerDown={handleAgePointerDown}
@@ -230,8 +233,7 @@ export default function Onboarding() {
                                 : "text-text-black opacity-30"
                             }`}
                           >
-                            {age} ปี
-                          </div>
+                            {age}{t("ปี")}</div>
                         )}
                       </Picker.Item>
                     ))}
@@ -242,7 +244,7 @@ export default function Onboarding() {
           )}
 
           {step === 2 && (
-            <StepShell title="คุณชอบอาหารแบบไหน?" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
+            <StepShell title={t("คุณชอบอาหารแบบไหน?")} hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionChips
                 options={CUISINE_OPTIONS}
                 selected={cuisinePreferences}
@@ -260,7 +262,7 @@ export default function Onboarding() {
           )}
 
           {step === 3 && (
-            <StepShell title="อาการแพ้ หรือข้อจำกัดของคุณ" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
+            <StepShell title={t("อาการแพ้ หรือข้อจำกัดของคุณ")} hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionChips
                 options={RESTRICTION_OPTIONS}
                 selected={dietaryRestrictions}
@@ -285,7 +287,7 @@ export default function Onboarding() {
                     setRestrictionOther(e.target.value);
                     if (e.target.value.trim()) setStepError("");
                   }}
-                  placeholder="ระบุข้อจำกัดของคุณ"
+                  placeholder={t("ระบุข้อจำกัดของคุณ")}
                   className={`w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands ${
                     !restrictionOther.trim() && stepError ? "animate-shake border-red-400" : ""
                   }`}
@@ -295,7 +297,7 @@ export default function Onboarding() {
           )}
 
           {step === 4 && (
-            <StepShell title="คุณมีอุปกรณ์อะไรบ้าง?" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
+            <StepShell title={t("คุณมีอุปกรณ์อะไรบ้าง?")} hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionChips
                 options={EQUIPMENT_OPTIONS}
                 selected={equipment}
@@ -320,7 +322,7 @@ export default function Onboarding() {
                     setEquipmentOther(e.target.value);
                     if (e.target.value.trim()) setStepError("");
                   }}
-                  placeholder="ระบุอุปกรณ์ที่มี"
+                  placeholder={t("ระบุอุปกรณ์ที่มี")}
                   className={`w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands ${
                     !equipmentOther.trim() && stepError ? "animate-shake border-red-400" : ""
                   }`}
@@ -330,7 +332,7 @@ export default function Onboarding() {
           )}
 
           {step === 5 && (
-            <StepShell title="คุณทำอาหารบ่อยแค่ไหน?" error={stepError}>
+            <StepShell title={t("คุณทำอาหารบ่อยแค่ไหน?")} error={stepError}>
               <OptionList
                 options={FREQUENCY_OPTIONS}
                 selected={cookingFrequency}
@@ -345,7 +347,7 @@ export default function Onboarding() {
           )}
 
           {step === 6 && (
-            <StepShell title="คุณทำอาหารเพื่ออะไร?" hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
+            <StepShell title={t("คุณทำอาหารเพื่ออะไร?")} hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
               <OptionList
                 options={GOAL_OPTIONS}
                 selected={cookingGoals}

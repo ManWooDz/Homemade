@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useState } from "react";
 import { ChevronLeft, Trash2 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
@@ -15,6 +16,7 @@ export default function IngredientDetail({
     activeTab,
     setActiveTab,
 }) {
+    const { t, locale } = useLocale();
     const { apiFetch } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
@@ -24,10 +26,10 @@ export default function IngredientDetail({
         return null;
     }
 
-    const badge = expiryBadgeLabel(ingredient.expiry_date);
+    const badge = expiryBadgeLabel(ingredient.expiry_date, locale);
 
     const handleDelete = async () => {
-        if (!window.confirm(`ลบ "${ingredient.name}" ออกจาก My Fridge?`)) {
+        if (!window.confirm(t('ลบ "{name}" ออกจากตู้เย็นของฉัน?', { name: ingredient.name }))) {
             return;
         }
         setIsDeleting(true);
@@ -44,9 +46,9 @@ export default function IngredientDetail({
                 );
                 onDeleted();
             } else {
-                setDeleteError(result.message || "ลบไม่สำเร็จ");
+                setDeleteError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
             }
-        } catch (error) {
+        } catch {
             setDeleteError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
         } finally {
             setIsDeleting(false);
@@ -96,18 +98,14 @@ export default function IngredientDetail({
 
                     <div className="flex flex-col gap-4">
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">
-                                Category
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-1">{t("Category")}</h3>
                             <p className="text-base text-gray-800">
-                                {ingredient.category}
+                                {t(ingredient.category)}
                             </p>
                         </div>
 
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">
-                                วันหมดอายุ (โดยประมาณ)
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-1">{t("วันหมดอายุ (โดยประมาณ)")}</h3>
                             {ingredient.expiry_date ? (
                                 <p className="text-base text-gray-800">
                                     {ingredient.expiry_date}
@@ -118,27 +116,21 @@ export default function IngredientDetail({
                                     )}
                                 </p>
                             ) : (
-                                <p className="text-base text-gray-400">
-                                    ไม่ได้ระบุ
-                                </p>
+                                <p className="text-base text-gray-400">{t("ไม่ได้ระบุ")}</p>
                             )}
                         </div>
 
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">
-                                ปริมาณ
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-1">{t("ปริมาณ")}</h3>
                             {ingredient.quantity_amount != null ? (
                                 <p className="text-base text-gray-800">
                                     {ingredient.quantity_amount}
                                     {ingredient.quantity_unit
-                                        ? ` ${ingredient.quantity_unit}`
+                                        ? ` ${t(ingredient.quantity_unit)}`
                                         : ""}
                                 </p>
                             ) : (
-                                <p className="text-base text-gray-400">
-                                    ไม่ได้ระบุ
-                                </p>
+                                <p className="text-base text-gray-400">{t("ไม่ได้ระบุ")}</p>
                             )}
                         </div>
 
@@ -147,7 +139,7 @@ export default function IngredientDetail({
 
                     {deleteError && (
                         <p className="text-sm text-red-500 mt-4 text-center">
-                            {deleteError}
+                            {t(deleteError)}
                         </p>
                     )}
 
@@ -157,7 +149,7 @@ export default function IngredientDetail({
                         className="w-full mt-8 flex items-center justify-center gap-2 border-2 border-red-200 text-red-500 py-4 rounded-full text-base font-bold hover:bg-red-50 transition disabled:opacity-50"
                     >
                         <Trash2 className="w-5 h-5" />
-                        {isDeleting ? "กำลังลบ..." : "ลบออกจาก My Fridge"}
+                        {isDeleting ? t("กำลังลบ...") : t("ลบออกจาก My Fridge")}
                     </button>
                 </div>
 

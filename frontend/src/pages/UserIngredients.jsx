@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useState, useLayoutEffect, useRef } from "react";
 import {
     ChevronLeft,
@@ -93,6 +94,7 @@ export default function UserIngredients({
     onScanBarcode,
     onOpenIngredient,
 }) {
+    const { t, locale } = useLocale();
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -162,12 +164,9 @@ export default function UserIngredients({
                     className="flex-1 overflow-y-auto pb-32"
                 >
                     <div className="px-5 mb-4 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            My Fridge
-                        </h2>
+                        <h2 className="text-2xl font-bold text-gray-900">{t("My Fridge")}</h2>
                         <span className="text-sm font-medium text-gray-500">
-                            {userIngredients.length} Items
-                        </span>
+                            {userIngredients.length}{t("Items")}</span>
                     </div>
 
                     {/* Search + Sort filter */}
@@ -179,7 +178,7 @@ export default function UserIngredients({
                             <Search className="w-4 h-4 text-gray-400 mr-2" />
                             <input
                                 type="text"
-                                placeholder="Search Ingredients..."
+                                placeholder={t("Search Ingredients...")}
                                 value={searchQuery}
                                 onChange={(e) =>
                                     setSearchQuery(e.target.value)
@@ -207,7 +206,7 @@ export default function UserIngredients({
                                         : "bg-white border border-[#EF5A3A] text-[#EF5A3A] hover:bg-orange-50"
                                 }`}
                             >
-                                {chip.label}
+                                {t(chip.label)}
                             </button>
                         ))}
                     </div>
@@ -217,14 +216,14 @@ export default function UserIngredients({
                         {!hasAnyIngredients ? (
                             <div className="flex flex-col items-center text-center text-gray-400 mt-10">
                                 <FaUtensils className="w-12 h-12 mb-3" />
-                                <p>Add your ingredient to get started</p>
+                                <p>{t("Add your ingredient to get started")}</p>
                             </div>
                         ) : filteredIngredients.length === 0 ? (
                             <div className="text-center text-gray-400 mt-10">
                                 <p>
                                     {normalizedQuery
-                                        ? "No ingredients match your search."
-                                        : `No items found in '${selectedCategoryLabel}'.`}
+                                        ? t("No ingredients match your search.")
+                                        : t("ไม่พบวัตถุดิบในหมวด {category}", { category: t(selectedCategoryLabel) })}
                                 </p>
                             </div>
                         ) : (
@@ -253,9 +252,9 @@ export default function UserIngredients({
                                             <span className="font-semibold text-gray-800 text-lg leading-tight">
                                                 {ing.name}
                                             </span>
-                                            {expiryBadgeLabel(ing.expiry_date) && (
+                                            {expiryBadgeLabel(ing.expiry_date, locale) && (
                                                 <span className="text-xs font-medium text-red-500 mt-0.5">
-                                                    {expiryBadgeLabel(ing.expiry_date)}
+                                                    {expiryBadgeLabel(ing.expiry_date, locale)}
                                                 </span>
                                             )}
                                         </div>
@@ -284,9 +283,7 @@ export default function UserIngredients({
                             onClick={() => setShowAddMenu(false)}
                         ></div>
                         <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 p-5 pb-28 flex flex-col gap-3">
-                            <p className="text-sm font-bold text-gray-700 mb-1">
-                                Add Ingredient
-                            </p>
+                            <p className="text-sm font-bold text-gray-700 mb-1">{t("Add Ingredient")}</p>
                             <button
                                 onClick={() => {
                                     setShowAddMenu(false);
@@ -295,9 +292,7 @@ export default function UserIngredients({
                                 className="w-full flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-left hover:border-[#EF5A3A] transition"
                             >
                                 <PenLine className="w-5 h-5 text-[#EF5A3A]" />
-                                <span className="font-medium text-gray-800">
-                                    Add Manually
-                                </span>
+                                <span className="font-medium text-gray-800">{t("Add Manually")}</span>
                             </button>
                             <button
                                 onClick={() => {
@@ -307,9 +302,7 @@ export default function UserIngredients({
                                 className="w-full flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-left hover:border-[#EF5A3A] transition"
                             >
                                 <ScanLine className="w-5 h-5 text-[#EF5A3A]" />
-                                <span className="font-medium text-gray-800">
-                                    Scan Barcode
-                                </span>
+                                <span className="font-medium text-gray-800">{t("Scan Barcode")}</span>
                             </button>
                         </div>
                     </>
@@ -326,9 +319,7 @@ export default function UserIngredients({
                             className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 flex flex-col"
                             style={{ top: sheetTop }}
                         >
-                            <p className="text-xs text-gray-400 font-medium px-5 pt-4 mb-2">
-                                Sort By
-                            </p>
+                            <p className="text-xs text-gray-400 font-medium px-5 pt-4 mb-2">{t("Sort By")}</p>
                             <div className="flex-1 overflow-y-auto px-5">
                                 {SORT_OPTIONS.map((opt) => {
                                     const Icon = opt.icon;
@@ -343,7 +334,7 @@ export default function UserIngredients({
                                         >
                                             <span className="flex items-center gap-3 text-sm text-gray-700">
                                                 <Icon className="w-4 h-4 text-gray-400" />
-                                                {opt.label}
+                                                {t(opt.label)}
                                             </span>
                                             <span
                                                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
@@ -364,18 +355,14 @@ export default function UserIngredients({
                                 <button
                                     onClick={() => setPendingSort(DEFAULT_SORT)}
                                     className="flex-1 py-3 rounded-full text-sm font-bold text-gray-600 border border-gray-300"
-                                >
-                                    Clear
-                                </button>
+                                >{t("Clear")}</button>
                                 <button
                                     onClick={() => {
                                         setSortBy(pendingSort);
                                         setShowSortSheet(false);
                                     }}
                                     className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#EF5A3A] shadow-md hover:bg-orange-600 transition"
-                                >
-                                    Apply
-                                </button>
+                                >{t("Apply")}</button>
                             </div>
                         </div>
                     </>

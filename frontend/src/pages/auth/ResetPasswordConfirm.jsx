@@ -1,3 +1,4 @@
+import { useLocale } from "../../context/LocaleContext";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -6,6 +7,7 @@ import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ResetPasswordConfirm() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     const { resetTicket, resetPassword } = useAuth();
     const [password, setPassword] = useState("");
@@ -50,28 +52,26 @@ export default function ResetPasswordConfirm() {
                         onSubmit={handleSubmit}
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
-                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">
-                            Reset Password
-                        </h1>
+                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t("Reset Password")}</h1>
 
                         <div className="w-full flex flex-col justify-start items-center gap-4.25">
                             <PasswordInput
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="New Password"
+                                placeholder={t("New Password")}
                                 required
                             />
 
                             <PasswordInput
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm password"
+                                placeholder={t("Confirm password")}
                                 required
                             />
                         </div>
 
                         {error && (
-                            <p className="w-full text-body-medium text-red-500 mt-4">{error}</p>
+                            <p className="w-full text-body-medium text-red-500 mt-4">{t(error)}</p>
                         )}
 
                         <button
@@ -79,7 +79,7 @@ export default function ResetPasswordConfirm() {
                             disabled={isSubmitting}
                             className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? "Saving..." : "Confirm"}
+                            {isSubmitting ? t("Saving...") : t("Confirm")}
                         </button>
                     </form>
                 </div>

@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Plus, Search, Upload, Loader2 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
@@ -16,6 +17,7 @@ export default function AddIngredient({
     setActiveTab,
     prefill,
 }) {
+    const { t } = useLocale();
     const { apiFetch } = useAuth();
     const [name, setName] = useState(prefill?.name || "");
     const [category, setCategory] = useState(prefill?.category || "Meat & poultry");
@@ -82,7 +84,7 @@ export default function AddIngredient({
                     setSearchResults(result.data.images);
                 } else {
                     setSearchResults([]);
-                    setSearchError(result.message || "Search failed");
+                    setSearchError("Search failed");
                 }
             } catch (error) {
                 setSearchResults([]);
@@ -110,7 +112,7 @@ export default function AddIngredient({
             if (result.status === "success") {
                 setSelectedImage(result.data.image);
             } else {
-                setSearchError(result.message || "Upload failed");
+                setSearchError("Upload failed");
             }
         } catch (error) {
             setSearchError("Could not reach upload server");
@@ -164,7 +166,7 @@ export default function AddIngredient({
                 onBack(); // Return to previous screen (My Fridge)
             } else {
                 console.error("Failed to add ingredient", result.message);
-                setSaveError(result.message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+                setSaveError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
             }
         } catch (error) {
             console.error("Error adding ingredient:", error);
@@ -194,9 +196,7 @@ export default function AddIngredient({
 
                 <div className="flex-1 overflow-y-auto px-5 pb-32">
                     <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            Add Ingredient
-                        </h2>
+                        <h2 className="text-2xl font-bold text-gray-900">{t("Add Ingredient")}</h2>
                     </div>
 
                     {/* Selected Image Preview */}
@@ -205,7 +205,7 @@ export default function AddIngredient({
                             {selectedImage && (
                                 <img
                                     src={selectedImage}
-                                    alt="Preview"
+                                    alt={t("Preview")}
                                     className="w-full h-full object-cover"
                                 />
                             )}
@@ -215,12 +215,10 @@ export default function AddIngredient({
                     <div className="flex flex-col gap-6">
                         {/* Name Input */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">
-                                Ingredient Name
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">{t("Ingredient Name")}</h3>
                             <input
                                 type="text"
-                                placeholder="e.g. Eggs, Pork Belly..."
+                                placeholder={t("e.g. Eggs, Pork Belly...")}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
@@ -229,17 +227,15 @@ export default function AddIngredient({
 
                         {/* Image Picker */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">
-                                Find an Image
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">{t("Find an Image")}</h3>
                             <div className="relative mb-3">
                                 <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                                 <input
                                     type="text"
                                     placeholder={
                                         name.trim()
-                                            ? `Search "${name.trim()}"...`
-                                            : "Search online images..."
+                                            ? t('ค้นหารูป "{name}"...', { name: name.trim() })
+                                            : t("Search online images...")
                                     }
                                     className="w-full bg-gray-50 border border-gray-300 rounded-2xl pl-10 pr-4 py-2.5 outline-none text-sm focus:border-[#EF5A3A] transition"
                                     value={searchTerm}
@@ -251,25 +247,18 @@ export default function AddIngredient({
 
                             {isSearching && (
                                 <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Searching...
-                                </div>
+                                    <Loader2 className="w-4 h-4 animate-spin" />{t("Searching...")}</div>
                             )}
 
                             {!isSearching && searchError && (
                                 <p className="text-sm text-red-500 py-2">
-                                    {searchError} — try uploading a photo
-                                    instead.
-                                </p>
+                                    {t(searchError)}{t("— try uploading a photo instead.")}</p>
                             )}
 
                             {!isSearching &&
                                 !searchError &&
                                 searchResults.length === 0 && (
-                                    <p className="text-sm text-gray-400 py-2">
-                                        No results yet. Type an ingredient
-                                        name to search, or upload your own.
-                                    </p>
+                                    <p className="text-sm text-gray-400 py-2">{t("No results yet. Type an ingredient name to search, or upload your own.")}</p>
                                 )}
 
                             {searchResults.length > 0 && (
@@ -285,7 +274,7 @@ export default function AddIngredient({
                                             <div className="w-full h-full rounded-xl overflow-hidden">
                                                 <img
                                                     src={img}
-                                                    alt="Ingredient option"
+                                                    alt={t("Ingredient option")}
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -309,23 +298,17 @@ export default function AddIngredient({
                             >
                                 {isUploading ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Uploading...
-                                    </>
+                                        <Loader2 className="w-4 h-4 animate-spin" />{t("Uploading...")}</>
                                 ) : (
                                     <>
-                                        <Upload className="w-4 h-4" />
-                                        Upload or Take Photo
-                                    </>
+                                        <Upload className="w-4 h-4" />{t("Upload or Take Photo")}</>
                                 )}
                             </button>
                         </div>
 
                         {/* Category Selection */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">
-                                Category
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">{t("Category")}</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 {categories.map((cat) => (
                                     <button
@@ -337,7 +320,7 @@ export default function AddIngredient({
                                                 : "bg-white border border-gray-300 text-gray-600 hover:bg-gray-50"
                                         }`}
                                     >
-                                        {cat}
+                                        {t(cat)}
                                     </button>
                                 ))}
                             </div>
@@ -345,16 +328,14 @@ export default function AddIngredient({
 
                         {/* Quantity (optional) */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">
-                                ปริมาณ (ไม่บังคับ)
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">{t("ปริมาณ (ไม่บังคับ)")}</h3>
                             <div className="flex gap-3">
                                 <input
                                     type="number"
                                     inputMode="decimal"
                                     step="any"
                                     min="0"
-                                    placeholder="เช่น 2"
+                                    placeholder={t("เช่น 2")}
                                     className="flex-1 bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
                                     value={quantityAmount}
                                     onChange={(e) => {
@@ -373,10 +354,10 @@ export default function AddIngredient({
                                     }
                                     className="flex-1 bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
                                 >
-                                    <option value="">หน่วย</option>
+                                    <option value="">{t("หน่วย")}</option>
                                     {QUANTITY_UNITS.map((unit) => (
                                         <option key={unit} value={unit}>
-                                            {unit}
+                                            {t(unit)}
                                         </option>
                                     ))}
                                 </select>
@@ -385,9 +366,7 @@ export default function AddIngredient({
 
                         {/* Expiry Date (optional) */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-2">
-                                วันหมดอายุ (โดยประมาณ, ไม่บังคับ)
-                            </h3>
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">{t("วันหมดอายุ (โดยประมาณ, ไม่บังคับ)")}</h3>
                             <input
                                 type="date"
                                 className="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 outline-none text-base focus:border-[#EF5A3A] transition"
@@ -402,7 +381,7 @@ export default function AddIngredient({
 
                     {saveError && (
                         <p className="text-sm text-red-500 mt-4 text-center">
-                            {saveError}
+                            {t(saveError)}
                         </p>
                     )}
 
@@ -411,7 +390,7 @@ export default function AddIngredient({
                         disabled={!name.trim() || isSaving}
                         className="w-full mt-8 bg-[#EF5A3A] text-white py-4 rounded-full text-lg font-bold shadow-md hover:bg-orange-600 disabled:opacity-50 transition flex justify-center items-center"
                     >
-                        {isSaving ? "Saving..." : "Add to My Fridge"}
+                        {isSaving ? t("Saving...") : t("Add to My Fridge")}
                     </button>
                 </div>
 

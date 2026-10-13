@@ -1,3 +1,4 @@
+import { useLocale } from "../../context/LocaleContext";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -6,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { isValidEmail } from "../../utils/authValidation";
 
 export default function ResetPasswordEmail() {
+    const { t } = useLocale();
     const navigate = useNavigate();
     const { requestOtp } = useAuth();
     const [email, setEmail] = useState("");
@@ -36,14 +38,12 @@ export default function ResetPasswordEmail() {
                         onSubmit={handleSubmit}
                         className="w-full flex flex-col justify-start items-center mt-24"
                     >
-                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">
-                            Reset Password
-                        </h1>
+                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t("Reset Password")}</h1>
 
                         <div className="w-full flex flex-col justify-start items-center">
                             <input
                                 type="email"
-                                placeholder="Email"
+                                placeholder={t("Email")}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-11 px-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands"
@@ -52,15 +52,13 @@ export default function ResetPasswordEmail() {
                         </div>
 
                         {error && (
-                            <p className="w-full text-body-medium text-red-500 mt-4">{error}</p>
+                            <p className="w-full text-body-medium text-red-500 mt-4">{t(error)}</p>
                         )}
 
                         <button
                             type="submit"
                             className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer"
-                        >
-                            Send OTP
-                        </button>
+                        >{t("Send OTP")}</button>
                     </form>
                 </div>
             </div>

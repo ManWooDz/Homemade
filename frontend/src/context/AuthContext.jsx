@@ -130,7 +130,12 @@ export function AuthProvider({ children }) {
             }
             if (!response.ok) {
                 const payload = await response.json().catch(() => ({}));
-                return { success: false, error: payload.detail || "Could not create account" };
+                const knownErrors = {
+                    "Invalid email": "Enter a valid email",
+                    "Password must be at least 8 characters": "Password must be at least 8 characters",
+                    "Email already registered": "Email already registered",
+                };
+                return { success: false, error: Object.hasOwn(knownErrors, payload.detail) ? knownErrors[payload.detail] : "Could not create account" };
             }
             // Account now exists server-side. If auto-login fails below,
             // never suggest registering again — a second register would
@@ -280,6 +285,29 @@ export function AuthProvider({ children }) {
         bootstrap();
     }, [bootstrap]);
 
+    const saveUser = async (path, options) => {
+        const ownerId = user?.id;
+        try {
+            const response = await apiFetch(path, options);
+            const payload = await response.json();
+            if (!response.ok || payload.status !== "success" || payload.data?.id !== ownerId || !["th", "en"].includes(payload.data.locale)) {
+                return { success: false, code: payload.code || "profile_save_failed" };
+            }
+            if (options.signal?.aborted) return { success: false, code: "profile_save_failed" };
+            setUser(current => current?.id !== ownerId ? current : path.endsWith("/language")
+                ? { ...current, locale: payload.data.locale }
+                : { ...current, display_name: payload.data.display_name, has_avatar: payload.data.has_avatar });
+            return { success: true, data: payload.data };
+        } catch {
+            return { success: false, code: "profile_save_failed" };
+        }
+    };
+
+    const updateProfile = (body, signal) => saveUser("/api/user-profile", { method: "PUT", body, signal });
+    const updateLanguage = locale => saveUser("/api/user-profile/language", {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale }),
+    });
+
     const value = {
         isAuthenticated,
         authLoading,
@@ -294,6 +322,8 @@ export function AuthProvider({ children }) {
         resetPassword,
         logout,
         apiFetch,
+        updateProfile,
+        updateLanguage,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

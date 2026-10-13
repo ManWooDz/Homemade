@@ -1,9 +1,16 @@
-// Keep Thai user-facing copy; hide raw provider/developer exceptions.
+import { translate } from "./translations.js";
+
+// Keep known user-facing copy; hide raw provider/developer exceptions.
 const THAI_CHAR = /[฀-๿]/;
 
-export function toUserFacingGenerateError(message) {
+export function toUserFacingGenerateError(message, locale = "th") {
     if (typeof message !== "string" || !THAI_CHAR.test(message)) return null;
-    return message;
+    if (locale !== "en") return message;
+    const translated = translate(message, "en");
+    if (translated !== message) return translated;
+    if (message.startsWith("ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ:")) return "Some selected ingredients conflict with your allergies. Remove them and try again.";
+    if (message.startsWith("ไม่สามารถสร้างสูตรได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ")) return "Could not find a recipe that passes your allergy checks. Change the ingredients and try again.";
+    return translate("ไม่สามารถสร้างสูตรที่ผ่านการตรวจสอบได้ กรุณาลองใหม่อีกครั้งหรือเปลี่ยนวัตถุดิบ", "en");
 }
 
 export async function validateAllergyPreferences(apiFetch, preferences) {

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./index.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { LocaleProvider } from "./context/LocaleContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Loading from "./pages/auth/Loading.jsx";
 import Login from "./pages/auth/Login.jsx";
@@ -17,6 +18,7 @@ createRoot(document.getElementById("root")).render(
     <StrictMode>
         <BrowserRouter>
             <AuthProvider>
+                <LocaleProvider>
                 <Routes>
                     <Route path="/" element={<Loading />} />
                     <Route path="/login" element={<Login />} />
@@ -35,6 +37,7 @@ createRoot(document.getElementById("root")).render(
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                </LocaleProvider>
             </AuthProvider>
         </BrowserRouter>
     </StrictMode>,

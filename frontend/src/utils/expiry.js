@@ -30,10 +30,10 @@ export function daysUntilExpiry(expiryDateStr) {
 }
 
 // null when there's no expiry date or it's not near enough to flag.
-export function expiryBadgeLabel(expiryDateStr) {
+export function expiryBadgeLabel(expiryDateStr, locale = "th") {
     const days = daysUntilExpiry(expiryDateStr);
     if (days === null || days > NEAR_EXPIRY_THRESHOLD_DAYS) return null;
-    if (days < 0) return "หมดอายุแล้ว";
-    if (days === 0) return "หมดอายุวันนี้";
-    return `หมดอายุใน ${days} วัน`;
+    if (days < 0) return locale === "en" ? "Expired" : "หมดอายุแล้ว";
+    if (days === 0) return locale === "en" ? "Expires today" : "หมดอายุวันนี้";
+    return locale === "en" ? `Expires in ${days} ${days === 1 ? "day" : "days"}` : `หมดอายุใน ${days} วัน`;
 }

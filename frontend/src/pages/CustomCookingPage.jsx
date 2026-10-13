@@ -1,3 +1,4 @@
+import { useLocale } from "../context/LocaleContext";
 import { useState, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
@@ -11,6 +12,7 @@ export default function CustomCookingPage({
     setActiveTab,
     onGenerate,
 }) {
+    const { t, locale } = useLocale();
     const OTHER_OPTION = "อื่นๆ";
 
     const TASTE_OPTIONS = [
@@ -134,20 +136,14 @@ export default function CustomCookingPage({
                 <div className="flex-1 overflow-y-auto px-5 pb-32">
                     {/* Page Title */}
                     <div className="mb-3 flex justify-center">
-                        <h2 className="text-2xl font-bold text-gray-900 leading-tight">
-                            Custom Cooking
-                        </h2>
+                        <h2 className="text-2xl font-bold text-gray-900 leading-tight">{t("Custom Cooking")}</h2>
                     </div>
 
                     {/* Description Textarea */}
                     <div className="mb-8">
                         <div className="flex justify-between items-end mb-4">
-                            <h3 className="text-lg font-bold text-black">
-                                วัตถุดิบที่ต้องการใช้
-                            </h3>
-                            <span className="text-sm text-red-700">
-                                เลือกอย่างน้อย 1 อย่าง
-                            </span>
+                            <h3 className="text-lg font-bold text-black">{t("วัตถุดิบที่ต้องการใช้")}</h3>
+                            <span className="text-sm text-red-700">{t("เลือกอย่างน้อย 1 อย่าง")}</span>
                         </div>
                         {/* Display Fridge Ingredients */}
                         {userIngredients && userIngredients.length > 0 ? (
@@ -185,9 +181,9 @@ export default function CustomCookingPage({
                                             >
                                                 {ing.name}
                                             </span>
-                                            {expiryBadgeLabel(ing.expiry_date) && (
+                                            {expiryBadgeLabel(ing.expiry_date, locale) && (
                                                 <span className="text-[10px] font-medium text-red-500">
-                                                    {expiryBadgeLabel(ing.expiry_date)}
+                                                    {expiryBadgeLabel(ing.expiry_date, locale)}
                                                 </span>
                                             )}
                                         </div>
@@ -195,15 +191,10 @@ export default function CustomCookingPage({
                                 })}
                             </div>
                         ) : (
-                            <div className="bg-gray-50 rounded-2xl p-4 text-center text-sm text-gray-500 mb-6">
-                                ตู้เย็นของคุณว่างเปล่า
-                                คุณสามารถไปเพิ่มวัตถุดิบได้ที่ My Fridge
-                            </div>
+                            <div className="bg-gray-50 rounded-2xl p-4 text-center text-sm text-gray-500 mb-6">{t("ตู้เย็นของคุณว่างเปล่า คุณสามารถไปเพิ่มวัตถุดิบได้ที่ My Fridge")}</div>
                         )}
 
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2">
-                            รสชาติ
-                        </h3>
+                        <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("รสชาติ")}</h3>
                         <div className="flex flex-wrap gap-2 mb-2">
                             {TASTE_OPTIONS.map((option) => (
                                 <button
@@ -216,7 +207,7 @@ export default function CustomCookingPage({
                                             : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
                                     }`}
                                 >
-                                    {option}
+                                    {t(option)}
                                 </button>
                             ))}
                         </div>
@@ -225,17 +216,13 @@ export default function CustomCookingPage({
                                 type="text"
                                 value={tasteOther}
                                 onChange={(e) => setTasteOther(e.target.value)}
-                                placeholder="ระบุรสชาติที่ต้องการ"
+                                placeholder={t("ระบุรสชาติที่ต้องการ")}
                                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
                             />
                         )}
                         {taste !== OTHER_OPTION && <div className="mb-2" />}
 
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
-                            อาการแพ้อาหาร
-                            <span className="text-xs font-normal text-gray-400">
-                                เลือกได้มากกว่า 1 ข้อ
-                            </span>
+                        <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อาการแพ้อาหาร")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
                         </h3>
                         <div className="flex flex-wrap gap-2 mb-2">
                             {ALLERGY_OPTIONS.map((option) => (
@@ -252,7 +239,7 @@ export default function CustomCookingPage({
                                             : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
                                     }`}
                                 >
-                                    {option}
+                                    {t(option)}
                                 </button>
                             ))}
                         </div>
@@ -261,7 +248,7 @@ export default function CustomCookingPage({
                                 type="text"
                                 ref={allergyInput}
                                 value={allergiesOther}
-                                aria-label="ระบุอาการแพ้อาหาร"
+                                aria-label={t("ระบุอาการแพ้อาหาร")}
                                 aria-invalid={Boolean(allergyError)}
                                 aria-describedby={allergyError ? "allergy-error" : undefined}
                                 maxLength={1000}
@@ -269,21 +256,17 @@ export default function CustomCookingPage({
                                     setAllergiesOther(e.target.value);
                                     setAllergyError(null);
                                 }}
-                                placeholder="ระบุอาการแพ้อาหาร"
+                                placeholder={t("ระบุอาการแพ้อาหาร")}
                                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
                             />
                         )}
                         {allergyError && (
                             <p id="allergy-error" role="alert" className="text-sm text-red-700 mb-4 break-words">
-                                {allergyError}
+                                {t(allergyError)}
                             </p>
                         )}
                         {!allergies.includes(OTHER_OPTION) && <div className="mb-2" />}
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">
-                            อุปกรณ์ที่มี
-                            <span className="text-xs font-normal text-gray-400">
-                                เลือกได้มากกว่า 1 ข้อ
-                            </span>
+                        <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อุปกรณ์ที่มี")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
                         </h3>
                         <div className="flex flex-wrap gap-2 mb-2">
                             {EQUIPMENT_OPTIONS.map((option) => (
@@ -299,7 +282,7 @@ export default function CustomCookingPage({
                                             : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
                                     }`}
                                 >
-                                    {option}
+                                    {t(option)}
                                 </button>
                             ))}
                         </div>
@@ -308,16 +291,14 @@ export default function CustomCookingPage({
                                 type="text"
                                 value={equipmentOther}
                                 onChange={(e) => setEquipmentOther(e.target.value)}
-                                placeholder="ระบุอุปกรณ์ที่มี"
+                                placeholder={t("ระบุอุปกรณ์ที่มี")}
                                 className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
                             />
                         )}
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2">
-                            ความต้องการอื่นๆ (ถ้ามี)
-                        </h3>
+                        <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("ความต้องการอื่นๆ (ถ้ามี)")}</h3>
                         <textarea
                             className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-                            placeholder="เช่น สิ่งที่ต้องระวัง หรือ ลักษณะของเมนูที่อยากได้"
+                            placeholder={t("เช่น สิ่งที่ต้องระวัง หรือ ลักษณะของเมนูที่อยากได้")}
                             value={extra}
                             onChange={(e) => setExtra(e.target.value)}
                         ></textarea>
@@ -343,7 +324,7 @@ export default function CustomCookingPage({
                                 d="M12 4v2m-6 4v2m12-2v2M4 14a8 8 0 0016 0H4zm0 0h16v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-1z"
                             />
                         </svg>
-                        {isSubmitting ? "กำลังตรวจสอบอาการแพ้…" : "สร้างเมนูจากวัตถุดิบในตู้เย็น"}
+                        {isSubmitting ? t("กำลังตรวจสอบอาการแพ้…") : t("สร้างเมนูจากวัตถุดิบในตู้เย็น")}
                     </button>
                 </div>
 
