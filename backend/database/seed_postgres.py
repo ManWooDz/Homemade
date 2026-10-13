@@ -23,6 +23,7 @@ DEV_USER_EMAIL = "dev@local"
 MOCK_RECIPES = [
     {
         "name": "Superfood Veggie",
+        "total_time_min_minutes": 25, "total_time_max_minutes": 35,
         "short_description": "A vibrant bowl packed with nutrient-dense vegetables and grains.",
         "ratings": 4.8,
         "review": 72,
@@ -42,6 +43,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Fresh Power Salad",
+        "total_time_min_minutes": 10, "total_time_max_minutes": 15,
         "short_description": "Crisp greens topped with crunchy vegetables and a zesty vinaigrette.",
         "ratings": 4.6,
         "review": 105,
@@ -62,6 +64,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Rainbow Healthy",
+        "total_time_min_minutes": 15, "total_time_max_minutes": 20,
         "short_description": "Eat the rainbow with this colorful and energizing vegetable mix.",
         "ratings": 4.9,
         "review": 210,
@@ -82,6 +85,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Chashu Ramen",
+        "total_time_min_minutes": 15, "total_time_max_minutes": 20,
         "short_description": "Rich pork bone broth served with tender pork belly, noodles, and a soft-boiled egg.",
         "ratings": 4.9,
         "review": 340,
@@ -103,6 +107,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Padthai with shrimps",
+        "total_time_min_minutes": 30, "total_time_max_minutes": 45,
         "short_description": "Classic Thai stir-fried rice noodles with fresh shrimp, peanuts, and tamarind sauce.",
         "ratings": 4.7,
         "review": 185,
@@ -127,6 +132,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Stir-Fried Basil with pork",
+        "total_time_min_minutes": 15, "total_time_max_minutes": 25,
         "short_description": "Spicy minced pork stir-fried with holy basil, garlic, and chilies (Pad Kra Pao).",
         "ratings": 4.8,
         "review": 450,
@@ -150,6 +156,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Greek Salad",
+        "total_time_min_minutes": 10, "total_time_max_minutes": 15,
         "short_description": "A refreshing traditional Mediterranean salad with feta and olives.",
         "ratings": 4.5,
         "review": 89,
@@ -171,6 +178,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Grilled Steak",
+        "total_time_min_minutes": 20, "total_time_max_minutes": 30,
         "short_description": "Juicy and tender beef steak seared to perfection with garlic butter.",
         "ratings": 4.9,
         "review": 512,
@@ -192,6 +200,7 @@ MOCK_RECIPES = [
     },
     {
         "name": "Tom Yum Kung",
+        "total_time_min_minutes": 25, "total_time_max_minutes": 35,
         "short_description": "Spicy, sour, and aromatic Thai shrimp soup with fresh herbs.",
         "ratings": 4.8,
         "review": 405,
@@ -258,6 +267,10 @@ def seed():
                 existing.servings = recipe["servings"]
                 existing.ingredient_quantities = recipe["ingredient_quantities"]
                 existing.nutrition = nutrition
+                if (existing.ingredients == recipe["ingredients"] and existing.instructions == recipe["instructions"]
+                        and existing.total_time_min_minutes is None and existing.total_time_max_minutes is None):
+                    existing.total_time_min_minutes = recipe["total_time_min_minutes"]
+                    existing.total_time_max_minutes = recipe["total_time_max_minutes"]
             else:
                 recipe_data = dict(recipe)
                 recipe_data["nutrition"] = nutrition

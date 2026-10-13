@@ -17,6 +17,9 @@ export default function RecipeDetail({
   onToggleFavorite,
 }) {
     const { t } = useLocale();
+  const time = recipe?.estimated_total_time;
+  const hasTime = Number.isSafeInteger(time?.min_minutes) && Number.isSafeInteger(time?.max_minutes)
+    && time.min_minutes > 0 && time.max_minutes >= time.min_minutes;
   const [ingredients, setIngredients] = useState(() => {
     if (recipe && recipe.ingredients) {
       return recipe.ingredients.map((ing, index) => ({
@@ -174,22 +177,28 @@ export default function RecipeDetail({
             <h2 className="text-[28px] font-bold text-black mb-2 leading-tight">
               {recipe?.name || t("Dishes Name")}
             </h2>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-2">
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-orange-400 fill-orange-400" />
                 <span className="font-bold text-black text-sm">
                   {recipe?.ratings || t("error")}
                 </span>
                 <span className="text-gray-500 text-sm mb-0">
-                  ({recipe?.review || t("error")}{t("Reviews)")}</span>
+                  ({recipe?.review || t("error")} {t("Reviews)")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-500 text-sm">
-                  {recipe?.usage_time || t("error")}
+                  {hasTime ? t("ประมาณ {min}–{max} นาที", { min: time.min_minutes, max: time.max_minutes }) : t("ยังไม่มีข้อมูลเวลา")}
                 </span>
               </div>
             </div>
+
+            {hasTime && (
+              <p className="text-gray-500 text-xs leading-relaxed mb-4">
+                {t("รวมเตรียม ปรุง และรอตามสูตร โดยวัตถุดิบสำเร็จรูปที่ระบุถือว่าเตรียมแล้ว")}
+              </p>
+            )}
 
             {recipe?.tags && recipe.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">

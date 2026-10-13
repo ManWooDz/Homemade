@@ -469,6 +469,10 @@ async def get_all_recipes(db: Session = Depends(get_db)):
                 "short_description": recipe.short_description,
                 "ratings": recipe.ratings,
                 "review": recipe.review,
+                "estimated_total_time": {
+                    "min_minutes": recipe.total_time_min_minutes,
+                    "max_minutes": recipe.total_time_max_minutes,
+                } if recipe.total_time_min_minutes is not None and recipe.total_time_max_minutes is not None else None,
                 "image": image_val,
                 "tags": recipe.tags,
                 "ingredients": mapped_ingredients,

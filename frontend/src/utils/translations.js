@@ -1,5 +1,8 @@
 // Display copy only: canonical preference values and recipe content stay unchanged.
 export const COPY = [
+    ["ประมาณ {min}–{max} นาที", "About {min}–{max} min"],
+    ["ยังไม่มีข้อมูลเวลา", "Time unavailable"],
+    ["รวมเตรียม ปรุง และรอตามสูตร โดยวัตถุดิบสำเร็จรูปที่ระบุถือว่าเตรียมแล้ว", "Includes prep, cooking and waiting in the recipe. Named prepared ingredients are ready to use."],
     ['ลบ "{name}" ออกจากตู้เย็นของฉัน?', 'Remove "{name}" from My Fridge?'],
     ['ค้นหารูป "{name}"...', 'Search "{name}"...'],
     ["ส่งใหม่ได้ใน {seconds} วินาที", "Resend in {seconds} seconds"],

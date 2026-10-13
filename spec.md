@@ -1,5 +1,14 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Base-menu cooking time and review spacing (2026-10-14 Bangkok)
+
+- Approved product envelope: nine base menus only; reviewed approximate total elapsed preparation/cooking/waiting time from recipe-ready ingredients. Named prepared foods start prepared. Ranges are estimates, not measured guarantees; generated recipes/history remain outside scope.
+- Added nullable minimum/maximum integer minutes with all-null-or-valid-pair constraint, additive migration a8b9c0d1e2f3 after f7a8b9c0d1e2, guarded backfill matching names and procedure/ingredient/serving hashes, and matching-empty-only seed support. Apply migration before activating the new ORM; do not run a full reseed for existing menus.
+- GET /api/recipes adds estimated_total_time ({min_minutes,max_minutes} or null) without writes. RecipeDetail shows the translated approximate range and assumptions; unknown/invalid ranges stay unavailable. A literal space separates review count and label. Existing nutrition behavior is retained in this scoped commit.
+- Local dev activation previously verified all nine ranges with original recipe fields, other non-revision tables and sequences unchanged. Private database backup/receipts remain local and are not published. Live API and actual-app browser checks passed in Thai390px/English320px/Thai1280px using synthetic account reads and blocked API writes.
+- Standalone delivery tests: backend/tests/test_base_recipe_time.py and frontend/test/recipeTiming.test.js avoid unrelated uncommitted nutrition dependencies; migration/seed regressions remain in test_seed_postgres_nutrition.py. Clean-source delivery verification passes42offline backend checks (guard0),11frontend checks and production build2226modules (existing bundle-size warning). Known motion lint error reproduced at parent HEAD; no package installation or generated-time feature.
+- Contract: docs/data-contracts/base-menu-cooking-time.md. Reviewed ranges/plan: docs/base-menu-cooking-time-plan-2026-10-14.md. Next: calibrate by timed cooking trials if requested; other environments must apply the additive migration.
+
 ## Profile/language implementation and local activation (2026-10-13 Bangkok)
 
 - User explicitly accepted the recommended concrete plan and approved scoped backend edits and crop installation, then authorized continuation. Implemented both product-envelope features: account-persisted Thai/English UI language; editable non-unique display name and owner-private uploaded avatar. No academic contribution/KPI or recipe-content translation added.

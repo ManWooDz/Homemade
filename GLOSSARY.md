@@ -2,6 +2,12 @@
 
 Canonical language for Homemade's recipe and account-recovery domain. Terms here describe product meaning, not implementation details.
 
+## Recipe Timing
+
+**Estimated Total Recipe Time**:
+A reviewed approximate range of elapsed time from preparing the ingredients to food ready to eat, including cooking and waiting specified by the recipe. Ingredients described as prepared foods are ready at the start; the range is an estimate, not a measured or guaranteed duration.
+_Avoid_: Active cooking time, time to make every ingredient from scratch, guaranteed completion time
+
 ## Password Recovery
 
 **Password-reset OTP**:

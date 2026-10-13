@@ -102,6 +102,17 @@ class BaseRecipe(Base):
     servings: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ingredient_quantities: Mapped[list | None] = mapped_column(JSON, nullable=True)
     instructions: Mapped[list] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=list)
+    total_time_min_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_time_max_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "(total_time_min_minutes IS NULL AND total_time_max_minutes IS NULL) OR "
+            "(total_time_min_minutes IS NOT NULL AND total_time_max_minutes IS NOT NULL "
+            "AND total_time_min_minutes > 0 AND total_time_max_minutes >= total_time_min_minutes)",
+            name="ck_base_recipes_total_time",
+        ),
+    )
 
 
 class IngredientNutrition(Base):
