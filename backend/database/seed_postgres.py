@@ -219,6 +219,7 @@ MOCK_RECIPES = [
 
 def image_path(name: str) -> str:
     name = name.lower()
+    name = {"pork belly (chashu)": "chashu", "soft-boiled egg": "egg"}.get(name, name)
     name = re.sub(r"[']", "", name)
     name = name.replace(" ", "_")
 

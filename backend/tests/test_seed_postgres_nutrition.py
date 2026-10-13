@@ -1,6 +1,7 @@
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
 from sqlalchemy import create_engine
@@ -15,7 +16,24 @@ from database.models import (
     RecipeIngredientImage,
     User,
 )
-from database.seed_postgres import DEV_USER_EMAIL, MOCK_RECIPES, seed
+from database.seed_postgres import DEV_USER_EMAIL, MOCK_RECIPES, image_path, seed
+
+
+class IngredientImagePathTests(unittest.TestCase):
+    def test_prepared_ingredient_aliases_use_existing_assets(self):
+        for name, filename in (
+            ("pork belly (chashu)", "chashu.png"),
+            ("soft-boiled egg", "egg.png"),
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(image_path(name), f"images/ingredients/{filename}")
+                self.assertEqual(image_path(name.upper()), image_path(name))
+
+    def test_every_catalog_ingredient_resolves_to_an_existing_file(self):
+        backend_dir = Path(__file__).resolve().parents[1]
+        for name in {name for recipe in MOCK_RECIPES for name in recipe["ingredients"]}:
+            with self.subTest(name=name):
+                self.assertTrue((backend_dir / image_path(name)).is_file(), image_path(name))
 
 
 class MockRecipesHaveQuantitiesTests(unittest.TestCase):
