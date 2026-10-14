@@ -1,114 +1,226 @@
-# 🍳 Homemade AI Recipe
+# Homemade — AI Recipe Generator
 
-แอปพลิเคชันแนะนำสูตรอาหารอัจฉริยะที่ช่วยจัดการวัตถุดิบในบ้านและคิดค้นเมนูอาหารสุดพิเศษที่ตอบโจทย์ความต้องการและสุขภาพของคุณโดยเฉพาะ!
+ระบบสร้างและดัดแปลงสูตรอาหารจากวัตถุดิบในตู้เย็น สำหรับโครงงาน capstone โดยเน้นบริบทอาหารไทย การตรวจการแพ้อาหาร และข้อมูลโภชนาการที่ตรวจสอบที่มาได้
 
-## 🌟 จุดเด่นของโปรเจกต์ (Core Features)
-*   **🛒 My Fridge:** ระบบจัดการวัตถุดิบในตู้เย็น (เพิ่ม/ลบ/เลือก) เพื่อนำมาคำนวณสูตรอาหาร
-*   **🤖 Smart AI Chef:** ใช้ AI (Gemini 3.1 Flash) วิเคราะห์วัตถุดิบที่คุณมีและสร้างสรรค์เมนูใหม่ที่ทำได้จริง
-*   **🛡️ 6-Stage Validation:** ระบบตรวจสอบสูตรอาหารอัจฉริยะ 6 ขั้นตอนเพื่อให้มั่นใจว่าสูตรที่ AI สร้างมานั้น:
-    1.  **Safety First:** ปลอดภัย (เนื้อสัตว์ต้องสุก, ไม่มีขั้นตอนอันตราย)
-    2.  **Ingredient Logic:** ใช้วัตถุดิบที่มีจริงตามที่ระบุ
-    3.  **Cooking Logic:** ขั้นตอนการทำถูกต้องตามหลักพื้นฐาน
-    4.  **Nutrition Check:** ข้อมูลโภชนาการสมเหตุสมผล
-    5.  **Flavor Pairing:** รสชาติเข้ากันได้ดี
-    6.  **Allergy Safety:** ปลอดภัยตามเงื่อนไขการแพ้อาหารของผู้ใช้
-*   **🔄 Adaptive Retry:** หากสูตรไม่ผ่านการตรวจสอบ ระบบจะส่งเหตุผลที่ไม่ผ่านกลับไปให้ AI แก้ไขเฉพาะจุดในรอบถัดไป (สูงสุด 3 รอบ) แทนการสุ่มสร้างสูตรใหม่ทั้งหมด
-*   **📊 Nutrition Info:** ข้อมูลแคลอรี และสารอาหารครบถ้วน (Protein, Carbs, Fat)
+อัปเดตจากโค้ดและสถานะโปรเจกต์วันที่ **14 ตุลาคม 2026** รายละเอียดในหน้านี้แยกความสามารถที่อยู่บน `main` แล้วออกจากงานที่ยังไม่ได้ commit ในเครื่อง
 
-## 🚀 Tech Stack
-*   **Frontend:** React + Vite, Tailwind CSS v4, Lucide React(icons)
-*   **Backend:** FastAPI (Python)
-*   **Database:** PostgreSQL (+ pgvector) via SQLAlchemy + Alembic
-*   **AI Models:** Gemini 3.1 Flash (Google Generative AI)
+## ความสามารถปัจจุบัน
 
----
+ความสามารถต่อไปนี้มีโค้ดบน `main` ที่เผยแพร่แล้ว:
 
-## 🛠️ วิธีการติดตั้งและรันโปรเจกต์ (Getting Started)
+- **ตู้เย็น:** เพิ่ม ดู และลบวัตถุดิบ ระบุปริมาณ/หน่วยและวันหมดอายุได้ พร้อมเรียงและแสดงสถานะใกล้หมดอายุ การส่งให้ AI ใช้รายการชนิดวัตถุดิบ ไม่ใช่หลักฐานว่ามีปริมาณพอหรือระบบหักสต็อกอัตโนมัติ
+- **บาร์โค้ด:** อ่านผ่านกล้องหรือกรอกเลข 8–14 หลัก ค้น Open Food Facts แล้วเติมข้อมูลในฟอร์มที่แก้ไขได้ ผู้ใช้ต้องกดบันทึกเอง และเพิ่มด้วยมือได้เมื่อค้นไม่พบ
+- **สูตรอาหาร:** เลือกเมนูตั้งต้นหรือสร้างสูตรใหม่ด้วย Gemini พร้อมจำนวนที่เสิร์ฟ วัตถุดิบและขั้นตอน เมนูตั้งต้นแสดงช่วงเวลารวมโดยประมาณตามขั้นตอนของสูตร
+- **ตรวจสูตรและลองแก้:** ตรวจรูปแบบผลลัพธ์ก่อนเข้า validation 6 ขั้น ส่งเหตุผลแรกที่ไม่ผ่านกลับไปให้ AI โดยสร้างได้สูงสุด **3 ครั้งรวมครั้งแรก**
+- **การแพ้อาหาร:** ใช้กฎพื้นฐานร่วมกับ Knowledge Graph ใน PostgreSQL รองรับนโยบายสารก่อภูมิแพ้ 10 กลุ่ม แยกการพบโดยตรง/ส่วนประกอบที่เกี่ยวข้อง ขอคำชี้แจงเมื่อข้อมูลกำกวม และปฏิเสธคำขอที่ระบุการแพ้เมื่อกราฟที่ต้องใช้ไม่พร้อม
+- **Nutrition Engine:** แยกผลคำนวณจากวัตถุดิบ/ปริมาณและข้อมูล INMU/USDA ออกจากค่าประมาณของ AI พร้อมสถานะความครบถ้วนของข้อมูล
+- **บัญชีและโปรไฟล์:** สมัคร/เข้าสู่ระบบด้วย JWT ใน HttpOnly cookies, refresh/logout, รีเซ็ตรหัสผ่านด้วย email OTP, บันทึก preferences ชื่อ รูปโปรไฟล์ที่ครอปได้ และภาษาไทย/อังกฤษ
+- **ประวัติและความชอบ:** เก็บสูตรที่สร้างสำเร็จ รายการโปรดของเมนูตั้งต้นและสูตรที่สร้าง คะแนน/แท็ก/ข้อความ feedback และดึงประวัติที่มีคะแนนมาเป็นบริบทของคำขอใหม่ผ่าน embeddings + pgvector เป็น personalization ใน prompt ไม่ใช่การฝึกโมเดลรายผู้ใช้
 
-### 1️⃣ การตั้งค่า Backend (FastAPI + Database)
-เปิด Terminal ในโฟลเดอร์ `backend`:
+### งานล่าสุดที่ยังอยู่ใน working tree
 
-1.  **สร้างและเปิดใช้งาน Virtual Environment**
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate  # สำหรับ Windows
-    ```
-2.  **ติดตั้ง Libraries**
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **ตั้งค่า Environment Variable**
-    สร้างไฟล์ `.env` ไว้ในโฟลเดอร์ `backend/` แล้วใส่ API Key + DB config:
-    ```env
-    GEMINI_API_KEY=ใส่_API_KEY_ของคุณที่นี่
-    DATABASE_URL=postgresql+psycopg://homemade:homemade_dev_only@localhost:5432/homemade
-    JWT_SECRET_KEY=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
-    OTP_HMAC_SECRET=ใส่_random_secret_ของคุณที่นี่ (เช่น python -c "import secrets; print(secrets.token_hex(32))")
-    EMAIL_BACKEND=console
-    # เมื่อใช้ Gmail SMTP ให้เปลี่ยน EMAIL_BACKEND=smtp แล้วกำหนดค่าด้านล่าง
-    SMTP_HOST=smtp.gmail.com
-    SMTP_PORT=587
-    SMTP_USERNAME=บัญชี_Gmail_ผู้ส่ง
-    SMTP_PASSWORD=Google_App_Password_16_หลัก_ห้ามใช้รหัสผ่านบัญชีปกติ
-    SMTP_FROM=HomeMade OTP <บัญชี_Gmail_ผู้ส่ง>
-    LOCAL_LLM_BASE_URL=http://localhost:8001 (ไม่บังคับ — ใส่เมื่อรัน vLLM server สำหรับ LocalLLMGenerator เท่านั้น, ดู docs/superpowers/specs/2026-09-13-local-llm-generator-design.md)
-    LOCAL_LLM_MODEL=qwen2.5-7b-instruct (ไม่บังคับ — ชื่อ model ที่ vLLM serve อยู่, สลับ 4B/7B-9B ได้โดยไม่ต้องแก้โค้ด)
-    ```
-    `EMAIL_BACKEND` ต้องกำหนดชัดเจนเสมอ: `console` ใช้เฉพาะ local development และจะ log อีเมลกับ OTP; `smtp` ส่งจริงผ่าน STARTTLS และต้องมีค่า `SMTP_*` ครบ มิฉะนั้น backend จะหยุดระหว่าง startup. เก็บ App Password ไว้เฉพาะใน `backend/.env` และห้าม commit. สำหรับ Gmail ให้เปิด Git Bash ที่ root โปรเจกต์แล้วรัน `./scripts/setup-gmail-smtp.sh`; wizard จะซ่อน App Password ระหว่างพิมพ์และตรวจ config โดยไม่ส่งอีเมล.
-4.  **เริ่มต้นฐานข้อมูล (Database Initialization)**
-    ต้องติดตั้ง [Docker Desktop](https://www.docker.com/products/docker-desktop/) ก่อน แล้วเปิดโปรแกรมทิ้งไว้ (ต้องเห็นสถานะ "Running")
+ณ วันที่อัปเดต README งานต่อไปนี้มีโค้ดในเครื่องแต่ยังไม่ได้ commit/push จึง **ยังไม่รวมใน fresh clone ของ remote `main`**:
 
-    เปิด Terminal/CMD ที่ **root โปรเจกต์** (โฟลเดอร์ `homemade/` ที่มีไฟล์ `docker-compose.yml`, **ไม่ใช่** ใน `backend/`) แล้วสั่ง:
-    ```bash
-    docker compose up -d
-    ```
-    จากนั้นย้ายไป Terminal/CMD ที่โฟลเดอร์ `backend/` (venv ต้อง activate อยู่) สร้างตาราง + seed ข้อมูลตัวอย่าง:
-    ```bash
-    alembic upgrade head
-    python database/seed_postgres.py
-    ```
-    > ⚠️ **ทำแค่ครั้งแรกเท่านั้น** (ตอน clone ใหม่ / container เป็น volume เปล่า) ข้อมูลจะถูกเก็บถาวรใน Docker volume (`pgdata`) แล้ว รันครั้งต่อไปแค่ `docker compose up -d` พอ **ไม่ต้อง** รัน `alembic upgrade head` / `seed_postgres.py` ซ้ำ (ยกเว้นมี migration ใหม่ที่ยังไม่ apply หรือลบ volume ทิ้งด้วย `docker compose down -v`)
-5.  **รันเซิร์ฟเวอร์**
-    ```bash
-    uvicorn main:app --reload
-    ```
-    *(เซิร์ฟเวอร์จะรันอยู่ที่: http://127.0.0.1:8000)*
+- แก้ไขวัตถุดิบในตู้เย็น: ชื่อ หมวดหมู่ ปริมาณ หน่วย และวันหมดอายุ
+- หน้ารายละเอียดโภชนาการที่แยกผลคำนวณ/ค่าประมาณ/ข้อมูลไม่ครบ และคำนวณโภชนาการเมนูตั้งต้นใหม่จากปริมาณในสูตร
+- ปรับข้อความภาษาไทย ฟอนต์ Noto Sans Thai ที่ให้บริการจากไฟล์ในโปรเจกต์ และแก้หน้า Favorites
+- utility และ tests สำหรับการแก้ค่า total carbohydrate ของ N3 แบบ project-derived; หลักฐานและการแก้ข้อมูล dev DB เป็นคนละส่วนกับการเผยแพร่ source
 
----
+การ clone และ seed ใหม่ไม่ได้ทำซ้ำข้อมูล nutrition ที่ผ่านการทบทวนและแก้ใน dev DB ทั้งหมด ดู [แนวทางดูแล nutrition และหลักฐานส่วนตัว](NUTRITION_MAINTENANCE.md)
 
-### 2️⃣ การตั้งค่า Frontend (React + Vite)
-เปิด Terminal ในโฟลเดอร์ `frontend`:
+## ขอบเขต validation และข้อจำกัด
 
-1.  **ติดตั้ง Dependencies**
-    ```bash
-    npm install  # หรือใช้ bun install
-    ```
-2.  **รันหน้าเว็บ**
-    ```bash
-    npm run dev  # หรือใช้ bun dev
-    ```
-    *(หน้าเว็บจะรันอยู่ที่: http://localhost:5173)*
+หลังตรวจโครงสร้าง JSON ลำดับจริงใน `backend/main.py` คือ:
 
----
+| ลำดับ | Check | ขอบเขตปัจจุบัน |
+| --- | --- | --- |
+| 1 | Ingredient | ตรวจวัตถุดิบกับรายการที่ผู้ใช้มีและเครื่องปรุงที่อนุญาต ยังมีข้อจำกัดด้านภาษาไทย/ชื่อผสม |
+| 2 | Allergy | ตรวจรายการวัตถุดิบของสูตรด้วย matcher ร่วมกับ floor + KG |
+| 3 | Flavor | กฎคู่รสชาติที่กำหนดไว้บางคู่ |
+| 4 | Logic | กฎขั้นตอนบางกรณีและข้อความสรุปสต็อกที่ห้ามใช้ |
+| 5 | Nutrition sanity | เงื่อนไขตัวเลขเบื้องต้น ร่วมกับการตรวจรูปแบบผลลัพธ์ |
+| 6 | Core ingredient | กฎวัตถุดิบหลักบางกรณี |
 
-## 📁 โครงสร้างโปรเจกต์ (Project Structure)
-```text
-homemade/
-├── backend/               # ระบบ API และ Database
-│   ├── database/          # SQLAlchemy models, Alembic migrations, seed script (SQLite ไฟล์เดิมยังอยู่แต่ deprecated ไม่ได้ใช้แล้ว)
-│   ├── model/             # (Internal) บริการเสริมอื่นๆ
-│   ├── images/            # เก็บรูปภาพวัตถุดิบและเมนู
-│   ├── main.py            # ไฟล์หลักของ FastAPI
-│   └── .env               # (ต้องสร้างเอง) เก็บ API Key
-└── frontend/              # ระบบ UI (React)
-    ├── src/
-    │   ├── pages/         # หน้าจอต่างๆ (Home, Fridge, Cooking, ฯลฯ)
-    │   ├── components/    # Common Components
-    │   └── App.jsx        # ตัวจัดการ Routing
-    └── tailwind.config.js # การตั้งค่า Design System
+ระบบหยุดที่เหตุผลแรกที่ไม่ผ่านในแต่ละครั้ง **Nutrition Engine ทำงานหลังสูตรผ่าน validation และอยู่นอก retry loop** ไม่ใช่ check ลำดับที่ 5
+
+กฎเหล่านี้ยังไม่ใช่การยืนยันความปลอดภัยในการปรุง รสชาติ ความถูกต้องทางคลินิก หรือการตรวจสารก่อภูมิแพ้ทุกข้อความในขั้นตอนทำอาหาร ข้อมูลชื่อวัตถุดิบ แหล่งโภชนาการ ปริมาณต่อหน่วย และ proxy ยังมีช่องว่าง; ค่าที่คำนวณได้ไม่ได้แปลว่ามีหลักฐานแหล่งข้อมูลครบ และยังไม่มีการปรับการสูญเสียสารอาหารจากการปรุง/การดูดซับน้ำมัน
+
+ยังไม่มีระบบส่งแจ้งเตือนอัตโนมัติหรือหน้า admin จัดการ catalog ส่วน YOLO ไม่ได้ใช้ใน flow ปัจจุบัน แม้ยังมีไฟล์และ dependency เดิมอยู่ งาน Local LLM/finetune เป็นส่วนทดลองแยกจาก API สร้างสูตรที่ใช้งานอยู่
+
+## Tech stack
+
+| ส่วน | เทคโนโลยีในโปรเจกต์ |
+| --- | --- |
+| Frontend | React 19, Vite 7, Tailwind CSS 4, React Router 7, Framer Motion, Lucide/React Icons |
+| กล้องและรูปโปรไฟล์ | `@yudiel/react-qr-scanner`, `react-easy-crop` |
+| Backend | FastAPI, SQLAlchemy 2, Alembic, psycopg |
+| Database | PostgreSQL 16 + pgvector; Docker Compose รันเฉพาะฐานข้อมูล |
+| Recipe generation | Google Gen AI SDK (`google-genai`), model ใน source: `gemini-3.1-flash-lite-preview` |
+| History embeddings | `gemini-embedding-001`, 768 dimensions |
+| Authentication | bcrypt + PyJWT, HttpOnly cookies, OTP/reset ticket |
+| ข้อมูลภายนอก | Open Food Facts, INMU/USDA; Pexels สำหรับค้นรูปเมื่อกำหนด key |
+
+SQLite ใช้กับ test fixtures และมีสคริปต์เก่าที่ deprecated; runtime หลักย้ายเป็น PostgreSQL แล้ว ชื่อ model ข้างต้นคือค่าที่โค้ดกำหนด ไม่ใช่การยืนยันว่า provider พร้อมให้บริการ ณ เวลารัน
+
+## ตั้งค่า local development
+
+ตัวอย่างใช้ **PowerShell บน Windows** ต้องมี Python พร้อม `venv`, Node.js ที่ Vite 7 รองรับ (`20.19+` ในสาย 20 หรือ `22.12+` ขึ้นไป), npm และ Docker Desktop ที่กำลังทำงาน
+
+คำสั่งติดตั้งด้านล่างเป็นคู่มือสำหรับผู้พัฒนา ไม่ใช่สิ่งที่รันอัตโนมัติเมื่ออัปเดต README
+
+### 1. Backend environment
+
+จาก root โปรเจกต์:
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
-## 🤝 ข้อกำหนดสำหรับทีมพัฒนา
-*   **Mobile-First Design:** ทุกการแก้ไข UI ต้องรองรับการแสดงผลบนมือถือ (Max-width 430px)
-*   **Security:** ห้าม Commit ไฟล์ `.env` ขึ้น Git เด็ดขาด
-*   **Validation:** หากมีการแก้ไข Logic การสร้างสูตรอาหาร ต้องทดสอบผ่าน Validation Pipeline ใน `main.py` เสมอ
+สร้าง `backend/.env` โดยใช้ secret ใหม่แยกกันสำหรับ JWT และ OTP สร้างแต่ละค่าด้วย `python -c "import secrets; print(secrets.token_hex(32))"`:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://homemade:homemade_dev_only@localhost:5432/homemade
+GEMINI_API_KEY=replace_with_your_gemini_api_key
+JWT_SECRET_KEY=replace_with_a_random_secret_at_least_32_bytes
+OTP_HMAC_SECRET=replace_with_another_random_secret_at_least_32_bytes
+EMAIL_BACKEND=console
+COOKIE_SECURE=false
+PERSONALIZATION_ENABLED=1
+```
+
+`homemade_dev_only` เป็นรหัสผ่านฐานข้อมูลตัวอย่างใน Compose สำหรับ local development เท่านั้น ห้าม commit `.env` หรือใช้ secret ตัวอย่างเป็นค่าจริง `EMAIL_BACKEND` ต้องกำหนดชัดเจน; `console` เขียน email/OTP ลง log และใช้เฉพาะ dev หากใช้ HTTPS ให้ตั้ง cookie policy ให้เหมาะกับ deployment
+
+หากต้องส่ง OTP จริง ให้เปลี่ยนเป็น `EMAIL_BACKEND=smtp` และเพิ่ม:
+
+```dotenv
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_sender_account
+SMTP_PASSWORD=your_app_password
+SMTP_FROM=HomeMade OTP <your_sender_account>
+```
+
+backend ตรวจ config อีเมลตอน startup และ SMTP ใช้ STARTTLS สำหรับ Gmail ใช้ App Password; มี wizard `scripts/setup-gmail-smtp.sh` ให้รันผ่าน Git Bash จาก root โดยไม่ส่งอีเมลทดสอบ
+
+ตัวเลือกเพิ่มเติม:
+
+- `PEXELS_API_KEY`: สำหรับค้นรูปจาก Pexels
+- `USDA_API_KEY`: สำหรับงาน import USDA ที่ผู้ดูแลเลือกทำแยก ไม่จำเป็นต่อการเปิด API ด้วยฐานข้อมูลที่เตรียมไว้แล้ว
+- `PERSONALIZATION_ENABLED=0`: ปิด retrieval, embedding และงาน vector ที่เกี่ยวข้อง
+- `LOCAL_LLM_BASE_URL` / `LOCAL_LLM_MODEL`: สำหรับ `LocalLLMGenerator` ในงานทดลอง ไม่ได้สลับ model ของ API ปัจจุบันโดยอัตโนมัติ
+
+### 2. Database และ migrations
+
+เปิดอีก terminal ที่ **root โปรเจกต์**:
+
+```powershell
+docker compose up -d db
+```
+
+ใน terminal backend ที่ activate venv และตั้ง `.env` แล้ว:
+
+```powershell
+alembic current
+alembic upgrade head
+```
+
+ตรวจ migration ที่เปลี่ยนและสำรองข้อมูลก่อนใช้กับฐานข้อมูลที่มีข้อมูลจริง ต้อง apply migration ใหม่เมื่ออัปเดต source; ไม่ใช่ทำเฉพาะครั้งแรก `upgrade head` เดินจาก revision ปัจจุบันไป revision ล่าสุดตาม [คู่มือ Alembic](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+
+**เฉพาะฐานข้อมูล dev ใหม่ที่ยังไม่มีข้อมูล** สามารถเติมเมนูตัวอย่างและกราฟสารก่อภูมิแพ้จาก `backend/`:
+
+```powershell
+python database/seed_postgres.py
+python -m database.seed_allergen_graph
+```
+
+schema/migration ไม่ได้เตรียมข้อมูล nutrition ให้ครบ สคริปต์เมนูตัวอย่างอาจใช้ค่า nutrition ที่กรอกไว้เมื่อคำนวณไม่ได้ และสามารถอัปเดตข้อมูลเมนูเดิมได้ จึงห้ามใช้ reseed เพื่อซ่อมฐานข้อมูลเดิมโดยไม่ทบทวน diff ข้อมูลก่อน งานนำเข้า INMU/USDA, aliases, portions, reviewed corrections และ embedding backfill ต้องเตรียมและตรวจแยกตาม [NUTRITION_MAINTENANCE.md](NUTRITION_MAINTENANCE.md) ไม่ใช่ bootstrap อัตโนมัติ
+
+กราฟที่ยังไม่พร้อมอาจทำให้คำขอสร้างสูตรที่ระบุการแพ้ถูกปฏิเสธตามนโยบายปัจจุบัน ข้อมูลเก็บใน named volume `pgdata` ของ Compose; อย่าลบ volume เพื่อแก้ปัญหาการรัน
+
+### 3. รัน API และ frontend
+
+จาก `backend/` ที่ activate venv แล้ว:
+
+```powershell
+uvicorn main:app --reload
+```
+
+API: [http://127.0.0.1:8000](http://127.0.0.1:8000) · Swagger: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+ต้องรัน API จาก `backend/` เนื่องจาก static images ใช้ path ที่สัมพันธ์กับ working directory
+
+อีก terminal จาก root:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+เปิด [http://localhost:5173](http://localhost:5173) ตาม URL ที่ Vite แสดง `frontend/vite.config.js` ส่ง `/api` ไป `http://127.0.0.1:8000` ผ่าน [Vite proxy](https://vite.dev/config/server-options.html#server-proxy) หาก port 5173 ถูกใช้อยู่ ให้จัดการ port ให้ตรงกับ origin ที่ backend อนุญาต
+
+`docker compose up` ไม่ได้เปิด API/frontend ให้ และ `npm run build` สร้าง frontend assets เท่านั้น การ deploy ต้องจัดการการเสิร์ฟ assets, API routing, HTTPS/cookies และ secrets เพิ่มเติม
+
+## ตรวจสอบก่อนส่งงาน
+
+Frontend จาก `frontend/`:
+
+```powershell
+node --test test/*.test.js
+npm run build
+npm run lint
+```
+
+Backend จาก `backend/` โดยใช้ environment ที่ติดตั้ง dependencies และตั้งค่าไว้แล้ว:
+
+```powershell
+python tests/run_offline.py
+# หรือเลือกเฉพาะกลุ่ม
+python tests/run_offline.py 'test_nutrition_*.py'
+```
+
+offline runner ใช้ fixtures โดยปิด network/provider และ persistent DB จึงไม่ใช่ผลทดสอบ PostgreSQL, Gemini, SMTP หรือกล้องจริง การตรวจหลักฐาน nutrition ส่วนตัวแยกจาก default suite และอาจต้องใช้ bundle ที่ไม่ได้เผยแพร่
+
+มีประวัติ frontend suite ล้มใน assertions ของ CookingPage/quantity contract และ lint บางจุด รวมถึง bundle-size warning; อ่านผลรันปัจจุบันก่อนสรุปว่าผ่านทั้งหมด การอัปเดต README นี้ตรวจความตรงกับ source และเอกสาร ไม่ได้รัน application test suites ใหม่
+
+## โครงสร้างที่ใช้จริง
+
+```text
+homemade/
+├── backend/
+│   ├── main.py                 # API, generation orchestration และ validation
+│   ├── database/               # connection, ORM models, seeds และ backfill
+│   ├── alembic/                # PostgreSQL schema migrations
+│   ├── allergen_kg/            # floor, graph resolution และ matcher
+│   ├── nutrition/              # parser, lookup, calculation และ maintenance
+│   ├── personalization/        # retrieval และ prompt context
+│   ├── generators/             # generator adapters สำหรับงานทดลอง
+│   ├── eval/                   # evaluation tools และ fixtures
+│   ├── finetune/               # งานทดลองเตรียมข้อมูล/โมเดล
+│   ├── images/                 # static ingredient/menu images
+│   └── tests/                  # unittest และ offline runner
+├── frontend/
+│   ├── src/components/         # shared UI
+│   ├── src/pages/              # application screens
+│   ├── src/context/            # authentication และ locale
+│   ├── src/utils/              # validation, payloads และ translations
+│   ├── test/                   # Node test runner
+│   └── vite.config.js          # React/Tailwind plugins และ API proxy
+├── docker-compose.yml          # PostgreSQL 16 + pgvector
+├── NUTRITION_MAINTENANCE.md     # ขอบเขต tests/imports/reviewed evidence
+├── GLOSSARY.md                 # คำศัพท์และความหมายในโปรเจกต์
+└── spec.md                     # สถานะและการตัดสินใจของโครงการ
+```
+
+## เอกสารและการทำงานร่วมกัน
+
+- [spec.md](spec.md): สถานะล่าสุด การตัดสินใจ งานต่อ และ data contracts; อ่านรายการใหม่ก่อนบันทึกประวัติเก่า
+- [GLOSSARY.md](GLOSSARY.md): ความหมายของคำที่ใช้ร่วมกัน
+- [MEMORY.md](MEMORY.md): ข้อผิดพลาดที่ต้องไม่ทำซ้ำ
+- [AGENTS.md](AGENTS.md): ข้อกำหนดการแก้ไขโปรเจกต์ รวมถึงการยืนยันแผนก่อนแก้ backend และขออนุญาตก่อนติดตั้ง package
+- `docs/` และ `tmp/` เป็น local-only ตาม `.gitignore` จึงอาจไม่มีใน fresh clone รวมถึงหลักฐาน/แผนงานที่ spec อ้างถึง ข้อเสนอใน `docs/project-proposal.md` เป็นร่างเก่า ไม่ใช่ข้อกำหนดล่าสุดทั้งหมด
+
+ขอบเขต contribution ที่ต้องประเมินทางวิชาการคือ nutrition engine, allergen validation และ critic-feedback loop ส่วน UI/auth/barcode และความสะดวกในการใช้งานเป็น product envelope การมี code path หรือผ่าน regression tests ยังไม่ใช่หลักฐานความแม่นยำหรือผลการทดลองกับผู้ใช้

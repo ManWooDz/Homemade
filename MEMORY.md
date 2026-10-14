@@ -1,5 +1,10 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Bound README refresh discovery before running it (2026-10-14):**
+- what: initial whole-spec and combined Thai source reads were truncated; guessed session/email/context paths were absent, and the first verbal untracked count42was corrected to43using porcelain -uall. No conclusion relied on the failed paths. Sandbox GitHub/worktree/index access failures were resolved through reviewed commands. Initial staged README byte comparison rejected Git's CRLF-to-LF normalization; decoded text was identical.
+- root cause: started discovery without applying existing output-bound and filename-discovery instructions, counted grouped status output by eye, and compared raw working bytes with Git-normalized documentation blobs.
+- correct: read spec headings before bounded relevant ranges, discover source filenames with scoped rg before opening them, and calculate modified/untracked/staged counts from git status --porcelain=v1 -uall. Compare branch commits with live remote heads and their reachability before calling an upstream-ahead commit unpublished; distinguish ignored private evidence from ordinary untracked files. For normal text docs, verify staged text with explicit CRLF-to-LF normalization; preserve raw hashes separately and do not apply this exception to pinned evidence bytes.
+
 **Run application smoke imports from their observed runtime cwd (2026-10-13):**
 - what: first PostgreSQL API postcheck imported main from project-root cwd and failed on its existing StaticFiles(directory="images") before creating synthetic test rows. Corrected to backend cwd and17checks passed with complete rollback and unchanged legacy/sequence hashes; retained the failed and corrected logs. A guessed auth_utils.py inspection was also corrected through bounded file discovery.
 - root cause: imported application paths were treated as module-relative even though the observed server/test runner uses backend-relative working directory; a conventional helper filename was guessed instead of discovered.
