@@ -51,6 +51,30 @@ class User(Base):
     )
 
 
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Source rows can be removed; retain the occurrence without blocking deletion.
+    target_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "event_key", name="uq_notifications_event"),
+        CheckConstraint("kind IN ('expiry_near','expiry_today','expiry_passed','recipe_history_saved','recipe_favorite_added')", name="ck_notifications_kind"),
+        CheckConstraint("target_type IN ('ingredient','history','base_recipe') AND target_id > 0", name="ck_notifications_target"),
+        Index("ix_notifications_feed", "user_id", "withdrawn_at", "read_at", "id"),
+        {"sqlite_autoincrement": True},
+    )
+
+
 class UserIngredient(Base):
     __tablename__ = "user_ingredients"
 

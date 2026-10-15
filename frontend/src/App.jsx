@@ -1,5 +1,5 @@
 import { useLocale } from "./context/LocaleContext";
-import { useState, useEffect, useRef, useLayoutEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from "react";
 import {
     Home,
     Refrigerator,
@@ -24,6 +24,10 @@ import IngredientDetail from "./pages/IngredientDetail";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import HistoryDetail from "./pages/HistoryDetail";
+import NotificationBell from "./components/NotificationBell";
+import NotificationToast from "./components/NotificationToast";
+import Notifications from "./pages/Notifications";
+import { bangkokDate } from "./utils/expiry";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
 import { toUserFacingGenerateError, validateAllergyPreferences } from "./utils/generateError";
 import { getTagColor } from "./utils/tagColors";
@@ -42,7 +46,7 @@ const toHistoryItem = (row) => ({
 
 function App() {
     const { t, locale } = useLocale();
-    const { apiFetch } = useAuth();
+    const { apiFetch, user } = useAuth();
 
     const [activeTab, setActiveTab] = useState("home");
     const [currentView, setCurrentView] = useState("home"); // "home" | "recipe-detail" | "create-recipe" | "cooking-page" | "user-ingredients" | "custom-cooking"
@@ -80,6 +84,217 @@ function App() {
     const [generatedRecipe, setGeneratedRecipe] = useState(null);
     const [generateError, setGenerateError] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [notificationCount, setNotificationCount] = useState(null);
+    const [notificationItems, setNotificationItems] = useState([]);
+    const [notificationTab, setNotificationTab] = useState("unread");
+    const [notificationCursor, setNotificationCursor] = useState(null);
+    const [notificationLoading, setNotificationLoading] = useState(false);
+    const [notificationPending, setNotificationPending] = useState(false);
+    const [notificationError, setNotificationError] = useState("");
+    const [notificationReturnView, setNotificationReturnView] = useState("home");
+    const [openedFromNotification, setOpenedFromNotification] = useState(false);
+    const [toastQueue, setToastQueue] = useState([]);
+    const [profileNotificationPaused, setProfileNotificationPaused] = useState(false);
+    const notificationTabRef = useRef("unread");
+    const notificationOwnerRef = useRef(user?.id);
+    const notificationLoadRef = useRef(0);
+    const notificationSyncRef = useRef(false);
+    const notificationSyncAgainRef = useRef(false);
+    const notificationReadRef = useRef(false);
+    const notificationSeenRef = useRef(new Set());
+    const notificationScrollRef = useRef({ unread: 0, read: 0 });
+    const notificationFridgeRef = useRef("");
+    const historyFavoritePendingRef = useRef(new Set());
+    const getNotificationScroll = useCallback(tab => notificationScrollRef.current[tab], []);
+    const rememberNotificationScroll = useCallback((tab, position) => { notificationScrollRef.current[tab] = position; }, []);
+
+    const enqueueNotification = useCallback(notice => {
+        if (!notice || notificationOwnerRef.current !== user?.id) return;
+        const records = notice.kind === "expiry_summary" ? notice.items : [notice];
+        const fresh = records.filter(record => !record.read_at && !notificationSeenRef.current.has(record.id));
+        if (!fresh.length) return;
+        fresh.forEach(record => notificationSeenRef.current.add(record.id));
+        setToastQueue(queue => [...queue, notice.kind === "expiry_summary" ? { ...notice, items: fresh, id: `expiry:${fresh.map(record => record.id).join(",")}` } : notice]);
+    }, [user?.id]);
+
+    const loadNotifications = useCallback(async (tab, cursor = null) => {
+        const sequence = ++notificationLoadRef.current;
+        setNotificationLoading(true);
+        try {
+            const response = await apiFetch(`/api/notifications?state=${tab}&limit=20${cursor ? `&before_id=${cursor}` : ""}`);
+            const result = await response.json();
+            if (!response.ok || result.status !== "success") throw new Error("feed");
+            if (sequence !== notificationLoadRef.current || notificationOwnerRef.current !== user?.id) return;
+            setNotificationItems(previous => cursor ? [...previous, ...result.data.items.filter(item => !previous.some(old => old.id === item.id))] : result.data.items);
+            setNotificationCount(result.data.unread_count);
+            setNotificationCursor(result.data.next_before_id);
+            setNotificationError("");
+        } catch {
+            if (sequence === notificationLoadRef.current && notificationOwnerRef.current === user?.id) setNotificationError("โหลดแจ้งเตือนไม่สำเร็จ กรุณาลองอีกครั้ง");
+        } finally {
+            if (sequence === notificationLoadRef.current && notificationOwnerRef.current === user?.id) setNotificationLoading(false);
+        }
+    }, [apiFetch, user?.id]);
+
+    const syncNotifications = useCallback(async function sync() {
+        if (notificationSyncRef.current) { notificationSyncAgainRef.current = true; return; }
+        notificationSyncRef.current = true;
+        try {
+            const response = await apiFetch("/api/notifications/sync", { method: "POST" });
+            const result = await response.json();
+            if (!response.ok || result.status !== "success") throw new Error("sync");
+            if (notificationOwnerRef.current !== user?.id) return;
+            setNotificationCount(result.data.unread_count);
+            if (result.data.created_items.length) enqueueNotification({ kind: "expiry_summary", items: result.data.created_items });
+            await loadNotifications(notificationTabRef.current);
+        } catch {
+            if (notificationOwnerRef.current === user?.id) setNotificationError("โหลดแจ้งเตือนไม่สำเร็จ กรุณาลองอีกครั้ง");
+        } finally {
+            if (notificationOwnerRef.current === user?.id) {
+                notificationSyncRef.current = false;
+                if (notificationSyncAgainRef.current) {
+                    notificationSyncAgainRef.current = false;
+                    void sync();
+                }
+            }
+        }
+    }, [apiFetch, enqueueNotification, loadNotifications, user?.id]);
+
+    useEffect(() => {
+        notificationOwnerRef.current = user?.id;
+        let active = true;
+        let timer;
+        let day = bangkokDate();
+        Promise.resolve().then(() => {
+            if (!active) return;
+            notificationSeenRef.current.clear();
+            notificationTabRef.current = "unread";
+            notificationScrollRef.current = { unread: 0, read: 0 };
+            setNotificationCount(null);
+            setNotificationItems([]);
+            setNotificationTab("unread");
+            setNotificationCursor(null);
+            setNotificationError("");
+            setToastQueue([]);
+        });
+        const refresh = async () => {
+            if (!active || document.visibilityState === "hidden") return;
+            void syncNotifications();
+            try {
+                const response = await apiFetch("/api/user-ingredients");
+                const result = await response.json();
+                if (active && response.ok && result.status === "success") setUserIngredients(result.data);
+            } catch { /* Existing fridge data remains available on refresh failure. */ }
+        };
+        const watch = () => {
+            clearInterval(timer);
+            if (document.visibilityState === "hidden") return;
+            day = bangkokDate();
+            void refresh();
+            timer = setInterval(() => {
+                const nextDay = bangkokDate();
+                if (nextDay !== day) { day = nextDay; void refresh(); }
+            }, 1000);
+        };
+        watch();
+        document.addEventListener("visibilitychange", watch);
+        window.addEventListener("focus", refresh);
+        const invalidateReads = () => { notificationLoadRef.current++; };
+        return () => {
+            active = false;
+            notificationOwnerRef.current = null;
+            invalidateReads();
+            notificationSyncRef.current = false;
+            notificationSyncAgainRef.current = false;
+            notificationFridgeRef.current = "";
+            clearInterval(timer);
+            document.removeEventListener("visibilitychange", watch);
+            window.removeEventListener("focus", refresh);
+        };
+    }, [apiFetch, syncNotifications, user?.id]);
+
+    useEffect(() => {
+        const signature = userIngredients.map(item => `${item.id}:${item.expiry_date ?? ""}`).join("|");
+        if (signature === notificationFridgeRef.current) return;
+        notificationFridgeRef.current = signature;
+        const reconcile = async () => {
+            setToastQueue(queue => queue.flatMap(notice => {
+                if (notice.kind !== "expiry_summary") return [notice];
+                const items = notice.items.filter(item => userIngredients.some(source => source.id === item.target_id && source.expiry_date === item.payload.expiry_date));
+                return items.length ? [{ ...notice, items }] : [];
+            }));
+            await syncNotifications();
+        };
+        void reconcile();
+    }, [userIngredients, syncNotifications]);
+
+    const dismissToast = useCallback(() => setToastQueue(queue => queue.slice(1)), []);
+    const openNotifications = () => {
+        setNotificationReturnView(currentView);
+        setCurrentView("notifications");
+        void syncNotifications();
+    };
+    const changeNotificationTab = tab => {
+        notificationTabRef.current = tab;
+        setNotificationTab(tab);
+        setNotificationItems([]);
+        setNotificationCursor(null);
+        void loadNotifications(tab);
+    };
+    const readAllNotifications = async () => {
+        if (notificationReadRef.current) return;
+        notificationReadRef.current = true;
+        setNotificationPending(true);
+        try {
+            const response = await apiFetch("/api/notifications/read-all", { method: "PUT" });
+            const result = await response.json();
+            if (!response.ok || result.status !== "success") throw new Error("read");
+            if (notificationOwnerRef.current !== user?.id) return;
+            setNotificationCount(result.data.unread_count);
+            setToastQueue([]);
+            await loadNotifications(notificationTabRef.current);
+        } catch { if (notificationOwnerRef.current === user?.id) setNotificationError("บันทึกสถานะอ่านไม่สำเร็จ กรุณาลองอีกครั้ง"); }
+        finally { notificationReadRef.current = false; if (notificationOwnerRef.current === user?.id) setNotificationPending(false); }
+    };
+    const openNotificationTarget = async notice => {
+        if (notificationReadRef.current) return;
+        notificationReadRef.current = true;
+        setNotificationPending(true);
+        let readConfirmed = false;
+        try {
+            const read = await apiFetch(`/api/notifications/${notice.id}/read`, { method: "PUT" });
+            if (!read.ok) throw new Error("read");
+            const readResult = await read.json();
+            if (readResult.status !== "success") throw new Error("read");
+            if (notificationOwnerRef.current !== user?.id) return;
+            readConfirmed = true;
+            notificationLoadRef.current++;
+            setNotificationLoading(false);
+            setNotificationCount(readResult.unread_count);
+            setNotificationItems(items => notificationTabRef.current === "unread" ? items.filter(item => item.id !== notice.id) : items.map(item => item.id === notice.id ? readResult.data : item));
+            setToastQueue(queue => queue.filter(item => item.kind === "expiry_summary" ? !item.items.some(record => record.id === notice.id) : item.id !== notice.id));
+            const url = notice.target_type === "ingredient" ? "/api/user-ingredients" : notice.target_type === "history" ? "/api/history" : "/api/recipes";
+            const response = await apiFetch(url);
+            const result = await response.json();
+            if (notificationOwnerRef.current !== user?.id) return;
+            const source = response.ok && result.status === "success" && result.data.find(item => item.id === notice.target_id);
+            if (!source) { setNotificationError("รายการนี้เปลี่ยนแปลงหรือไม่พร้อมใช้งานแล้ว"); return; }
+            setOpenedFromNotification(true);
+            if (notice.target_type === "ingredient") {
+                setUserIngredients(result.data);
+                setSelectedIngredientDetail(source);
+                setCurrentView("ingredient-detail");
+            } else if (notice.target_type === "history") {
+                setSelectedHistoryItem(toHistoryItem(source));
+                setHistoryReturnView("notifications");
+                setCurrentView("history-detail");
+            } else {
+                setSelectedRecipe(source);
+                setCurrentView("recipe-detail");
+            }
+        } catch { if (notificationOwnerRef.current === user?.id) setNotificationError(readConfirmed ? "รายการนี้เปลี่ยนแปลงหรือไม่พร้อมใช้งานแล้ว" : "บันทึกสถานะอ่านไม่สำเร็จ กรุณาลองอีกครั้ง"); }
+        finally { notificationReadRef.current = false; if (notificationOwnerRef.current === user?.id) setNotificationPending(false); }
+    };
 
     const rateRecipe = async (historyId, rating) => {
         try {
@@ -108,8 +323,10 @@ function App() {
     };
 
     const toggleHistoryFavorite = async (historyId) => {
+        if (historyFavoritePendingRef.current.has(historyId)) return;
         const current = cookingHistory.find((item) => item.id === historyId);
         if (!current) return;
+        historyFavoritePendingRef.current.add(historyId);
         const next = !current.is_favorite;
         const setFavorite = (value) =>
             setCookingHistory((prev) =>
@@ -122,10 +339,14 @@ function App() {
             const response = await apiFetch(`/api/history/${historyId}/favorite`, {
                 method: next ? "PUT" : "DELETE",
             });
-            if (!response.ok) setFavorite(!next);
+            const result = await response.json();
+            if (!response.ok || result.status !== "success") setFavorite(!next);
+            else if (result.notification) { enqueueNotification(result.notification); void loadNotifications(notificationTabRef.current); }
         } catch (error) {
             console.error("Error toggling favorite:", error);
             setFavorite(!next);
+        } finally {
+            historyFavoritePendingRef.current.delete(historyId);
         }
     };
     const [cookingSource, setCookingSource] = useState("create-recipe"); // "create-recipe" | "custom-cooking"
@@ -363,6 +584,9 @@ function App() {
             const result = await response.json();
             if (result.status !== "success") {
                 setMembership(wasFavorite);
+            } else if (result.notification) {
+                enqueueNotification(result.notification);
+                void loadNotifications(notificationTabRef.current);
             }
         } catch (error) {
             console.error("Error toggling base favorite:", error);
@@ -414,6 +638,7 @@ function App() {
     });
 
     const handleTabChange = (tab) => {
+        setOpenedFromNotification(false);
         setActiveTab(tab);
         if (tab === "home") {
             setCurrentView("home");
@@ -430,6 +655,16 @@ function App() {
         }
     };
 
+    const renderPage = () => {
+    if (currentView === "notifications") {
+        return <Notifications items={notificationItems} ingredients={userIngredients} count={notificationCount} tab={notificationTab}
+            onTabChange={changeNotificationTab} loading={notificationLoading} pending={notificationPending}
+            error={notificationError} nextCursor={notificationCursor}
+            onLoadMore={() => loadNotifications(notificationTabRef.current, notificationCursor)}
+            onRetry={syncNotifications} onReadAll={readAllNotifications} onOpen={openNotificationTarget}
+            onBack={() => setCurrentView(notificationReturnView)} activeTab={activeTab} setActiveTab={handleTabChange}
+            getScroll={getNotificationScroll} rememberScroll={rememberNotificationScroll} />;
+    }
     if (currentView === "recipe-detail") {
         return (
             <RecipeDetail
@@ -439,8 +674,8 @@ function App() {
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => {
-                    setCurrentView("home");
-                    setActiveTab("home");
+                    setCurrentView(openedFromNotification ? "notifications" : "home");
+                    if (!openedFromNotification) setActiveTab("home");
                 }}
                 onConfirm={(ingredients) => {
                     setSelectedIngredients(ingredients);
@@ -481,10 +716,12 @@ function App() {
                             })
                         });
                         const result = await response.json();
-                        if (result.status === "success") {
+                        if (response.ok && result.status === "success") {
                             const historyId = result.data.history_id ?? null;
                             setGeneratedRecipe({ ...result.data, _historyId: historyId });
                             if (historyId !== null) {
+                                enqueueNotification(result.notification);
+                                void loadNotifications(notificationTabRef.current);
                                 setCookingHistory((prev) => [
                                     {
                                         ...result.data,
@@ -537,6 +774,7 @@ function App() {
     if (currentView === "user-ingredients") {
         return (
             <UserIngredients
+                notificationCount={notificationCount} onNotifications={openNotifications}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 userIngredients={userIngredients}
@@ -567,7 +805,7 @@ function App() {
                 setActiveTab={handleTabChange}
                 onBack={() => {
                     setSelectedIngredientDetail(null);
-                    setCurrentView("user-ingredients");
+                    setCurrentView(openedFromNotification ? "notifications" : "user-ingredients");
                 }}
                 onDeleted={() => {
                     setSelectedIngredientDetail(null);
@@ -598,6 +836,7 @@ function App() {
     if (currentView === "favorites") {
         return (
             <Favorites
+                notificationCount={notificationCount} onNotifications={openNotifications}
                 recipes={recipes}
                 categories={categories}
                 favoriteRecipeIds={favoriteRecipeIds}
@@ -642,6 +881,7 @@ function App() {
     if (currentView === "custom-cooking") {
         return (
             <CustomCookingPage
+                notificationCount={notificationCount} onNotifications={openNotifications}
                 userIngredients={userIngredients}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
@@ -668,10 +908,12 @@ function App() {
                             })
                         });
                         const result = await response.json();
-                        if (result.status === "success") {
+                        if (response.ok && result.status === "success") {
                             const historyId = result.data.history_id ?? null;
                             setGeneratedRecipe({ ...result.data, _historyId: historyId });
                             if (historyId !== null) {
+                                enqueueNotification(result.notification);
+                                void loadNotifications(notificationTabRef.current);
                                 setCookingHistory((prev) => [
                                     {
                                         ...result.data,
@@ -702,6 +944,8 @@ function App() {
     if (currentView === "profile") {
         return (
             <Profile
+                notificationCount={notificationCount} onNotifications={openNotifications}
+                onNotificationPause={setProfileNotificationPaused}
                 cookingHistory={cookingHistory}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
@@ -740,7 +984,8 @@ function App() {
                     className="flex-1 overflow-y-auto pb-24 px-5 pt-8 scrollbar-hide"
                 >
                     {/* Logo */}
-                    <div className="flex justify-center mb-6">
+                    <div className="flex justify-center mb-6 relative">
+                        <NotificationBell count={notificationCount} onClick={openNotifications} />
                         <img
                             src={logo}
                             alt="HomeMade"
@@ -1100,6 +1345,13 @@ function App() {
             </div>
         </div>
     );
+    };
+    const notice = toastQueue[0];
+    const showToast = notice && !isGenerating && !showFilterPanel &&
+        ["home", "user-ingredients", "favorites", "profile"].includes(currentView) &&
+        !(currentView === "profile" && profileNotificationPaused);
+    return <>{renderPage()}{showToast && <NotificationToast key={notice.id} notice={notice} ingredients={userIngredients} onDismiss={dismissToast}
+        onOpen={() => { dismissToast(); if (notice.kind === "expiry_summary") openNotifications(); else { setNotificationReturnView(currentView); setCurrentView("notifications"); void openNotificationTarget(notice); } }} />}</>;
 }
 
 function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {

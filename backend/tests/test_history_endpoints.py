@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from database.db import get_db
 from database.models import (
+    Notification,
     Base,
     BaseRecipe,
     Favorite,
@@ -46,7 +47,7 @@ class HistoryEndpointTestCase(unittest.TestCase):
         Base.metadata.create_all(
             self.engine,
             tables=[
-                User.__table__,
+                User.__table__, Notification.__table__,
                 RefreshToken.__table__,
                 BaseRecipe.__table__,
                 GenerateHistory.__table__,

@@ -15,6 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
+import NotificationBell from "../components/NotificationBell";
 import BottomMenu from "../components/bottomMenu";
 import { OptionChips, OptionList } from "../components/OptionPicker";
 import { getTagColor } from "../utils/tagColors";
@@ -43,7 +44,7 @@ const LANGUAGE_OPTIONS = [
   { code: "en", label: "English" },
 ];
 
-function Header({ title, onBack }) {
+function Header({ title, onBack, notificationCount, onNotifications }) {
   const { t } = useLocale();
   return (
     <div className="pt-8 px-6 h-18 flex items-center justify-center relative z-20 mb-6">
@@ -59,6 +60,7 @@ function Header({ title, onBack }) {
       ) : (
         <img src={logo} alt="HomeMade" className="h-18 object-contain" />
       )}
+      {onNotifications && <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>}
     </div>
   );
 }
@@ -118,8 +120,10 @@ export default function Profile({
   setActiveTab,
   onBack,
   onOpenHistoryItem,
+  notificationCount, onNotifications, onNotificationPause,
 }) {
   const [view, setView] = useState("main"); // main | history | language | preferences | helps
+  useEffect(() => { onNotificationPause?.(view !== "main"); return () => onNotificationPause?.(false); }, [view, onNotificationPause]);
   const [historyFilter, setHistoryFilter] = useState("all"); // all | favorites
 
   const { locale: language, t } = useLocale();
@@ -599,7 +603,7 @@ export default function Profile({
   return (
     <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-        <Header onBack={onBack} />
+        <Header onBack={onBack} notificationCount={notificationCount} onNotifications={onNotifications} />
 
         <div className="flex-1 overflow-y-auto px-5 pb-32">
           {/* Profile Card */}

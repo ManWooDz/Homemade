@@ -16,17 +16,20 @@ export function sortByExpiry(items) {
 
 const NEAR_EXPIRY_THRESHOLD_DAYS = 3;
 
-// Parses "YYYY-MM-DD" as a LOCAL date, not UTC — new Date("YYYY-MM-DD")
-// parses as UTC midnight, which reads as "already expired" from ~7am
-// onward in Bangkok time (UTC+7). Compares against local midnight today.
-export function daysUntilExpiry(expiryDateStr) {
+export function bangkokDate(now = new Date()) {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+// Compare calendar dates, so all devices agree with account notifications.
+export function daysUntilExpiry(expiryDateStr, now = new Date()) {
     if (!expiryDateStr) return null;
     const [y, m, d] = expiryDateStr.split("-").map(Number);
-    const expiry = new Date(y, m - 1, d);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const expiry = Date.UTC(y, m - 1, d);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr) || new Date(expiry).toISOString().slice(0, 10) !== expiryDateStr) return null;
+    const [ty, tm, td] = bangkokDate(now).split("-").map(Number);
+    const today = Date.UTC(ty, tm - 1, td);
     const msPerDay = 24 * 60 * 60 * 1000;
-    return Math.round((expiry - today) / msPerDay);
+    return (expiry - today) / msPerDay;
 }
 
 // null when there's no expiry date or it's not near enough to flag.

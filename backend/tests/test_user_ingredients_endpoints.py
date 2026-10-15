@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -10,11 +11,76 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database.db import get_db
-from database.models import Base, RefreshToken, User, UserIngredient
+from database.models import Notification, Base, RefreshToken, User, UserIngredient
 from main import app
 
 
 class UserIngredientsEndpointTests(unittest.TestCase):
+    def _edit_fixture(self):
+        client = TestClient(app)
+        self._register_and_login(client, "edit@example.com")
+        nutrition = {"basis": "per_100g_or_ml", "calories": 42}
+        created = client.post("/api/user-ingredients", headers=self.origin_headers, json={
+            "name": "original", "category": "Other", "image": "original.png",
+            "nutrition_data": nutrition, "quantity_amount": 2, "quantity_unit": "ชิ้น",
+        }).json()["data"]
+        payload = {"name": "  edited  ", "category": "Vegetables", "expiry_date": "2026-10-20", "quantity_amount": 500, "quantity_unit": "กรัม"}
+        return client, created, payload
+
+    def test_edit_updates_same_row_and_preserves_product_data(self):
+        client, created, payload = self._edit_fixture()
+        url = f'/api/user-ingredients/{created["id"]}'
+        res = client.put(url, json=payload, headers=self.origin_headers)
+        self.assertEqual(res.status_code, 200)
+        updated = res.json()["data"]
+        self.assertEqual(updated["id"], created["id"])
+        self.assertEqual(updated["name"], "edited")
+        self.assertEqual(updated["category"], "Vegetables")
+        self.assertEqual(updated["expiry_date"], payload["expiry_date"])
+        self.assertEqual(updated["quantity_amount"], 500)
+        self.assertEqual(updated["quantity_unit"], "กรัม")
+        for field in ("image", "nutrition_data"):
+            self.assertEqual(updated[field], created[field])
+        payload.update(expiry_date=None, quantity_amount=None, quantity_unit=None)
+        self.assertEqual(client.put(url, json=payload, headers=self.origin_headers).status_code, 200)
+        rows = client.get("/api/user-ingredients").json()["data"]
+        self.assertEqual(len(rows), 1)
+        for field in ("expiry_date", "quantity_amount", "quantity_unit"):
+            self.assertIsNone(rows[0][field])
+
+    def test_edit_rejects_invalid_values_without_changing_row(self):
+        client, created, payload = self._edit_fixture()
+        cases = [{"name": " "}, {"name": "x" * 201}, {"name": True}, {"category": "arbitrary"},
+                 {"expiry_date": "2026-02-30"}, {"quantity_amount": 0}, {"quantity_amount": -1},
+                 {"quantity_amount": 100001}, {"quantity_amount": True}, {"quantity_amount": "NaN"},
+                 {"quantity_unit": "unknown"}, {"quantity_amount": None}, {"image": "replace.png"},
+                 {"nutrition_data": None}, {"user_id": 42}]
+        for invalid in cases:
+            with self.subTest(invalid=invalid):
+                res = client.put(f'/api/user-ingredients/{created["id"]}', json={**payload, **invalid}, headers=self.origin_headers)
+                self.assertEqual(res.status_code, 422)
+        self.assertEqual(client.get("/api/user-ingredients").json()["data"], [created])
+
+    def test_edit_requires_auth_origin_and_owner(self):
+        client, created, payload = self._edit_fixture()
+        url = f'/api/user-ingredients/{created["id"]}'
+        self.assertEqual(TestClient(app).put(url, json=payload, headers=self.origin_headers).status_code, 401)
+        for headers in ({}, {"Origin": "https://untrusted.example"}):
+            self.assertEqual(client.put(url, json=payload, headers=headers).status_code, 403)
+        other = TestClient(app)
+        self._register_and_login(other, "otheredit@example.com")
+        self.assertEqual(other.put(url, json=payload, headers=self.origin_headers).status_code, 404)
+        self.assertEqual(client.put("/api/user-ingredients/999999", json=payload, headers=self.origin_headers).status_code, 404)
+        self.assertEqual(client.get("/api/user-ingredients").json()["data"], [created])
+
+    def test_edit_rolls_back_commit_failure_and_hides_internal_error(self):
+        client, created, payload = self._edit_fixture()
+        with patch("fridge_repository.Session.commit", side_effect=RuntimeError("private DB failure")):
+            res = client.put(f'/api/user-ingredients/{created["id"]}', json=payload, headers=self.origin_headers)
+        self.assertEqual(res.status_code, 500)
+        self.assertEqual(res.json(), {"detail": "Could not save ingredient"})
+        self.assertEqual(client.get("/api/user-ingredients").json()["data"], [created])
+
     def setUp(self):
         self.engine = create_engine(
             "sqlite:///:memory:",
@@ -22,7 +88,7 @@ class UserIngredientsEndpointTests(unittest.TestCase):
             poolclass=StaticPool,
         )
         Base.metadata.create_all(
-            self.engine, tables=[User.__table__, RefreshToken.__table__, UserIngredient.__table__]
+            self.engine, tables=[User.__table__, Notification.__table__, RefreshToken.__table__, UserIngredient.__table__]
         )
         test_session_local = sessionmaker(bind=self.engine, autoflush=False, autocommit=False)
 

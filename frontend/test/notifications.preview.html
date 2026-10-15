@@ -1,0 +1,69 @@
+<!doctype html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Notification QA — synthetic data</title></head><body data-notification-fixture="20261015"><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from '../src/App.jsx';
+import { AuthProvider, useAuth } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import { bangkokDate } from '../src/utils/expiry.js';
+import '../src/index.css';
+import eggImage from '../../backend/images/ingredients/egg.png';
+const params = new URLSearchParams(location.search);
+const locale = params.get('locale') === 'en' ? 'en' : 'th';
+const today = bangkokDate();
+const dateOffset = days => new Date(Date.parse(today+'T00:00:00Z') + days*86400000).toISOString().slice(0,10);
+const name = 'ไข่ไก่สำหรับทำอาหารหลายมื้อและแบ่งไว้ใช้ตลอดสัปดาห์';
+let ingredients = [{id:1,name,category:'Other',expiry_date:dateOffset(2),image:null,selected:true},{id:2,name:'นมสด',category:'Other',expiry_date:dateOffset(0),image:null,selected:true},{id:3,name:'ชีสแผ่น',category:'Other',expiry_date:dateOffset(-1),image:null,selected:true}];
+if(params.has('images'))ingredients=ingredients.map(item=>({...item,image:item.id===1?eggImage:item.id===2?'/test/missing-ingredient-photo.png':null}));
+if(params.has('single'))ingredients=ingredients.slice(0,1);
+const recipe = {id:1,name:'ไข่เจียวต้นหอม',image:'/src/assets/HomeMade_Logo.png',tags:['Thai'],ingredients:[{name:'ไข่ไก่'}],instructions:['ตีไข่และทอด'],nutrition:{calories:250,protein_g:12,carbs_g:3,fat_g:20},servings:1};
+let history=[];
+let baseFavorites=[];
+let generatedId=1;
+let notices=[];
+let firstSync=true;
+let nextId=1;
+const addNotice=(kind,type,id,payload)=>{ const record={id:nextId++,kind,target_type:type,target_id:id,payload,created_at:new Date().toISOString(),read_at:null};notices.unshift(record);return record; };
+window.__notificationRequests=[];
+window.fetch=async (input,options={})=>{
+ const url=new URL(typeof input==='string'?input:input.url,location.origin);const path=url.pathname;const method=options.method||'GET';
+ window.__notificationRequests.push({path,method});
+ const ok=data=>new Response(JSON.stringify({status:'success',data}),{status:200,headers:{'Content-Type':'application/json'}});
+ const response=(data,notification=null)=>new Response(JSON.stringify({status:'success',data,notification}),{status:200,headers:{'Content-Type':'application/json'}});
+ const fail=()=>new Response(JSON.stringify({detail:'Synthetic failure'}),{status:503,headers:{'Content-Type':'application/json'}});
+ const unread=()=>notices.filter(item=>!item.read_at).length;
+ if(path==='/api/auth/me')return ok({id:1,email:'synthetic@example.com',display_name:'ผู้ใช้ทดสอบ',locale,has_avatar:false});
+ if(path==='/api/user-ingredients'&&method==='GET')return ok(ingredients);
+ if(path.startsWith('/api/user-ingredients/')&&method==='PUT'){const id=Number(path.split('/').at(-1));const changed=JSON.parse(options.body);ingredients=ingredients.map(item=>item.id===id?{...item,...changed}:item);notices=notices.filter(item=>item.target_type!=='ingredient'||item.target_id!==id);return ok(ingredients.find(item=>item.id===id));}
+ if(path.startsWith('/api/user-ingredients/')&&method==='DELETE'){const id=Number(path.split('/').at(-1));ingredients=ingredients.filter(item=>item.id!==id);notices=notices.filter(item=>item.target_type!=='ingredient'||item.target_id!==id);return ok({});}
+ if(path==='/api/recipes')return ok([recipe]);
+ if(path==='/api/history')return ok(history);
+ if(path==='/api/base-favorites')return ok(baseFavorites);
+ if(path==='/api/preferences'||path==='/api/user-preferences')return ok({});
+ if(path==='/api/validate-allergy-preferences')return ok({});
+ if(path==='/api/notifications/sync'){
+  if(params.get('mode')==='error')return fail();
+  let created=[];
+  if(firstSync){firstSync=false;if(params.get('mode')!=='empty'){
+   for(const item of ingredients)created.push(addNotice(item.id===1?'expiry_near':item.id===2?'expiry_today':'expiry_passed','ingredient',item.id,{name:item.name,expiry_date:item.expiry_date}));
+   if(params.get('many'))for(let index=0;index<22;index++)created.push(addNotice('expiry_near','ingredient',1,{name:`วัตถุดิบทดสอบ ${index+4}`,expiry_date:dateOffset(2)}));
+  }}return ok({created_items:created,unread_count:unread()});
+ }
+ if(path==='/api/notifications'&&method==='GET'){
+  const state=url.searchParams.get('state');const before=Number(url.searchParams.get('before_id'))||Infinity;
+  const rows=notices.filter(item=>(state==='read'?!!item.read_at:!item.read_at)&&item.id<before);
+  const limit=Number(url.searchParams.get('limit'))||20;
+  return ok({items:rows.slice(0,limit),unread_count:unread(),next_before_id:rows.length>limit?rows[limit-1].id:null});
+ }
+ if(path==='/api/notifications/read-all'){notices.forEach(item=>{item.read_at||=new Date().toISOString()});return ok({unread_count:unread()});}
+ if(/^\/api\/notifications\/\d+\/read$/.test(path)){if(params.get('mode')==='read-error')return fail();const item=notices.find(item=>item.id===Number(path.split('/')[3]));item.read_at||=new Date().toISOString();return new Response(JSON.stringify({status:'success',data:item,unread_count:unread()}),{status:200,headers:{'Content-Type':'application/json'}});}
+ if(path==='/api/base-favorites/1'){if(params.get('mode')==='save-error')return fail();let notification=null;if(method==='PUT'&&!baseFavorites.includes(1)){baseFavorites.push(1);notification=addNotice('recipe_favorite_added','base_recipe',1,{name:recipe.name});}else if(method==='DELETE')baseFavorites=[];return response({is_favorite:method==='PUT'},notification);}
+ if(path==='/api/generate-recipe-text'){
+  const data={recipe_name:'ไข่เจียวจากตู้เย็น',servings:1,adjusted_ingredients:['ไข่ไก่'],instructions:['ตีไข่ให้เข้ากัน','ทอดไข่จนสุก'],nutrition:{basis:'per_serving',calories:250,protein_g:12,carbs_g:3,fat_g:20},history_id:params.get('mode')==='history-error'?null:generatedId++,diet_tags:['Thai']};
+  let notification=null;if(data.history_id!==null){history.unshift({id:data.history_id,recipe_name:data.recipe_name,recipe_data:data,is_favorite:false,created_at:new Date().toISOString()});notification=addNotice('recipe_history_saved','history',data.history_id,{name:data.recipe_name});}return response(data,notification);
+ }
+ throw new Error('Fixture blocked unexpected request: '+method+' '+path);
+};
+function AuthenticatedFixture(){const {authLoading}=useAuth();return authLoading?null:React.createElement(App);}
+createRoot(document.getElementById('root')).render(React.createElement(BrowserRouter,null,React.createElement(AuthProvider,null,React.createElement(LocaleProvider,null,React.createElement(AuthenticatedFixture)))));
+</script></body></html>

@@ -1,5 +1,14 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Automatic in-app notifications (2026-10-16 Bangkok delivery)
+
+- Implemented account-owned foreground expiry reminders (near/today/passed using Bangkok calendar), atomic history/favorite save events, durable read/unread pagination and explicit read/read-all. Date edits/deletion withdraw obsolete reminders while retaining stored history. Five main tabs have the right-of-logo bell; summary/save toasts defer on forms and active cooking.
+- UI follow-up removes the timezone helper sentence while preserving Bangkok dates. Expiry rows and single-ingredient summary toasts use the current matching fridge image with missing/placeholder/load-error icon fallback; multi-item summaries retain the bell. No image schema/API addition.
+- Additive migration b9c0d1e2f3a4 (parent a8b9c0d1e2f3) was separately approved/applied on the existing local PostgreSQL container after unique backup and exact-revision guards. Independent schema/read-only fingerprints confirmed all 15 old app tables and 14 old sequences unchanged. Other deployments must migrate before activating this code. See docs/notifications-migration-result-2026-10-15.md and docs/notifications-database-summary-2026-10-15.md.
+- Delivery isolates notification changes from unrelated nutrition, auth, typography, diagram and editor WIP; the existing ingredient-update backend prerequisite is included so date edits can withdraw reminders atomically. No dependency install, destructive Git operation, repeated migration or provider call. Candidate verification is recorded below before publication; original working files remain intact.
+- User authorized ordinary commit/push to origin/main. Exact candidate verification:22new+87affected backend tests pass with offline guard violations0,16frontend notification/expiry tests pass, scoped ESLint passes, production build2230modules passes with the existing >500kB warning. The expiry test explicitly imports node:process. Remote main matched base875bfc19 before publication; remote-head verification is the final delivery step. No full-suite or real-account cross-device retest.
+- Contracts and decisions: docs/data-contracts/notifications.md, docs/adr/0004-account-owned-in-app-notifications.md, docs/notifications-plan-2026-10-15.md. Actual authenticated cross-device delivery and backup restore rehearsal remain unverified.
+
 ## README refresh and Git audit (2026-10-14 Bangkok)
 
 - Follow-up: user requested commit/push. Delivery scope is root README plus only this task's spec/MEMORY sections, staged against HEAD independently of the pre-existing document changes. Preserve all other WIP and private evidence; documentation-only checks and staged-content inspection precede ordinary origin/main publication. No application code or interface changes.

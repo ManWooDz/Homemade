@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.models import BaseRecipe, BaseRecipeFavorite
+from notification_repository import public_notification, record_save_notification
 
 
 def list_base_favorite_ids(db: Session, user_id: int) -> list[int]:
@@ -14,7 +15,7 @@ def list_base_favorite_ids(db: Session, user_id: int) -> list[int]:
     return list(db.execute(stmt).scalars().all())
 
 
-def set_base_favorite(db: Session, *, user_id: int, base_recipe_id: int, favorite: bool) -> bool:
+def set_base_favorite(db: Session, *, user_id: int, base_recipe_id: int, favorite: bool, notifications=None) -> bool:
     """Returns False only when favoriting a base recipe that does not exist."""
     if not favorite:
         # Single atomic DELETE (mirrors history_repository.set_favorite): racing
@@ -27,7 +28,8 @@ def set_base_favorite(db: Session, *, user_id: int, base_recipe_id: int, favorit
         )
         db.commit()
         return True
-    if db.get(BaseRecipe, base_recipe_id) is None:
+    recipe = db.get(BaseRecipe, base_recipe_id)
+    if recipe is None:
         return False
     existing = db.execute(
         select(BaseRecipeFavorite).where(
@@ -38,8 +40,18 @@ def set_base_favorite(db: Session, *, user_id: int, base_recipe_id: int, favorit
     if existing is None:
         db.add(BaseRecipeFavorite(user_id=user_id, base_recipe_id=base_recipe_id))
         try:
+            notice = record_save_notification(db, user_id=user_id, kind="recipe_favorite_added",
+                target_type="base_recipe", target_id=base_recipe_id, name=recipe.name)
             db.commit()
         except IntegrityError:
             # Concurrent insert of the same (user, recipe) pair: already present.
             db.rollback()
+            if db.scalar(select(BaseRecipeFavorite.id).where(BaseRecipeFavorite.user_id == user_id, BaseRecipeFavorite.base_recipe_id == base_recipe_id)) is None:
+                raise
+        except Exception:
+            db.rollback()
+            raise
+        else:
+            if notifications is not None:
+                notifications.append(public_notification(notice))
     return True

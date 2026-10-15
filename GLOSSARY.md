@@ -2,6 +2,30 @@
 
 Canonical language for Homemade's recipe and account-recovery domain. Terms here describe product meaning, not implementation details.
 
+## Fridge Expiry Reminders
+
+**Recorded Expiry Date**:
+The optional, approximate expiry date recorded by the account holder for an ingredient in their fridge. It is not independent evidence that the food is safe or unsafe to eat.
+_Avoid_: Verified food safety deadline, guaranteed shelf life
+
+**Near-expiry Ingredient**:
+A fridge ingredient whose recorded expiry date is today or within the next three calendar days. An ingredient whose date has passed is expired by the recorded date, a separate reminder category.
+_Avoid_: Automatically selected cooking ingredient, verified fresh food
+
+**Expiry Reminder**:
+A notification about a fridge ingredient approaching, reaching or passing its recorded expiry date. Its purpose is to draw attention to the recorded date, not to certify the food's condition.
+_Avoid_: Food safety verdict, automatic stock consumption
+
+## Recipe Save Events
+
+**Recipe History Save**:
+The successful addition of a generated recipe to the account holder's recipe history. Successful recipe generation alone does not establish that this save occurred.
+_Avoid_: Favorite save, generation success
+
+**Favorite Recipe Save**:
+The successful addition of a catalog recipe or a generated recipe to the account holder's favorites. Removing a favorite or repeating an already-completed addition is not a new save.
+_Avoid_: Recipe history save, optimistic heart state
+
 ## Recipe Timing
 
 **Estimated Total Recipe Time**:

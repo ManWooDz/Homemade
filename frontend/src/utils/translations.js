@@ -1,5 +1,18 @@
 // Display copy only: canonical preference values and recipe content stay unchanged.
 export const COPY = [
+    ["แจ้งเตือน", "Notifications"], ["แจ้งเตือน ยังไม่อ่าน {count} รายการ", "Notifications, {count} unread"],
+    ["ยังไม่อ่าน", "Unread"], ["อ่านแล้ว", "Read"], ["อ่านทั้งหมด", "Read all"],
+    ["รีเฟรชแจ้งเตือน", "Refresh notifications"], ["สถานะแจ้งเตือน", "Notification status"], ["วันที่อ้างอิงเวลาไทย", "Dates use Thailand time"],
+    ["วัตถุดิบใกล้วันที่หมดอายุ", "Ingredient nearing its recorded expiry"], ["ถึงวันที่หมดอายุที่บันทึกไว้", "Recorded expiry is today"], ["เลยวันที่หมดอายุที่บันทึกไว้", "Past the recorded expiry date"],
+    ["สร้างสูตรและบันทึกในประวัติแล้ว", "Recipe created and saved to history"], ["บันทึกเป็นสูตรที่ชอบแล้ว", "Recipe added to favorites"],
+    ["วันที่บันทึก: {date}", "Recorded expiry: {date}"], ["มีวัตถุดิบที่ควรตรวจสอบ {count} รายการ", "Check {count} ingredients in your fridge"],
+    ["อ้างอิงวันที่หมดอายุที่คุณบันทึกไว้", "Based on the expiry dates you recorded"], ["ปิดแจ้งเตือน", "Dismiss notification"],
+    ["ดูรายการแจ้งเตือน", "View notifications"], ["ดูสูตร", "View recipe"], ["กำลังโหลดแจ้งเตือน...", "Loading notifications..."],
+    ["ไม่มีแจ้งเตือนที่ยังไม่อ่าน", "No unread notifications"], ["ยังไม่มีแจ้งเตือนที่อ่านแล้ว", "No read notifications yet"],
+    ["เมื่อมีรายการใหม่ เราจะแสดงให้คุณที่นี่", "New notifications will appear here"], ["ลองอีกครั้ง", "Try again"], ["โหลดเพิ่มเติม", "Load more"],
+    ["โหลดแจ้งเตือนไม่สำเร็จ กรุณาลองอีกครั้ง", "Could not load notifications. Please try again."],
+    ["บันทึกสถานะอ่านไม่สำเร็จ กรุณาลองอีกครั้ง", "Could not mark notifications as read. Please try again."],
+    ["รายการนี้เปลี่ยนแปลงหรือไม่พร้อมใช้งานแล้ว", "This item has changed or is no longer available"],
     ["ประมาณ {min}–{max} นาที", "About {min}–{max} min"],
     ["ยังไม่มีข้อมูลเวลา", "Time unavailable"],
     ["รวมเตรียม ปรุง และรอตามสูตร โดยวัตถุดิบสำเร็จรูปที่ระบุถือว่าเตรียมแล้ว", "Includes prep, cooking and waiting in the recipe. Named prepared ingredients are ready to use."],

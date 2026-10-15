@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database.models import UserIngredient
+from notification_repository import lock_notification_owner, withdraw_ingredient_notifications
 
 
 def _public_ingredient(row: UserIngredient):
@@ -62,6 +63,7 @@ def insert_user_ingredient(
 
 
 def delete_user_ingredient(db: Session, *, user_id: int, ingredient_id: int):
+    lock_notification_owner(db, user_id)
     row = db.execute(
         select(UserIngredient).where(
             UserIngredient.id == ingredient_id, UserIngredient.user_id == user_id
@@ -69,6 +71,25 @@ def delete_user_ingredient(db: Session, *, user_id: int, ingredient_id: int):
     ).scalar_one_or_none()
     if row is None:
         return False
+    withdraw_ingredient_notifications(db, user_id, ingredient_id)
     db.delete(row)
     db.commit()
     return True
+
+
+def update_user_ingredient(db: Session, *, user_id: int, ingredient_id: int, values: dict):
+    lock_notification_owner(db, user_id)
+    row = db.execute(
+        select(UserIngredient).where(
+            UserIngredient.id == ingredient_id, UserIngredient.user_id == user_id
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    if row.expiry_date != values["expiry_date"]:
+        withdraw_ingredient_notifications(db, user_id, ingredient_id)
+    for field in ("name", "category", "expiry_date", "quantity_amount", "quantity_unit"):
+        setattr(row, field, values[field])
+    db.commit()
+    db.refresh(row)
+    return _public_ingredient(row)

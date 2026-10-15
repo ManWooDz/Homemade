@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.models import BaseRecipe, Favorite, GenerateHistory, Rating
+from notification_repository import public_notification, record_save_notification
 from image_urls import public_image_url
 
 
@@ -50,7 +51,14 @@ def insert_generate_history(db: Session, *, user_id: int, request_recipe, final_
         recipe_data=deepcopy(final_output),
     )
     db.add(row)
-    db.commit()
+    try:
+        db.flush()
+        record_save_notification(db, user_id=user_id, kind="recipe_history_saved",
+                                 target_type="history", target_id=row.id, name=row.recipe_name)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(row)
     return row.id
 
@@ -152,8 +160,9 @@ def upsert_rating(db: Session, *, user_id: int, history_id: int, stars: int, tag
     raise RuntimeError("rating upsert conflicted twice")
 
 
-def set_favorite(db: Session, *, user_id: int, history_id: int, favorite: bool) -> bool:
-    if _owned_history(db, user_id, history_id) is None:
+def set_favorite(db: Session, *, user_id: int, history_id: int, favorite: bool, notifications=None) -> bool:
+    history = _owned_history(db, user_id, history_id)
+    if history is None:
         return False
     if not favorite:
         # Single atomic DELETE: racing double-DELETEs both succeed (the second
@@ -169,7 +178,17 @@ def set_favorite(db: Session, *, user_id: int, history_id: int, favorite: bool) 
     if existing is None:
         db.add(Favorite(user_id=user_id, generate_history_id=history_id))
         try:
+            notice = record_save_notification(db, user_id=user_id, kind="recipe_favorite_added",
+                target_type="history", target_id=history_id, name=history.recipe_name)
             db.commit()
         except IntegrityError:
             db.rollback()
+            if db.scalar(select(Favorite.id).where(Favorite.user_id == user_id, Favorite.generate_history_id == history_id)) is None:
+                raise
+        except Exception:
+            db.rollback()
+            raise
+        else:
+            if notifications is not None:
+                notifications.append(public_notification(notice))
     return True

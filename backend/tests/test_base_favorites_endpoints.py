@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 from base_favorites_repository import set_base_favorite
 from database.db import get_db
 from database.models import (
+    Notification,
     Base,
     BaseRecipe,
     BaseRecipeFavorite,
@@ -31,7 +32,7 @@ class BaseFavoritesTestCase(unittest.TestCase):
         Base.metadata.create_all(
             self.engine,
             tables=[
-                User.__table__,
+                User.__table__, Notification.__table__,
                 RefreshToken.__table__,
                 BaseRecipe.__table__,
                 BaseRecipeFavorite.__table__,
@@ -104,7 +105,12 @@ class BaseFavoritesEndpointTests(BaseFavoritesTestCase):
     def test_put_adds_in_creation_order(self):
         res = self.put(self.alice, 1)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json(), {"status": "success", "data": {"is_favorite": True}})
+        body = res.json()
+        notice = body.pop("notification")
+        self.assertEqual(body, {"status": "success", "data": {"is_favorite": True}})
+        self.assertEqual((notice["kind"], notice["target_type"], notice["target_id"]), ("recipe_favorite_added", "base_recipe", 1))
+        self.assertEqual(notice["payload"], {"name": "Recipe 1"})
+        self.assertIsNone(notice["read_at"])
         self.assertEqual(self.ids(self.alice), [1])
         self.assertEqual(self.put(self.alice, 2).status_code, 200)
         self.assertEqual(self.ids(self.alice), [1, 2])
@@ -123,7 +129,7 @@ class BaseFavoritesEndpointTests(BaseFavoritesTestCase):
         self.put(self.alice, 1)
         res = self.delete(self.alice, 1)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json(), {"status": "success", "data": {"is_favorite": False}})
+        self.assertEqual(res.json(), {"status": "success", "data": {"is_favorite": False}, "notification": None})
         self.assertEqual(self.delete(self.alice, 1).status_code, 200)
         self.assertEqual(self.ids(self.alice), [])
 
@@ -133,7 +139,7 @@ class BaseFavoritesEndpointTests(BaseFavoritesTestCase):
         self.assertEqual(res.json()["detail"], "Recipe not found")
         res = self.delete(self.alice, 999)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json(), {"status": "success", "data": {"is_favorite": False}})
+        self.assertEqual(res.json(), {"status": "success", "data": {"is_favorite": False}, "notification": None})
         self.assertEqual(self.ids(self.alice), [])
 
     def test_users_are_isolated(self):

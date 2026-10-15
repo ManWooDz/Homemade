@@ -8,10 +8,10 @@ from sqlalchemy import create_engine, delete, null, select, update
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from database.models import Base, BaseRecipe, Favorite, GenerateHistory, Rating, User
+from database.models import Notification, Base, BaseRecipe, Favorite, GenerateHistory, Rating, User
 
 HISTORY_TABLES = [
-    User.__table__,
+    User.__table__, Notification.__table__,
     BaseRecipe.__table__,
     GenerateHistory.__table__,
     Rating.__table__,

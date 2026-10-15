@@ -5,7 +5,7 @@ import math
 
 logging.basicConfig(level=logging.INFO)
 
-from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response, UploadFile, File, Form, status
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, Response, UploadFile, File, Form, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,7 +48,7 @@ from nutrition.calculator import compute_recipe_nutrition
 from nutrition.llm_fallback import NutritionLLMEstimator
 from email_sender import send_otp_email, validate_email_config
 import otp
-from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
+from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients, update_user_ingredient
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
 from user_profile import MAX_UPLOAD_BYTES, ProfileValidationError, normalize_avatar, user_payload, validate_display_name
@@ -61,6 +61,7 @@ from history_repository import (
     upsert_rating,
 )
 from base_favorites_repository import list_base_favorite_ids, set_base_favorite
+from notification_repository import history_save_notification, list_notifications, mark_all_read, mark_read, sync_expiry_notifications, unread_count
 from embeddings import build_history_document, build_request_query, embed_history_documents, embed_request_queries
 from personalization.context import PersonalizationContext, build_personalization_context
 from personalization.repository import count_embedded_signals
@@ -527,6 +528,29 @@ class UserIngredientCreate(BaseModel):
             raise ValueError("quantity_unit requires quantity_amount")
         return self
 
+class UserIngredientUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+    name: str = Field(min_length=1, max_length=200, strict=True)
+    category: Literal["Meat & poultry", "Vegetables", "Fruits", "Other"]
+    expiry_date: Optional[date]
+    quantity_amount: Optional[float] = Field(gt=0, le=100000, allow_inf_nan=False, strict=True)
+    quantity_unit: Optional[QuantityUnit]
+
+    @field_validator("name")
+    @classmethod
+    def _trim_name(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("name is required")
+        return value
+
+    @model_validator(mode="after")
+    def _quantity_unit_requires_amount(self):
+        if self.quantity_unit is not None and self.quantity_amount is None:
+            raise ValueError("quantity_unit requires quantity_amount")
+        return self
+
+
 # get ingredient images from folder images/ingredients
 @app.get("/api/ingredient-images")
 async def get_ingredient_images():
@@ -711,6 +735,25 @@ async def add_user_ingredient(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.put("/api/user-ingredients/{ingredient_id}", dependencies=[Depends(verify_same_origin)])
+async def edit_user_ingredient(
+    ingredient_id: int,
+    ingredient: UserIngredientUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        updated = update_user_ingredient(
+            db, user_id=current_user.id, ingredient_id=ingredient_id, values=ingredient.model_dump()
+        )
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Could not save ingredient") from None
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    return {"status": "success", "data": updated}
+
+
 # delete user ingredients from database (PostgreSQL: user_ingredients table)
 @app.delete("/api/user-ingredients/{ingredient_id}", dependencies=[Depends(verify_same_origin)])
 async def remove_user_ingredient(
@@ -755,6 +798,53 @@ async def get_history(
 # Postgres binds ids as INTEGER: anything above 2**31-1 would raise DataError
 # (a 500) if it reached the DB, so out-of-range ids are rejected as 422 here.
 PositiveInt32Id = Annotated[int, Path(ge=1, le=2_147_483_647)]
+
+
+@app.get("/api/notifications")
+async def get_notifications(
+    state: Literal["unread", "read"] = "unread",
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    before_id: Annotated[int | None, Query(ge=1, le=2_147_483_647)] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return {"status": "success", "data": list_notifications(db, current_user.id, state=state, limit=limit, before_id=before_id)}
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Notifications unavailable")
+
+
+@app.post("/api/notifications/sync", dependencies=[Depends(verify_same_origin)])
+async def sync_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        return {"status": "success", "data": sync_expiry_notifications(db, current_user.id)}
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Notifications unavailable")
+
+
+@app.put("/api/notifications/read-all", dependencies=[Depends(verify_same_origin)])
+async def read_all_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        return {"status": "success", "data": mark_all_read(db, current_user.id)}
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Could not update notifications")
+
+
+@app.put("/api/notifications/{notification_id}/read", dependencies=[Depends(verify_same_origin)])
+async def read_notification(notification_id: PositiveInt32Id,
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        record = mark_read(db, current_user.id, notification_id)
+        count = unread_count(db, current_user.id) if record is not None else None
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Could not update notification")
+    if record is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"status": "success", "data": record, "unread_count": count}
 
 
 async def embed_rated_history_best_effort(db, *, user_id, history_id, rating) -> None:
@@ -822,9 +912,10 @@ async def put_history_rating(
 
 
 def _set_history_favorite(db, user, history_id, favorite):
-    if not set_favorite(db, user_id=user.id, history_id=history_id, favorite=favorite):
+    notifications = []
+    if not set_favorite(db, user_id=user.id, history_id=history_id, favorite=favorite, notifications=notifications):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="History not found")
-    return {"status": "success", "data": {"is_favorite": favorite}}
+    return {"status": "success", "data": {"is_favorite": favorite}, "notification": notifications[0] if notifications else None}
 
 
 @app.put("/api/history/{history_id}/favorite", dependencies=[Depends(verify_same_origin)])
@@ -854,9 +945,10 @@ async def get_base_favorites(
 
 
 def _set_base_favorite(db, user, recipe_id, favorite):
-    if not set_base_favorite(db, user_id=user.id, base_recipe_id=recipe_id, favorite=favorite):
+    notifications = []
+    if not set_base_favorite(db, user_id=user.id, base_recipe_id=recipe_id, favorite=favorite, notifications=notifications):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found")
-    return {"status": "success", "data": {"is_favorite": favorite}}
+    return {"status": "success", "data": {"is_favorite": favorite}, "notification": notifications[0] if notifications else None}
 
 
 @app.put("/api/base-favorites/{recipe_id}", dependencies=[Depends(verify_same_origin)])
@@ -1251,6 +1343,7 @@ async def generate_recipe_text(
 
         return {
             "status": "success",
+            "notification": history_save_notification(db, current_user.id, history_id) if history_id is not None else None,
             "data": {
                 **final_output,
                 "history_id": history_id,

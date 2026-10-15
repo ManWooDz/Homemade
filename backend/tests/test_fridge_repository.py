@@ -8,14 +8,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from database.models import Base, User, UserIngredient
-from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients
+from database.models import Notification, Base, User, UserIngredient
+from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients, update_user_ingredient
 
 
 class FridgeRepositoryTests(unittest.TestCase):
+    def test_update_preserves_legacy_quantity_and_product_provenance(self):
+        row = UserIngredient(user_id=self.user_id, name="egg", category="Other", quantity="legacy", image="original.png", nutrition_data={"calories": 42})
+        self.db.add(row)
+        self.db.commit()
+        values = {"name": "renamed", "category": "Vegetables", "expiry_date": None, "quantity_amount": None, "quantity_unit": None}
+        self.assertIsNone(update_user_ingredient(self.db, user_id=self.user_id + 1, ingredient_id=row.id, values=values))
+        result = update_user_ingredient(self.db, user_id=self.user_id, ingredient_id=row.id, values=values)
+        self.assertEqual(result["name"], "renamed")
+        self.assertEqual(row.quantity, "legacy")
+        self.assertEqual(row.image, "original.png")
+        self.assertEqual(row.nutrition_data, {"calories": 42})
+
     def setUp(self):
         engine = create_engine("sqlite:///:memory:")
-        Base.metadata.create_all(engine, tables=[User.__table__, UserIngredient.__table__])
+        Base.metadata.create_all(engine, tables=[User.__table__, Notification.__table__, UserIngredient.__table__])
         self.db = Session(engine)
         user = User(email="test@example.com")
         self.db.add(user)

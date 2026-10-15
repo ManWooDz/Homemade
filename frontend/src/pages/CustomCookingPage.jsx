@@ -1,4 +1,5 @@
 import { useLocale } from "../context/LocaleContext";
+import NotificationBell from "../components/NotificationBell";
 import { useState, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
@@ -11,6 +12,7 @@ export default function CustomCookingPage({
     activeTab,
     setActiveTab,
     onGenerate,
+    notificationCount, onNotifications,
 }) {
     const { t, locale } = useLocale();
     const OTHER_OPTION = "อื่นๆ";
@@ -131,6 +133,7 @@ export default function CustomCookingPage({
                         alt="HomeMade"
                         className="h-18 object-contain"
                     />
+                    <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 pb-32">

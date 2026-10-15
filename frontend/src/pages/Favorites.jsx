@@ -1,4 +1,5 @@
 import { useLocale } from "../context/LocaleContext";
+import NotificationBell from "../components/NotificationBell";
 import { useState } from "react";
 import { ChevronLeft, Heart, Plus, Search, Sparkles, Star } from "lucide-react";
 import { BiSolidFoodMenu } from "react-icons/bi";
@@ -20,6 +21,7 @@ export default function Favorites({
     historyFavorites = [],
     onToggleHistoryFavorite,
     onOpenHistoryItem,
+    notificationCount, onNotifications,
 }) {
     const { t } = useLocale();
     const [selectedCategory, setSelectedCategory] = useState("All");
@@ -81,6 +83,7 @@ export default function Favorites({
                         alt="HomeMade"
                         className="h-18 object-contain"
                     />
+                    <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto pb-32">
@@ -94,17 +97,17 @@ export default function Favorites({
                         {[
                             { key: "base", label: "เมนูพื้นฐาน" },
                             { key: "mine", label: "✨ สูตรของฉัน" },
-                        ].map((t) => (
+                        ].map((favoriteTab) => (
                             <button
-                                key={t.key}
-                                onClick={() => onTabChange?.(t.key)}
+                                key={favoriteTab.key}
+                                onClick={() => onTabChange?.(favoriteTab.key)}
                                 className={`flex-1 py-2 rounded-full text-sm font-medium border transition ${
-                                    tab === t.key
+                                    tab === favoriteTab.key
                                         ? "bg-[#EF5A3A] text-white border-[#EF5A3A]"
                                         : "bg-white text-[#EF5A3A] border-[#EF5A3A]"
                                 }`}
                             >
-                                {t(t.label)}
+                                {t(favoriteTab.label)}
                             </button>
                         ))}
                     </div>

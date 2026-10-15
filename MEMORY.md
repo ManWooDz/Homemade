@@ -1,5 +1,31 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Confirm stable photo/loading state before delivery captures (2026-10-15):**
+- what: first post-navigation notification screenshot showed pending opacity and unloaded logo/photo; the earlier single-toast locator had also expired after its normal8-second timer. Recovered by focusing a real toast action immediately in the synthetic fixture and capturing the list only after DOM confirmed no disabled row and loaded image.
+- root cause: assumed a navigation snapshot implied data/images were ready and a transient toast would remain visible across tool calls.
+- correct: after navigation check the actual pending controls and image complete/naturalWidth before taking the deliverable screenshot. For transient UI, focus an existing action promptly to use its designed timeout pause. Preserve normal product timing rather than extending it for QA.
+
+**Diagnose Windows sandbox realpath stalls without weakening guards (2026-10-15, notifications):**
+- what: guarded notification TestClient runs hung before the first assertion; a faulthandler trace identified inspect.stack→ntpath.realpath inside the existing offline guard during asyncio socketpair startup. Sandbox Vite build separately denied realpath. Host runs passed with original guards, synthetic keys/SQLite,22new and87affected backend tests. Initial SSR timestamp assertions expected lowercase while React emitted camel-case dateTime; semantic case-insensitive attribute checks passed. Browser mirror rejected window fixture-state reads; actual visible DOM/read/pagination/save states were used instead. The initial fixture lacked Profile's actual BrowserRouter context; restoring the real wrapper verified its bell. A toast covering the bell meant the visible View notifications action, not the covered bell, was the correct entry during toast presentation.
+- root cause: sandbox Windows path resolution stalls/ACL denial differ from host execution; assumed serialized attribute casing and access to non-DOM globals. A recipe QA fixture also omitted the actual always-called allergy-preflight endpoint, so a blocked synthetic request prevented generation until the fixture was corrected.
+- correct: capture a bounded stack when a guarded request stalls, stop the stuck test and rerun unchanged guards via permitted host execution. Set UTF-8 stdout, preserve failed logs, and never disable network/DB guards or change business assertions for sandbox failures. Assert HTML attribute semantics case-insensitively; use visible DOM in the browser mirror. Inventory actual preflight endpoints and provider/router wrappers before mocking a flow, reload the explicit fixture after edits, and distinguish missing-fixture behavior from product failures. Inspect the actual visible state after an ineffective click; use the toast's entry action when it covers the header.
+
+**Preserve loaded notification pages across explicit reads (2026-10-15):**
+- what: initial row activation refreshed only the first20feed records, and a same-content ingredient refetch could also trigger reconciliation and reset the loaded range. Corrected to use read RPC's authoritative count, update the confirmed row locally and reconcile only actual ingredient-ID/expiry changes. Real browser25-row target/back flow retained24remaining rows and count24; actual-handler/effect tests cover the same behavior and distinguish target-fetch failure from a failed read save.
+- root cause: reused a first-page refresh for a local confirmed mutation and treated a new array reference as an inventory-date change.
+- correct: after confirmed row reads, update that row/count without discarding loaded pages, invalidate stale feed requests, and compare actual expiry identity before reconciling. Test a target/back flow after loading more than one page; report a subsequent unavailable target separately from read persistence.
+
+**Keep notification discovery/review reads and patch anchors bounded (2026-10-15):**
+- what: combined source/skill/status reads again exceeded output budgets, a search used backend-relative paths while cwd was frontend, and documenter guessed source filenames before recovering exact paths. A multi-file docs patch failed on a partial-line anchor; verified it applied nothing before reapplying exact anchors.
+- root cause: ignored long-line/combined-output budgets and mixed cwd-relative assumptions with exact filename/patch-line requirements.
+- correct: use per-call bounded source ranges and observed paths relative to the active cwd, then cap total batched output. Search filenames before opening them, and use full exact-line patch anchors. Verify a failed multi-file patch changed nothing before retrying; never use truncated/missing reads as evidence.
+
+**Bound notification discovery and use observed page ownership (2026-10-15):**
+- what: initial whole-spec/combined reads were truncated and an unexcluded frontend inventory entered node_modules. A guessed Home.jsx read failed; actual Home lives in App.jsx. Recovered with bounded exact reads and a read-only source inspection before making conclusions.
+- root cause: repeated broad discovery despite recorded output limits and assumed a page filename from its visible name.
+- correct: start with capped spec headings/relevant sections; exclude node_modules, venv, tmp and archived trees before every inventory. Resolve a screen to its observed component before reading it. Never treat truncated output or a failed path lookup as complete evidence.
+
+
 **Bound README refresh discovery before running it (2026-10-14):**
 - what: initial whole-spec and combined Thai source reads were truncated; guessed session/email/context paths were absent, and the first verbal untracked count42was corrected to43using porcelain -uall. No conclusion relied on the failed paths. Sandbox GitHub/worktree/index access failures were resolved through reviewed commands. Initial staged README byte comparison rejected Git's CRLF-to-LF normalization; decoded text was identical.
 - root cause: started discovery without applying existing output-bound and filename-discovery instructions, counted grouped status output by eye, and compared raw working bytes with Git-normalized documentation blobs.

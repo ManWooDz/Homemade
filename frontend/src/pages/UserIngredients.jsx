@@ -1,4 +1,5 @@
 import { useLocale } from "../context/LocaleContext";
+import NotificationBell from "../components/NotificationBell";
 import { useState, useLayoutEffect, useRef } from "react";
 import {
     ChevronLeft,
@@ -93,6 +94,7 @@ export default function UserIngredients({
     onAddManually,
     onScanBarcode,
     onOpenIngredient,
+    notificationCount, onNotifications,
 }) {
     const { t, locale } = useLocale();
     const [selectedCategory, setSelectedCategory] = useState("All");
@@ -157,6 +159,7 @@ export default function UserIngredients({
                         alt="HomeMade"
                         className="h-18 object-contain"
                     />
+                    <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
                 </div>
 
                 <div
