@@ -12,12 +12,12 @@ export default function OtpVerify() {
     const { t } = useLocale();
     const navigate = useNavigate();
     const { pendingResetEmail, verifyOtp, resendOtp } = useAuth();
-    const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""));
+    const [code, setCode] = useState("");
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isResending, setIsResending] = useState(false);
     const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
-    const inputRefs = useRef([]);
+    const inputRef = useRef(null);
 
     useEffect(() => {
         if (!pendingResetEmail) {
@@ -31,27 +31,16 @@ export default function OtpVerify() {
         return () => clearTimeout(timer);
     }, [cooldown]);
 
-    const handleChange = (index, value) => {
-        const digit = value.replace(/\D/g, "").slice(-1);
-        const next = [...digits];
-        next[index] = digit;
-        setDigits(next);
-        if (digit && index < OTP_LENGTH - 1) {
-            inputRefs.current[index + 1]?.focus();
-        }
-    };
-
-    const handleKeyDown = (index, e) => {
-        if (e.key === "Backspace" && !digits[index] && index > 0) {
-            inputRefs.current[index - 1]?.focus();
-        }
+    const handleChange = (value) => {
+        setCode(value.replace(/[^0-9]/g, "").slice(0, OTP_LENGTH));
+        setError("");
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting || isResending || !/^[0-9]{6}$/.test(code)) return;
         setError("");
         setIsSubmitting(true);
-        const code = digits.join("");
         const result = await verifyOtp(code);
         setIsSubmitting(false);
         if (result.success) {
@@ -62,7 +51,7 @@ export default function OtpVerify() {
     };
 
     const handleResend = async () => {
-        if (cooldown > 0 || isResending) return;
+        if (cooldown > 0 || isResending || isSubmitting) return;
         setError("");
         setIsResending(true);
         try {
@@ -72,52 +61,57 @@ export default function OtpVerify() {
                 return;
             }
             setCooldown(RESEND_COOLDOWN_SECONDS);
-            setDigits(Array(OTP_LENGTH).fill(""));
-            inputRefs.current[0]?.focus();
+            setCode("");
+            requestAnimationFrame(() => inputRef.current?.focus());
         } finally {
             setIsResending(false);
         }
     };
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <div className="auth-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
             <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto overflow-x-hidden">
-                <div className="w-full min-h-full px-8 pt-6 pb-10 bg-background-primary flex flex-col justify-start items-center">
+                <main className="w-full min-h-full px-6 pt-6 pb-8 bg-background-primary flex flex-col items-center">
                     <HeaderLogo />
 
                     <div className="w-full flex justify-start items-center">
-                        <BackButton to="/reset-password" />
+                        <BackButton to="/reset-password" size="w-11 h-11" disabled={isSubmitting || isResending} />
                     </div>
 
                     <form
                         onSubmit={handleSubmit}
-                        className="w-full flex flex-col justify-start items-center mt-24"
+                        aria-busy={isSubmitting || isResending}
+                        className="w-full flex flex-col items-center mt-6"
                     >
                         <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t("Enter OTP")}</h1>
 
-                        <p className="w-full text-body-medium text-text-neutral mb-4">{t("รหัสอาจใช้เวลาสักครู่ หากยังไม่ได้รับ ให้รอหมดเวลานับถอยหลังแล้วกดส่งใหม่")}</p>
+                        <p className="w-full text-body-medium text-text-tertiary break-words mb-2">{t("กรอกรหัสสำหรับอีเมล {email}", { email: pendingResetEmail })}</p>
+                        <p id="otp-hint" className="w-full text-body-medium text-text-neutral mb-6">{t("รหัสอาจใช้เวลาสักครู่ หากยังไม่ได้รับ ให้รอหมดเวลานับถอยหลังแล้วกดส่งใหม่")}</p>
 
                         <div className="w-full flex flex-col items-center gap-3">
-                            <div className="flex gap-2">
-                                {digits.map((digit, index) => (
-                                    <input
-                                        key={index}
-                                        ref={(el) => (inputRefs.current[index] = el)}
-                                        type="text"
-                                        inputMode="numeric"
-                                        maxLength={1}
-                                        value={digit}
-                                        onChange={(e) => handleChange(index, e.target.value)}
-                                        onKeyDown={(e) => handleKeyDown(index, e)}
-                                        className="w-10 h-11 bg-forms-otp-fill-default border border-stroke-text-field text-center text-body-large text-text-black rounded-lg focus:outline-none focus:bg-forms-otp-fill-filled focus:border-stroke-brands"
-                                    />
-                                ))}
-                            </div>
+                            <label htmlFor="otp-code" className="auth-label">{t("รหัส OTP 6 หลัก")}</label>
+                            <input
+                                id="otp-code"
+                                name="code"
+                                ref={inputRef}
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={OTP_LENGTH}
+                                pattern="[0-9]{6}"
+                                required
+                                value={code}
+                                disabled={isSubmitting || isResending}
+                                aria-describedby={error ? "otp-hint otp-error" : "otp-hint"}
+                                onChange={(e) => handleChange(e.target.value)}
+                                onPaste={(e) => { e.preventDefault(); handleChange(e.clipboardData.getData("text")); }}
+                                className="w-full h-14 bg-forms-otp-fill-default border border-stroke-text-field text-center text-2xl tracking-[0.35em] tabular-nums text-text-black rounded-xl focus:outline-none focus:bg-forms-otp-fill-filled focus:border-stroke-brands"
+                            />
 
                             <button
                                 type="button"
                                 onClick={handleResend}
-                                disabled={cooldown > 0 || isResending}
+                                disabled={cooldown > 0 || isResending || isSubmitting}
                                 className="h-11 px-4 bg-button-neutral rounded-full border border-stroke-brands text-text-brands text-body-medium font-normal flex justify-center items-center whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isResending
@@ -129,18 +123,18 @@ export default function OtpVerify() {
                         </div>
 
                         {error && (
-                            <p className="w-full text-body-medium text-red-500 mt-4">{t(error)}</p>
+                            <p id="otp-error" role="alert" className="w-full text-body-medium text-red-700 mt-4">{t(error)}</p>
                         )}
 
                         <button
                             type="submit"
-                            disabled={isSubmitting || digits.some((d) => !d)}
-                            className="w-full h-11 mt-24 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer disabled:opacity-50"
+                            disabled={isSubmitting || isResending || code.length !== OTP_LENGTH}
+                            className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-colors cursor-pointer disabled:opacity-50"
                         >
                             {isSubmitting ? t("Verifying...") : t("Verify")}
                         </button>
                     </form>
-                </div>
+                </main>
             </div>
         </div>
     );

@@ -25,23 +25,30 @@ export default function ResetPasswordEmail() {
     };
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <div className="auth-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
             <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-y-auto">
-                <div className="w-full min-h-full px-8 pt-6 pb-10 bg-background-primary flex flex-col justify-start items-center">
+                <main className="w-full min-h-full px-6 pt-6 pb-8 bg-background-primary flex flex-col items-center">
                     <HeaderLogo />
 
                     <div className="w-full flex justify-start items-center">
-                        <BackButton to="/login" />
+                        <BackButton to="/login" size="w-11 h-11" />
                     </div>
 
                     <form
                         onSubmit={handleSubmit}
-                        className="w-full flex flex-col justify-start items-center mt-24"
+                        className="w-full flex flex-col items-center mt-6"
                     >
                         <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t("Reset Password")}</h1>
+                        <p id="reset-email-hint" className="w-full text-body-medium text-text-neutral mb-6">{t("ใช้อีเมลที่สมัครสมาชิกเพื่อรับรหัสยืนยัน")}</p>
 
-                        <div className="w-full flex flex-col justify-start items-center">
+                        <div className="w-full flex flex-col gap-3">
+                            <label htmlFor="reset-email" className="auth-label">{t("Email")}</label>
                             <input
+                                id="reset-email"
+                                name="email"
+                                autoComplete="email"
+                                autoCapitalize="none"
+                                aria-describedby="reset-email-hint"
                                 type="email"
                                 placeholder={t("Email")}
                                 value={email}
@@ -52,7 +59,7 @@ export default function ResetPasswordEmail() {
                         </div>
 
                         {error && (
-                            <p className="w-full text-body-medium text-red-500 mt-4">{t(error)}</p>
+                            <p role="alert" className="w-full text-body-medium text-red-700 mt-4">{t(error)}</p>
                         )}
 
                         <button
@@ -60,7 +67,7 @@ export default function ResetPasswordEmail() {
                             className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-all cursor-pointer"
                         >{t("Send OTP")}</button>
                     </form>
-                </div>
+                </main>
             </div>
         </div>
     );

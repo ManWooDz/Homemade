@@ -1,11 +1,11 @@
 import { useLocale } from "../../context/LocaleContext";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import Picker from "react-mobile-picker";
 import HeaderLogo from "../../components/HeaderLogo";
 import BackButton from "../../components/BackButton";
-import NextButton from "../../components/NextButton";
+import { ChevronRight } from "lucide-react";
 import { OptionChips, OptionList } from "../../components/OptionPicker";
 import {
   OTHER_OPTION,
@@ -28,10 +28,10 @@ const AGES = Array.from({ length: 66 }, (_, i) => String(15 + i));
 const AGE_ITEM_HEIGHT = 44; // matches the h-11 row rendered for each Picker.Item
 
 function StepCounter({ step, total }) {
+  const { t } = useLocale();
   return (
-    <div className="text-body-medium font-semibold">
-      <span className="text-text-brands">{step}</span>
-      <span className="text-text-neutral">/{total}</span>
+    <div className="text-body-medium text-text-neutral tabular-nums">
+      {t("ขั้นตอน {step} จาก {total}", { step, total })}
     </div>
   );
 }
@@ -39,22 +39,18 @@ function StepCounter({ step, total }) {
 function StepShell({ title, hint, error, children }) {
     const { t } = useLocale();
   return (
-    <div className="w-full flex flex-col justify-start items-center mt-4">
-      <h1 className="text-h2 font-semibold text-text-black text-center">
+    <div className="w-full flex flex-col items-center mt-8">
+      <h1 id="quiz-title" tabIndex={-1} className="text-h2 font-semibold text-text-black text-center outline-none">
         {title}
       </h1>
       {hint && (
-        <p className="text-body-medium text-text-brands text-center mt-1 mb-6">
+        <p className="text-body-medium text-text-neutral text-center mt-2 mb-6">
           {t(hint)}
         </p>
       )}
       {!hint && <div className="mb-8" />}
       {children}
-      {error && (
-        <p className="w-full max-w-[358px] text-body-medium text-red-500 text-center mt-2">
-          {t(error)}
-        </p>
-      )}
+      {error && <p id="quiz-error" role="alert" className="w-full max-w-[358px] text-body-medium text-red-700 mt-4">{t(error)}</p>}
     </div>
   );
 }
@@ -64,6 +60,14 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { apiFetch } = useAuth();
   const [step, setStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
+  const savePending = useRef(false);
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    contentRef.current.scrollTop = 0;
+    contentRef.current.querySelector("h1")?.focus({ preventScroll: true });
+  }, [step]);
 
   const [pickerValue, setPickerValue] = useState({ age: "25" });
 
@@ -78,9 +82,14 @@ export default function Onboarding() {
   const [restrictionShakeKey, setRestrictionShakeKey] = useState(0);
   const [equipmentShakeKey, setEquipmentShakeKey] = useState(0);
 
+  useEffect(() => {
+    if (stepError) contentRef.current.querySelector("#quiz-error")?.scrollIntoView({ block: "nearest" });
+  }, [stepError]);
+
   const SELECT_ONE_ERROR = "กรุณาเลือกอย่างน้อย 1 ตัวเลือก";
 
   const handleBack = () => {
+    if (savePending.current) return;
     setStepError("");
     if (step === 1) {
       if (window.history.state?.idx > 0) {
@@ -94,6 +103,7 @@ export default function Onboarding() {
   };
 
   const handleNext = async () => {
+    if (savePending.current) return;
     setStepError("");
     if (step === 2 && cuisinePreferences.length === 0) {
       setStepError(SELECT_ONE_ERROR);
@@ -131,6 +141,8 @@ export default function Onboarding() {
     }
 
     if (step === 6) {
+      savePending.current = true;
+      setIsSaving(true);
       const payload = {
         age: Number(pickerValue.age),
         cuisine_preferences: cuisinePreferences,
@@ -150,16 +162,17 @@ export default function Onboarding() {
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
-          setStepError("บันทึกข้อมูลไม่สำเร็จ กรุณาแก้ไขที่ Profile ภายหลัง");
+          setStepError("บันทึกคำตอบไม่สำเร็จ คำตอบยังอยู่ กรุณาลองอีกครั้ง");
+          return;
         }
+        navigate("/home", { replace: true });
       } catch (err) {
-        // Best-effort: onboarding answers are also editable later from
-        // Profile, so a failed save here must not trap the user in the
-        // wizard — log for debugging, surface a message, still proceed to /home.
         console.error("[onboarding] failed to save preferences:", err);
-        setStepError("บันทึกข้อมูลไม่สำเร็จ กรุณาแก้ไขที่ Profile ภายหลัง");
+        setStepError("บันทึกคำตอบไม่สำเร็จ คำตอบยังอยู่ กรุณาลองอีกครั้ง");
+      } finally {
+        savePending.current = false;
+        setIsSaving(false);
       }
-      navigate("/home", { replace: true });
       return;
     }
     setStep((s) => s + 1);
@@ -196,20 +209,37 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+    <div className="auth-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-hidden flex flex-col">
-        <div className="w-full flex-1 min-h-0 px-4 pt-6 pb-6 bg-background-primary flex flex-col items-center overflow-y-auto">
+        <main ref={contentRef} className="w-full flex-1 min-h-0 px-6 pt-6 pb-6 bg-background-primary flex flex-col items-center overflow-y-auto">
           <div className="w-full flex flex-col items-center">
             <HeaderLogo />
-            <div className="w-full flex justify-between items-center mt-6">
-              <BackButton onClick={handleBack} to="/login" size="w-14 h-14" iconSize="w-7 h-7" />
+            <div className="w-full flex justify-between items-center mt-4">
+              <BackButton onClick={handleBack} disabled={isSaving} to="/login" size="w-11 h-11" />
               <StepCounter step={step} total={6} />
             </div>
+            <div role="progressbar" aria-label={t("ความคืบหน้า")} aria-valuemin={1} aria-valuemax={6} aria-valuenow={step} className="w-full flex gap-2 mt-4">
+              {Array.from({ length: 6 }, (_, index) => <span key={index} className={`h-1 flex-1 rounded-full ${index < step ? "bg-button-primary" : "bg-gray-200"}`} />)}
+            </div>
           </div>
+          <fieldset disabled={isSaving} aria-labelledby="quiz-title" aria-describedby={stepError ? "quiz-error" : undefined} className="w-full min-w-0">
 
           {step === 1 && (
-            <StepShell title={t("คุณอายุเท่าไหร่?")}>
+            <StepShell title={t("คุณอายุเท่าไหร่?")} hint="เลื่อนเพื่อเลือกอายุ หรือใช้ปุ่มลูกศรขึ้นและลง">
               <div
+                role="spinbutton"
+                tabIndex={0}
+                aria-label={t("อายุ")}
+                aria-valuemin={15}
+                aria-valuemax={80}
+                aria-valuenow={Number(pickerValue.age)}
+                aria-valuetext={`${pickerValue.age} ${t("ปี")}`}
+                onKeyDown={(event) => {
+                  if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+                  event.preventDefault();
+                  const age = Number(pickerValue.age);
+                  setPickerValue({ age: String(event.key === "Home" ? 15 : event.key === "End" ? 80 : Math.min(80, Math.max(15, age + (event.key === "ArrowUp" ? 1 : -1)))) });
+                }}
                 className="w-full max-w-[200px] custom-picker-container cursor-grab active:cursor-grabbing select-none"
                 onPointerDown={handleAgePointerDown}
                 onPointerMove={handleAgePointerMove}
@@ -229,11 +259,11 @@ export default function Onboarding() {
                           <div
                             className={`h-11 px-8 flex justify-center items-center rounded-xl text-body-large font-semibold transition-all ${
                               selected
-                                ? "bg-button-primary text-text-white shadow-[0_0_30px_0_rgba(239,88,44,0.25)]"
-                                : "text-text-black opacity-30"
+                                ? "bg-button-primary text-text-white"
+                                : "text-text-neutral"
                             }`}
                           >
-                            {age}{t("ปี")}</div>
+                            {age} {t("ปี")}</div>
                         )}
                       </Picker.Item>
                     ))}
@@ -280,6 +310,9 @@ export default function Onboarding() {
               />
               {dietaryRestrictions.includes(OTHER_OPTION) && (
                 <input
+                  aria-label={t("ระบุข้อจำกัดของคุณ")}
+                  aria-invalid={!restrictionOther.trim() && Boolean(stepError)}
+                  aria-describedby={stepError ? "quiz-error" : undefined}
                   key={`restriction-other-${restrictionShakeKey}`}
                   type="text"
                   value={restrictionOther}
@@ -315,6 +348,9 @@ export default function Onboarding() {
               />
               {equipment.includes(OTHER_OPTION) && (
                 <input
+                  aria-label={t("ระบุอุปกรณ์ที่มี")}
+                  aria-invalid={!equipmentOther.trim() && Boolean(stepError)}
+                  aria-describedby={stepError ? "quiz-error" : undefined}
                   key={`equipment-other-${equipmentShakeKey}`}
                   type="text"
                   value={equipmentOther}
@@ -332,7 +368,7 @@ export default function Onboarding() {
           )}
 
           {step === 5 && (
-            <StepShell title={t("คุณทำอาหารบ่อยแค่ไหน?")} error={stepError}>
+            <StepShell title={t("คุณทำอาหารบ่อยแค่ไหน?")} hint="เลือก 1 ข้อ" error={stepError}>
               <OptionList
                 options={FREQUENCY_OPTIONS}
                 selected={cookingFrequency}
@@ -363,10 +399,14 @@ export default function Onboarding() {
               />
             </StepShell>
           )}
-        </div>
+          </fieldset>
+        </main>
 
-        <div className="w-full px-4 pb-60 flex justify-end bg-background-primary">
-          <NextButton onClick={handleNext} />
+        <div className="auth-footer w-full shrink-0 px-6 pt-4 border-t border-gray-100 bg-background-primary">
+          <button type="button" onClick={handleNext} disabled={isSaving} aria-busy={isSaving} className="w-full min-h-11 px-5 py-2 bg-button-primary text-text-white rounded-full flex items-center justify-center gap-2 text-body-medium font-semibold hover:opacity-95 disabled:opacity-50 transition-colors cursor-pointer">
+            {isSaving ? t("กำลังบันทึก...") : step === 6 ? t("บันทึกและเริ่มใช้งาน") : t("Next")}
+            {!isSaving && <ChevronRight aria-hidden="true" className="w-5 h-5" />}
+          </button>
         </div>
       </div>
     </div>

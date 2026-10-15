@@ -78,3 +78,27 @@
 .animate-shake {
   animation: shake 0.5s ease-in-out;
 }
+
+/* Darker orange keeps small white action labels readable on these forms. */
+.auth-screen {
+  --color-button-primary: #c94328;
+  --color-text-brands: #c94328;
+  --color-stroke-brands: #c94328;
+  --color-border-stroke-brands: #c94328;
+  --color-stroke-text-field: #8a8f99;
+  --color-border-stroke-btn-tertiary: #8a8f99;
+  caret-color: var(--color-text-brands);
+  scrollbar-color: var(--color-stroke-text-field) var(--color-background-primary);
+}
+.auth-screen ::selection { background: var(--color-button-secondary); color: var(--color-text-black); }
+.auth-screen :is(button, a, input, [role="spinbutton"]):focus-visible {
+  outline: 2px solid var(--color-stroke-brands);
+  outline-offset: 3px;
+}
+.auth-screen a { text-underline-offset: 4px; }
+.auth-screen button:disabled { cursor: wait; }
+.auth-label { width: 100%; text-align: left; font-size: var(--text-body-medium); font-weight: 600; color: var(--color-text-tertiary); margin-bottom: -4px; }
+.auth-footer { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: reduce) {
+  .auth-screen *, .auth-screen *::before, .auth-screen *::after { animation: none; transition: none; }
+}

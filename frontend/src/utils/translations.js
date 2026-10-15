@@ -1,5 +1,12 @@
 // Display copy only: canonical preference values and recipe content stay unchanged.
 export const COPY = [
+    ["ใช้อีเมลที่สมัครสมาชิกเพื่อรับรหัสยืนยัน", "Use the email you registered with to receive a verification code"],
+    ["กรอกรหัสสำหรับอีเมล {email}", "Enter the code for {email}"], ["รหัส OTP 6 หลัก", "6-digit OTP code"],
+    ["ยังไม่มีบัญชี?", "New here?"], ["มีบัญชีแล้ว?", "Already have an account?"],
+    ["ขั้นตอน {step} จาก {total}", "Step {step} of {total}"], ["ความคืบหน้า", "Progress"],
+    ["เลื่อนเพื่อเลือกอายุ หรือใช้ปุ่มลูกศรขึ้นและลง", "Scroll to choose your age, or use the up and down arrow keys"],
+    ["เลือก 1 ข้อ", "Choose one option"], ["บันทึกและเริ่มใช้งาน", "Save and get started"],
+    ["บันทึกคำตอบไม่สำเร็จ คำตอบยังอยู่ กรุณาลองอีกครั้ง", "Could not save your answers. They are still here; please try again."],
     ["แจ้งเตือน", "Notifications"], ["แจ้งเตือน ยังไม่อ่าน {count} รายการ", "Notifications, {count} unread"],
     ["ยังไม่อ่าน", "Unread"], ["อ่านแล้ว", "Read"], ["อ่านทั้งหมด", "Read all"],
     ["รีเฟรชแจ้งเตือน", "Refresh notifications"], ["สถานะแจ้งเตือน", "Notification status"], ["วันที่อ้างอิงเวลาไทย", "Dates use Thailand time"],

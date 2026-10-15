@@ -1,0 +1,28 @@
+<!-- Deprecated: isolated UI QA fixture, never deploy; retained for manual removal under AGENTS.md. -->
+<!doctype html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HomeMade auth QA</title></head><body><div id="root"></div><script type="module">
+const originalFetch = window.fetch.bind(window);
+const options = new URLSearchParams(location.search);
+document.documentElement.dataset.qaFixture = "auth-onboarding";
+let signedIn = options.get("view") === "onboarding", saveAttempts = 0;
+const user = { id: 999, email: "qa@example.test", locale: options.get("locale") === "en" ? "en" : "th" };
+const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+window.fetch = async (input, init = {}) => {
+    const path = new URL(typeof input === "string" ? input : input.url, location.origin).pathname;
+    if (!path.startsWith("/api/")) return originalFetch(input, init);
+    document.documentElement.dataset.qaRequests = (document.documentElement.dataset.qaRequests || "") + `${init.method || "GET"} ${path};`;
+    if (path === "/api/auth/me") return signedIn ? json({ status: "success", data: user }) : json({}, 401);
+    if (path === "/api/auth/refresh") return json({}, 401);
+    if (path === "/api/auth/register") return options.has("authfail") ? json({ detail: "Email already registered" }, 400) : json({ status: "success" });
+    if (path === "/api/auth/login") { if (options.has("authfail")) return json({}, 401); signedIn = true; return json({ status: "success", data: user }); }
+    if (path === "/api/user-preferences" && init.method === "PUT") {
+        saveAttempts++;
+        await new Promise(resolve => setTimeout(resolve, 800));
+        return options.has("savefail") && saveAttempts === 1 ? json({}, 500) : json({ status: "success", data: JSON.parse(init.body) });
+    }
+    if (path === "/api/user-preferences") return json({ status: "success", data: null });
+    if (["/api/recipes", "/api/user-ingredients", "/api/history", "/api/base-favorites"].includes(path)) return json({ status: "success", data: [] });
+    return json({ message: "Blocked by QA fixture" }, 404);
+};
+history.replaceState({}, "", "/" + (["login", "register", "onboarding"].includes(options.get("view")) ? options.get("view") : "login"));
+await import("/src/main.jsx");
+</script></body></html>

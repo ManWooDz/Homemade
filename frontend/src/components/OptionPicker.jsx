@@ -11,14 +11,15 @@ export function OptionChips({ options, selected, multiple, onToggle, emojiMap })
           <button
             key={option}
             type="button"
+            aria-pressed={isSelected}
             onClick={() => onToggle(option)}
-            className={`h-11 px-5 rounded-full border flex justify-center items-center text-body-large transition-all cursor-pointer ${
+            className={`min-h-11 max-w-full px-5 py-2 rounded-full border flex justify-center items-center text-body-large transition-colors cursor-pointer ${
               isSelected
                 ? "bg-button-primary border-button-primary text-text-white font-normal"
                 : "bg-button-neutral border-border-stroke-btn-tertiary text-text-tertiary font-normal hover:bg-background-tertiary"
             }`}
           >
-            {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
+            {emojiMap?.[option] && <span aria-hidden="true" className="mr-1.5">{emojiMap[option]}</span>}
             {t(option)}
           </button>
         );
@@ -39,15 +40,16 @@ export function OptionList({ options, selected, multiple, onToggle, emojiMap }) 
           <button
             key={option}
             type="button"
+            aria-pressed={isSelected}
             onClick={() => onToggle(option)}
-            className={`w-full h-14 pl-3.5 pr-7 py-2 rounded-2xl flex items-center transition-all cursor-pointer ${
+            className={`w-full min-h-14 px-4 py-3 rounded-2xl flex items-center text-left transition-colors cursor-pointer ${
               isSelected
-                ? "bg-button-secondary border border-border-stroke-brands shadow-[0px_0px_4px_0px_rgba(0,0,0,0.25)] text-text-black"
+                ? "bg-button-secondary border border-border-stroke-brands text-text-black"
                 : "bg-background-primary border border-border-stroke-btn-tertiary text-text-tertiary hover:bg-background-tertiary"
             }`}
           >
-            <span className="text-body-medium font-normal truncate">
-              {emojiMap?.[option] && <span className="mr-1.5">{emojiMap[option]}</span>}
+            <span className="text-body-medium font-normal">
+              {emojiMap?.[option] && <span aria-hidden="true" className="mr-1.5">{emojiMap[option]}</span>}
               {t(option)}
             </span>
           </button>
