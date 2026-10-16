@@ -1,10 +1,11 @@
 import { useLocale } from "../context/LocaleContext";
-import { useState } from "react";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { ChevronLeft, Trash2, PenLine } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import NutritionBox from "../components/NutritionBox";
-import { expiryBadgeLabel } from "../utils/expiry";
+import IngredientEditor from "../components/IngredientEditor";
+import { expiryBadgeLabel, sortByExpiry } from "../utils/expiry";
 import { useAuth } from "../context/AuthContext";
 
 export default function IngredientDetail({
@@ -13,6 +14,7 @@ export default function IngredientDetail({
     setUserIngredients,
     onBack,
     onDeleted,
+    onUpdated,
     activeTab,
     setActiveTab,
 }) {
@@ -20,6 +22,10 @@ export default function IngredientDetail({
     const { apiFetch } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
+    const [editing, setEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const editButton = useRef(null);
 
     if (!ingredient) {
         onBack();
@@ -62,6 +68,8 @@ export default function IngredientDetail({
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
                         onClick={onBack}
+                        disabled={isSaving}
+                        aria-label={t("กลับ")}
                         className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
                     >
                         <ChevronLeft className="w-6 h-6" />
@@ -96,7 +104,18 @@ export default function IngredientDetail({
                         {ingredient.name}
                     </h2>
 
-                    <div className="flex flex-col gap-4">
+                    {editing ? <IngredientEditor
+                        ingredient={ingredient}
+                        onBusyChange={setIsSaving}
+                        onCancel={() => { setEditing(false); setDeleteError(""); requestAnimationFrame(() => editButton.current?.focus()); }}
+                        onSaved={(updated) => {
+                            setUserIngredients(items => sortByExpiry(items.map(item => item.id === updated.id ? { ...updated, selected: item.selected } : item)));
+                            onUpdated(updated);
+                            setEditing(false);
+                            setSaved(true);
+                            requestAnimationFrame(() => editButton.current?.focus());
+                        }}
+                    /> : <div className="flex flex-col gap-4">
                         <div>
                             <h3 className="text-sm font-bold text-gray-700 mb-1">{t("Category")}</h3>
                             <p className="text-base text-gray-800">
@@ -135,7 +154,15 @@ export default function IngredientDetail({
                         </div>
 
                         <NutritionBox nutrition={ingredient.nutrition_data} />
-                    </div>
+                    </div>}
+
+                    {saved && <p role="status" className="mt-4 text-sm text-gray-700">{t("บันทึกวัตถุดิบแล้ว")}</p>}
+                    {!editing && <button
+                        ref={editButton}
+                        onClick={() => { setEditing(true); setSaved(false); setDeleteError(""); }}
+                        disabled={isDeleting}
+                        className="w-full mt-6 min-h-11 flex items-center justify-center gap-2 rounded-full bg-[#EF5A3A] text-white font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-gray-900"
+                    ><PenLine className="w-5 h-5" />{t("แก้ไขวัตถุดิบ")}</button>}
 
                     {deleteError && (
                         <p className="text-sm text-red-500 mt-4 text-center">
@@ -143,18 +170,18 @@ export default function IngredientDetail({
                         </p>
                     )}
 
-                    <button
+                    {!editing && <button
                         onClick={handleDelete}
                         disabled={isDeleting}
                         className="w-full mt-8 flex items-center justify-center gap-2 border-2 border-red-200 text-red-500 py-4 rounded-full text-base font-bold hover:bg-red-50 transition disabled:opacity-50"
                     >
                         <Trash2 className="w-5 h-5" />
                         {isDeleting ? t("กำลังลบ...") : t("ลบออกจาก My Fridge")}
-                    </button>
+                    </button>}
                 </div>
 
                 {/* === Bottom Navigation === */}
-                <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
+                <BottomMenu activeTab={activeTab} setActiveTab={tab => { if (!isSaving) setActiveTab(tab); }} />
             </div>
         </div>
     );

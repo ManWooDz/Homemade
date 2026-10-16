@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- Deprecated after this critique; retained for manual removal per AGENTS.md. Offline UI evidence only. -->
+<html lang="th">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Barcode critique — mock API / camera denied</title></head>
+<body style="margin:0">
+<div id="root"></div>
+<script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { AuthProvider } from '/src/context/AuthContext.jsx';
+import BarcodeScanPage from '/src/pages/BarcodeScanPage.jsx';
+import '/src/index.css';
+
+const scenario = new URLSearchParams(location.search).get('scenario') || 'not-found';
+const allowed = ['not-found', 'network', 'slow', 'success', 'http-error', 'malformed'];
+console.assert(allowed.includes(scenario), 'Unknown preview scenario');
+window.__barcodePreview = { lookups: [], navigation: [] };
+document.documentElement.dataset.lookupCount = '0';
+document.documentElement.dataset.lookupSettled = '0';
+window.fetch = async (input) => {
+  const path = String(input);
+  if (path === '/api/auth/me') return new Response(JSON.stringify({ data: { id: 0, email: 'preview.invalid' } }), { status: 200 });
+  if (!path.startsWith('/api/barcode-lookup?')) throw new Error('Preview blocks non-mock fetch');
+  window.__barcodePreview.lookups.push(path);
+  document.documentElement.dataset.lookupCount = String(window.__barcodePreview.lookups.length);
+  document.documentElement.dataset.lookupCodes = JSON.stringify(window.__barcodePreview.lookups);
+  await new Promise(resolve => setTimeout(resolve, scenario === 'slow' ? 15000 : 1800));
+  // Deliberately ignore AbortSignal to verify that late results cannot navigate.
+  document.documentElement.dataset.lookupSettled = String(Number(document.documentElement.dataset.lookupSettled) + 1);
+  if (scenario === 'network') throw new Error('Mock network failure');
+  const payload = scenario === 'malformed' ? { status: 'success', data: {} } : scenario === 'success' || scenario === 'http-error'
+    ? { status: 'success', data: { name: 'สินค้าตัวอย่าง', category: 'Other', image: '' } }
+    : { status: 'error', message: 'Product not found' };
+  return new Response(JSON.stringify(payload), { status: scenario === 'http-error' ? 500 : 200 });
+};
+// Pending permission keeps the real scanner overlay visible without opening hardware.
+const pendingCamera = new URLSearchParams(location.search).get('camera') === 'pending';
+if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = pendingCamera
+  ? () => new Promise(() => {})
+  : async () => { throw new DOMException('Preview camera denied', 'NotAllowedError'); };
+const root = createRoot(document.getElementById('root'));
+const leave = text => {
+  window.__barcodePreview.navigation.push(text);
+  document.documentElement.dataset.navigation = JSON.stringify(window.__barcodePreview.navigation);
+  root.render(React.createElement('p', { style: { padding: 24 } }, text));
+};
+root.render(React.createElement(AuthProvider, null, React.createElement(BarcodeScanPage, {
+  activeTab: 'fridge',
+  setActiveTab: tab => leave('Mock navigation: ' + tab),
+  onBack: () => leave('Mock navigation: My Fridge'),
+  onScanned: data => leave('Mock AddIngredient prefill: ' + data.name),
+  onAddManually: () => leave('Mock navigation: AddIngredient'),
+})));
+</script>
+</body>
+</html>

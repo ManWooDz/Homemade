@@ -221,7 +221,7 @@ class RunCaseWiringTests(unittest.TestCase):
 
     CASE = {
         "case_id": "wiring",
-        "ingredients": [{"name": "หมูสับ"}],
+        "ingredients": [{"name": "หมูสับ"}, {"name": "กุ้งสด"}],
         "user_prefs": {"allergy": "แพ้กุ้ง", "taste": "", "equipment": "", "extra": ""},
         "base_recipe": {},
     }

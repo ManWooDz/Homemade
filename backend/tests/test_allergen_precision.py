@@ -174,13 +174,13 @@ class PreflightAndGenerationTests(unittest.IsolatedAsyncioTestCase):
             "nutrition": {"basis": "per_serving", "calories": 300, "protein_g": 15, "carbs_g": 10, "fat_g": 10},
         }
         unsafe = deepcopy(safe)
-        unsafe["adjusted_ingredients"].append("ทาฮินี 1 ช้อนโต๊ะ (ไม่มีงา)")
+        unsafe["adjusted_ingredients"].append("ทาฮินี (ไม่มีงา) 1 ช้อนโต๊ะ")
         db = make_memory_db()
         self.addCleanup(db.close)
         seed_allergen_graph(db)
         blocks = resolve_blocks_for_keys(db, ["sesame"])
         req = GenerateRecipeTextRequest(recipe={"name": "Custom Recipe from Fridge"},
-            ingredients=[{"name": "หมูสับ"}], preferences={"allergies": "แพ้งา"})
+            ingredients=[{"name": "หมูสับ"}, {"name": "ทาฮินี (ไม่มีงา)"}], preferences={"allergies": "แพ้งา"})
         partial = NutritionResult(safe["nutrition"], True, ["test estimate"])
         with patch("main.resolve_blocks_for_request", return_value=blocks), \
              patch("main.get_personalization_for_request", new=AsyncMock(return_value=None)), \

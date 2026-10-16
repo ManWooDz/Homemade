@@ -59,6 +59,12 @@ lerna-debug.log*
 # Local-only (ไม่จำเป็นต้อง push)
 # =========================
 .obsidian/
+.impeccable/config.local.json
+.impeccable/review/
+.superpowers/
+backend/nutrition/data/accepted_c2_records.json
+backend/nutrition/data/accepted_herb_records.json
+backend/nutrition/data/accepted_n3_total_records.json
 tmp/
 docs/
 start-homemade.ps1

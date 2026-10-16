@@ -5,6 +5,7 @@ import { ChevronLeft, Heart, Plus, Search, Sparkles, Star } from "lucide-react";
 import { BiSolidFoodMenu } from "react-icons/bi";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import DragScrollRow from "../components/DragScrollRow";
 import { getTagColor } from "../utils/tagColors";
 
 export default function Favorites({
@@ -90,7 +91,7 @@ export default function Favorites({
                     <div className="px-5 mb-4 flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-gray-900">{t("Favorites")}</h2>
                         <span className="text-sm font-medium text-gray-500">
-                            {tab === "base" ? favoriteRecipes.length : myRecipes.length}{t("Items")}</span>
+                            {tab === "base" ? favoriteRecipes.length : myRecipes.length} {t("Items")}</span>
                     </div>
 
                     <div className="px-5 mb-4 flex gap-2">
@@ -131,12 +132,13 @@ export default function Favorites({
                     {tab === "base" && (
                     <>
                     {/* Categories Strip */}
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide mb-4 px-5">
+                    <DragScrollRow id="favorites-categories" className="flex gap-3 pb-2 scrollbar-hide mb-4 px-5">
                         {categories.map((cat, index) => (
                             <button
                                 key={index}
                                 onClick={() => setSelectedCategory(cat)}
-                                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-sm transition ${
+                                aria-pressed={selectedCategory === cat}
+                                className={`min-h-11 shrink-0 px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25] ${
                                     selectedCategory === cat
                                         ? "bg-[#EF5A3A] text-white"
                                         : "bg-white border border-[#EF5A3A] text-[#EF5A3A] hover:bg-orange-50"
@@ -145,7 +147,7 @@ export default function Favorites({
                                 {t(cat)}
                             </button>
                         ))}
-                    </div>
+                    </DragScrollRow>
 
                     {allFavoriteRecipes.length === 0 ? (
                         <div className="flex flex-col items-center text-center text-gray-400 mt-10">

@@ -1,0 +1,2139 @@
+{
+  "label_version": 2,
+  "label_sha256": "0bdbe4a46b4778890448f90ba4d6d7e3871179230a2343c0807c2b87f30ecf8e",
+  "source_sha256": {
+    "allergen_kg/floor.py": "8e96a21e92f014ca934f4a8e4baec7029298f8a6b4c54e0dc109165528f6dd2c",
+    "allergen_kg/match.py": "7bc839490e61a63ea0f8121025047c4b7e4b172fb05d6488d23b67864068b095",
+    "allergen_kg/resolve.py": "7f64b4cbec9dfdd8abfaf3ca326b59cbe18617fa624536db311ddccd7fbfd23a",
+    "allergen_kg/graph.py": "81fd9615959c751918cbf4f2f17d28ab9595c5ed40aaad7db6ea58cc228542f9",
+    "database/seed_allergen_graph.py": "d1ec03e25430eaf439fc47897a407fa9a03fd43d17eb4c739b3f02755d4d7fc6",
+    "main.py": "55a924869fc09ed4f8a836279032cde59ab6cb1475b733130a989cc073a80f74",
+    "eval/allergen_kg_eval.py": "321dff27854d49cb12e577ee0bf2569336f0d9788afb75adad3cad01296d87c9",
+    "nutrition/text.py": "d781519801bfb2685a827fd096ba130267195ea1c85310d55edb9668e6e6de75",
+    "nutrition/data/inmu_nutrition_dataset.csv": "a144bdd5b9fb6ebf1d6d9b158ca07157f739b837df32148fbddedceb665ef790"
+  },
+  "evaluation_kind": "development_regression_not_held_out",
+  "historical_baseline": "Original nine-key results remain in spec.md; this run does not replace them.",
+  "key_definitions": {
+    "shrimp": "Shrimp/prawn and products containing them; other shellfish have their own key.",
+    "peanut": "Peanuts and products containing peanuts; not tree nuts or soybeans.",
+    "milk": "Animal milk and dairy; not an unrelated syllable in ขนม or แหนม.",
+    "egg": "Bird eggs and products containing them; not eggplant, fish roe or insect eggs.",
+    "gluten": "Wheat/barley/rye and products containing them; not identified rice/corn/tapioca flour. Generic flour is unresolved, not a confirmed negative.",
+    "shellfish": "Non-shrimp crustaceans and molluscs, including squid; not finned fish.",
+    "fish": "Finned fish and their derivatives; not squid.",
+    "soy": "Soybeans and their derivatives; retain v1 refined-oil exclusion.",
+    "nut": "Tree nuts, not peanuts, coconut, nutmeg or water chestnut.",
+    "sesame": "Sesame seeds and products containing them, including sesame oil, typical sesame sauce and tahini; unknown sauces are not inferred to contain sesame. Absence claims cannot override known composition."
+  },
+  "review_stats": {
+    "review_status": "frozen"
+  },
+  "all": {
+    "n_strings": 20,
+    "floor_only": {
+      "literal": {
+        "positives": 10,
+        "caught": 9,
+        "caught_2plus_hop": 0
+      },
+      "derived_only": {
+        "positives": 3,
+        "caught": 3,
+        "caught_2plus_hop": 0
+      },
+      "negatives": {
+        "total": 147,
+        "flagged": 0
+      },
+      "by_key": {
+        "shrimp": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 1,
+            "caught": 1,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 14,
+            "flagged": 0
+          }
+        },
+        "peanut": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "milk": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "egg": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "gluten": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "shellfish": {
+          "literal": {
+            "positives": 1,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "fish": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "soy": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "nut": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "sesame": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 2,
+            "caught": 2,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 13,
+            "flagged": 0
+          }
+        }
+      },
+      "caught_by_head_edge": {
+        "shrimp|floor": 1,
+        "sesame|floor": 2
+      },
+      "spelling_note_items": [],
+      "flagged_negatives": [],
+      "n_scored_strings": 16,
+      "n_scored_pairs": 160,
+      "n_excluded_strings": 4,
+      "excluded_items": [
+        {
+          "id": "v2-dev-05",
+          "reason": "Fish-derived positive assumes fish-based sauce; the generic input identifies no recipe/product establishing the other nine groups. Product examples and possible cross-contact do not establish this item's complete composition."
+        },
+        {
+          "id": "v2-dev-10",
+          "reason": "Empty set is conditional on confirmed plain rice-noodle composition, without curry or accompaniments. The generic input identifies no exact formulation; packaged noodles require an ingredient list. Pure corn flour does not imply gluten, whereas wheat flour does."
+        },
+        {
+          "id": "v2-dev-11",
+          "reason": "Empty set is conditional on coconut-and-water-only composition. This input identifies no exact formulation; the cow-milk absence claim and a different product's ingredient list cannot establish all ten groups. Coconut is outside the project's nut key."
+        },
+        {
+          "id": "v2-dev-18",
+          "reason": "Positives apply only to the cited sauce subrecipe, not the whole bowl or generic sesame sauce. Sesame oil and the named soy sauce establish sesame/soy/wheat; egg assumes standard regular mayonnaise identity. Unspecified mayonnaise prevents a complete ten-group set."
+        }
+      ]
+    },
+    "floor_union_kg": {
+      "literal": {
+        "positives": 10,
+        "caught": 10,
+        "caught_2plus_hop": 0
+      },
+      "derived_only": {
+        "positives": 3,
+        "caught": 3,
+        "caught_2plus_hop": 0
+      },
+      "negatives": {
+        "total": 147,
+        "flagged": 0
+      },
+      "by_key": {
+        "shrimp": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 1,
+            "caught": 1,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 14,
+            "flagged": 0
+          }
+        },
+        "peanut": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "milk": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "egg": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "gluten": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "shellfish": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "fish": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "soy": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "nut": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 15,
+            "flagged": 0
+          }
+        },
+        "sesame": {
+          "literal": {
+            "positives": 1,
+            "caught": 1
+          },
+          "derived_only": {
+            "positives": 2,
+            "caught": 2,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 13,
+            "flagged": 0
+          }
+        }
+      },
+      "caught_by_head_edge": {
+        "shrimp|กะปิ": 1,
+        "sesame|น้ำมันงา": 1,
+        "sesame|ทาฮินี": 1
+      },
+      "spelling_note_items": [],
+      "flagged_negatives": [],
+      "n_scored_strings": 16,
+      "n_scored_pairs": 160,
+      "n_excluded_strings": 4,
+      "excluded_items": [
+        {
+          "id": "v2-dev-05",
+          "reason": "Fish-derived positive assumes fish-based sauce; the generic input identifies no recipe/product establishing the other nine groups. Product examples and possible cross-contact do not establish this item's complete composition."
+        },
+        {
+          "id": "v2-dev-10",
+          "reason": "Empty set is conditional on confirmed plain rice-noodle composition, without curry or accompaniments. The generic input identifies no exact formulation; packaged noodles require an ingredient list. Pure corn flour does not imply gluten, whereas wheat flour does."
+        },
+        {
+          "id": "v2-dev-11",
+          "reason": "Empty set is conditional on coconut-and-water-only composition. This input identifies no exact formulation; the cow-milk absence claim and a different product's ingredient list cannot establish all ten groups. Coconut is outside the project's nut key."
+        },
+        {
+          "id": "v2-dev-18",
+          "reason": "Positives apply only to the cited sauce subrecipe, not the whole bowl or generic sesame sauce. Sesame oil and the named soy sauce establish sesame/soy/wheat; egg assumes standard regular mayonnaise identity. Unspecified mayonnaise prevents a complete ten-group set."
+        }
+      ]
+    }
+  },
+  "without_public": {
+    "n_strings": 0,
+    "floor_only": {
+      "literal": {
+        "positives": 0,
+        "caught": 0,
+        "caught_2plus_hop": 0
+      },
+      "derived_only": {
+        "positives": 0,
+        "caught": 0,
+        "caught_2plus_hop": 0
+      },
+      "negatives": {
+        "total": 0,
+        "flagged": 0
+      },
+      "by_key": {
+        "shrimp": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "peanut": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "milk": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "egg": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "gluten": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "shellfish": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "fish": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "soy": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "nut": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "sesame": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        }
+      },
+      "caught_by_head_edge": {},
+      "spelling_note_items": [],
+      "flagged_negatives": [],
+      "n_scored_strings": 0,
+      "n_scored_pairs": 0,
+      "n_excluded_strings": 0,
+      "excluded_items": []
+    },
+    "floor_union_kg": {
+      "literal": {
+        "positives": 0,
+        "caught": 0,
+        "caught_2plus_hop": 0
+      },
+      "derived_only": {
+        "positives": 0,
+        "caught": 0,
+        "caught_2plus_hop": 0
+      },
+      "negatives": {
+        "total": 0,
+        "flagged": 0
+      },
+      "by_key": {
+        "shrimp": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "peanut": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "milk": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "egg": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "gluten": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "shellfish": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "fish": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "soy": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "nut": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        },
+        "sesame": {
+          "literal": {
+            "positives": 0,
+            "caught": 0
+          },
+          "derived_only": {
+            "positives": 0,
+            "caught": 0,
+            "caught_2plus_hop": 0
+          },
+          "negatives": {
+            "total": 0,
+            "flagged": 0
+          }
+        }
+      },
+      "caught_by_head_edge": {},
+      "spelling_note_items": [],
+      "flagged_negatives": [],
+      "n_scored_strings": 0,
+      "n_scored_pairs": 0,
+      "n_excluded_strings": 0,
+      "excluded_items": []
+    }
+  },
+  "collision_hits": [
+    {
+      "node": "น้ำพริกเผา",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกเผา",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "พริกแกงกะหรี่",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกแกงกะหรี่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "พริกแกงมัสมั่น",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกแกงมัสมั่น",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "พริกแกงส้ม",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกแกงส้ม",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "พริกแกงเขียวหวาน",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกแกงเขียวหวาน",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "พริกแกงเหลือง",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกแกงเหลือง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "พริกแกงแดง",
+      "allergen": "shrimp",
+      "matched_string": "น้ำพริกแกงแดง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "เวย์โปรตีน",
+      "allergen": "milk",
+      "matched_string": "เวย์โปรตีนผง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "โยเกิร์ต",
+      "allergen": "milk",
+      "matched_string": "โยเกิร์ต, ผสมวุ้นมะพร้าว",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "โยเกิร์ต",
+      "allergen": "milk",
+      "matched_string": "โยเกิร์ต, ไขมันต่ำ, รสต่างๆ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "โยเกิร์ต",
+      "allergen": "milk",
+      "matched_string": "โยเกิร์ต, รสต่างๆ, ค่าเฉลี่ย",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "โยเกิร์ต",
+      "allergen": "milk",
+      "matched_string": "โยเกิร์ต, รสธรรมชาติ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "โยเกิร์ต",
+      "allergen": "milk",
+      "matched_string": "โยเกิร์ต, รสธัญญาหาร",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "โยเกิร์ต",
+      "allergen": "milk",
+      "matched_string": "พัฟฟ์แซนวิชแคร็กเกอร์สอดไส้ครีมกลิ่นโยเกิร์ตสตรอเบอร์รี่ ผสมสตรอเบอร์รี่คริสตัลบีดส์, Yodutch",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ขนมหม้อแกง",
+      "allergen": "egg",
+      "matched_string": "ขนมหม้อแกง-ถั่ว",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ทองหยอด",
+      "allergen": "egg",
+      "matched_string": "ทองหยอด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "มายองเนส",
+      "allergen": "egg",
+      "matched_string": "มายองเนส",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "มายองเนส",
+      "allergen": "egg",
+      "matched_string": "พิซซ่า, หน้าต่างๆ (ไก่,เนื้อ,เบคอน,ผัก,มายองเนส, ทูน่า)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ขนมปัง",
+      "allergen": "gluten",
+      "matched_string": "บัตเตอร์สเปรด (ชนิดเค็ม) (ผลิตภัณฑ์สำหรับทาขนมปังและทำเบเกอรี่)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ขนมปัง",
+      "allergen": "gluten",
+      "matched_string": "บัตเตอร์สเปรด (ชนิดจืด) (ผลิตภัณฑ์เนยสำหรับทาขนมปังและทำเบเกอรี่)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ข้าวสาลี",
+      "allergen": "gluten",
+      "matched_string": "ข้าวสาลี, ดิบ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ข้าวสาลี",
+      "allergen": "gluten",
+      "matched_string": "จมูกข้าวสาลี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ข้าวสาลี",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ผสมจมูกข้าวสาลีชนิดเค็ม, คาร์ส เม็ลท์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสปรุงรส",
+      "allergen": "gluten",
+      "matched_string": "ซอสปรุงรส (protein<10 กรัม), ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสปรุงรส",
+      "allergen": "gluten",
+      "matched_string": "ซอสปรุงรส (protein>10 กรัม), ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วขาว, สูตร 1, ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วขาว, สูตร 3, ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วดำ, สูตร 1(ซอสจากกากน้ำตาลและถั่วเหลือง)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วดำ, สูตร 2(ซอสจากกากน้ำตาลและถั่วเหลือง)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วดำ, สูตร 3(ซอสจากกากน้ำตาลและถั่วเหลือง)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วดำ, สูตร 4(ซอสจากกากน้ำตาลและถั่วเหลือง)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วหวาน",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซีอิ๊ว",
+      "allergen": "gluten",
+      "matched_string": "ซีอิ๊วขาว, สูตร 2, ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, พร้อมเครื่องปรุง, รสไก่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่, สด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, พร้อมเครื่องปรุง, ไม่ระบุรส",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, ไม่รวมเครื่องปรุง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่, อบแห้ง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, พร้อมเครื่องปรุง, ต้ม",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, พร้อมเครื่องปรุง, รสหมูสับ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, พร้อมเครื่องปรุง, รสต้มยำกุ้ง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่กึ่งสำเร็จรูป, รสหมูสับ, บรรจุในถ้วย",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่, เส้นกลม, ทอด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่, เส้นแบน, ทอด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่อบแห้งกึ่งสำเร็จรูป รสต่างๆ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่, ลูกชิ้น, น้ำ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "บะหมี่",
+      "allergen": "gluten",
+      "matched_string": "บะหมี่, หมูแดง, น้ำ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "มักกะโรนี",
+      "allergen": "gluten",
+      "matched_string": "มักกะโรนี, หมู",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "มอลคิสท์ แครกเกอร์, มอลคิสท์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โกลด์ฟิชเชดดา เบคสแน็ค แครกเกอร์, เปปเปอร์ริดจ์ฟาร์ม",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "มินิบัตเตอร์แครกเกอร์, ดอกบัว",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โรซี่ ชีส แครกเกอร์, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสชีส, ไฮไท",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ผสมชีส, คาร์ส เม็ลท์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ชีส ริง แครกเกอร์ขนมอบกรอบรสชีส, โคโค่แลนด์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์รสชีสเคลือบคาราเมลผสมสาหาร่ายญี่ปุ่น (ซอง), บิ๊กซี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เมจิกแครกเกอร์สอดไส้ครีม รสชีส, JACK' n JILL",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ไวท์ เช็ดด้า แคร็กเกอร์ (ขนมแครกเกอร์รสชีส), ชีส-อิท",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ชีสแครกเกอร์ สอดไส้ครีมบัตเตอร์มิลค์, โฮมมี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม รสชีส, มายช้อยส์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โรซี่ แครกเกอร์สอดไส้ครีม รสชีส, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โรซี่ แครกเกอร์สอดไส้ครีม รสช็อกโกแลต, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์เคลือบช็อกโกแลต สอดไส้ครีมรสช็อกโกแลต, วอยซ์ โอเวอร์โลด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ไส้ครีมรสโกโก้, ไวโอเลต",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีมกาแฟ, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ไส้ครีมกาแฟ, บิ๊กซี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เบเกอร์ส ชอยส์ ครีมแครกเกอร์ส, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีมชีส, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ครีมแครกเกอร์ รสดั้งเดิม, Huntley & Palmers",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม กลิ่นนมข้นหวาน, ไวโอเลต",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ไส้ครีม กลิ่นวนิลลา, ไวโอเลต",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม 2 ชั้น รสช็อกโกแลต, วอยซ์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม 2 ชั้น กลิ่นครีมมี่บัตเตอร์, วอยซ์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม 2 ชั้น กลิ่นสตรอเบอร์รี่, วอยซ์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม รสเลม่อน, มายช้อยส์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม รสมะนาว, ริทซ์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โรซี่ แครกเกอร์สอดไส้ครีม รสเลม่อน, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีมนม, สวีตไทม์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โรซี่ แครกเกอร์สอดไส้ครีม รสนม, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เปปปิโต แครกเกอร์ส-มิลค์ (แครกเกอร์รสนม), เปปปิโต",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสนม, ไฮไท",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม รสนม, มายช้อยส์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์สอดไส้ครีม 2 ชั้น รสนม, วอยซ์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "มินิแครกเกอร์ เอ.บี.ซี., มาร์วิน",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "บัตเตอร์ แครกเกอร์ รสเนยสด, ดอกบัว",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "มินิช็อกโก้ แครกเกอร์ ช็อกโกแลต, เอส.เค.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "มินิแครกเกอร์สอดไส้ แยมสับปะรด, เอ็มแอนด์เค",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ข้าวโอ๊ตกับลูกเกด, ไอเคโอ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ผสมน้ำมันมะกอก และใบโรสแมรี่, โคลุสซี่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ไส้ครีมส้ม, บิ๊กซี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เทเบิล วอเตอร์ ออริจินอล (แครกเกอร์รสดั้งเดิม), คาร์ส",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ออริจินัล สแน็ค แคร็กเกอร์ (ขนมแครกเกอร์รสดั้งเดิม), ชีส-อิท",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสคลาสสิค, บิ๊กซี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสดั้งเดิม, อันปัน",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสดั้งเดิม, ไฮไท",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เมจิกแครกเกอร์, JACK' n JILL",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสปราปริก้า, บิ๊กซี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เมจิกแครกเกอร์สอดไส้ครีม รสเนยถั่ว, JACK' n JILL",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ ไส้สับปะรด, เอส.เค.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ไส้แยมสับปะรด, บิ๊กซี",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ มันฝรั่ง, ไฮไท",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์มันฝรั่งแผ่นบาง รสคลาสสิค, เนลี่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์มันฝรั่งแผ่นบาง รสสาหร่ายซอสญี่ปุ่น, เนลี่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์มันฝรั่งแผ่นบาง รสซาวครีมและหัวหอม, เนลี่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "พัฟ แครกเกอร์, บิสชิน",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ฮันท์เล่ย์ แอนด์ พาล์มเมอร์ส ครีมแครกเกอร์ โทสต์ ฌซซามิ (ครีมแครกเกอร์ รสงาคั่ว), ฮันท์เล่ย์ แอนด์ พาล์มเมอร์ส",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ รสเค็ม, ไวโอเลต",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เปเปอร์ ติน แครกเกอร์ รสงา, มายช้อยส์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เทเบิล วอเตอร์ วิท โทสเต็ด เซซามิ ซีดส์ (แครกเกอร์ผสมเมล็ดงา), คาร์ส",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "ไฮไลพ์ แครกเกอร์โรยงา, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์อบกรอบรสซาวร์ครีมและหัวหอม, อาซาโนะ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โซอ์ แครกเกอร์ แครกเกอร์ถั่วเหลือง, มิซูร่า",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ไส้ครีมสตรอเบอร์รี่, สวีตไทม์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์เคลือบช็อกโกแลต สอดไส้ครีมกลิ่นวานิลลา, วอยซ์ โอเวอร์โลด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ผสมผัก, ไฮไลพ์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "แครกเกอร์ผสมจมูกข้าวสาลีชนิดเค็ม, คาร์ส เม็ลท์",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โกลด์ฟิช โฮล เกรน เบค สแน็ค แครกเกอร์ (แครกเกอร์ธัญพืชรูปปลา รสเชดดาชีส), เปปเปอร์ริดจ์ฟาร์ม",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โฮลวีทแครกเกอร์, โคลุสซี่",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โฮลวีท แครกเกอร์, บิสชิน",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "โรซี่ โฮลวีท แครกเกอร์, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แครกเกอร์",
+      "allergen": "gluten",
+      "matched_string": "เบเกอร์ส ชอยส์ โฮลวีท ครีม แครกเกอร์, อิมพิเรียล",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แผ่นเกี๊ยว",
+      "allergen": "gluten",
+      "matched_string": "แผ่นเกี๊ยวทอด ไม่มีหมู",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสหอยนางรม",
+      "allergen": "shellfish",
+      "matched_string": "ซอสหอยนางรม สูตรผสมกระเทียม",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสหอยนางรม",
+      "allergen": "shellfish",
+      "matched_string": "ซอสหอยนางรม, ชนิดโซเดียมและน้ำตาลต่ำ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสหอยนางรม",
+      "allergen": "shellfish",
+      "matched_string": "ซอสหอยนางรม",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกแห้งแช่ด่าง (ใส่เย็นตาโฟ), ลวก",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกกระดอง, สด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกกล้วย, สด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกกล้วย, ลอกหนังติดหัว, แช่แข็ง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึก, กรอบ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ไข่ปลาหมึก, ทอด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ปลาหมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกสด 125 กรัม",
+      "sources": [
+        "pool"
+      ],
+      "public": true
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกแห้งแช่ด่าง (ใส่เย็นตาโฟ), ลวก",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกกระดอง, สด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกกล้วย, สด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกกล้วย, ลอกหนังติดหัว, แช่แข็ง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึก, กรอบ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ไข่ปลาหมึก, ทอด",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "หมึก",
+      "allergen": "shellfish",
+      "matched_string": "ปลาหมึกสด 125 กรัม",
+      "sources": [
+        "pool"
+      ],
+      "public": true
+    },
+    {
+      "node": "ซอสผัดไทย",
+      "allergen": "fish",
+      "matched_string": "ซอสผัดไทย",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ทูน่า",
+      "allergen": "fish",
+      "matched_string": "น้ำมันปลาทูน่า",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ทูน่า",
+      "allergen": "fish",
+      "matched_string": "พิซซ่า, หน้าต่างๆ (ไก่,เนื้อ,เบคอน,ผัก,มายองเนส, ทูน่า)",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสปรุงรส",
+      "allergen": "soy",
+      "matched_string": "ซอสปรุงรส (protein<10 กรัม), ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "ซอสปรุงรส",
+      "allergen": "soy",
+      "matched_string": "ซอสปรุงรส (protein>10 กรัม), ต่อ 100 มล.",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "เต้าเจี้ยว",
+      "allergen": "soy",
+      "matched_string": "เต้าเจี้ยวขาว",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "เต้าเจี้ยว",
+      "allergen": "soy",
+      "matched_string": "เต้าเจี้ยวดำ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "เกาลัด",
+      "allergen": "nut",
+      "matched_string": "เกาลัด, พันธุ์พื้นเมือง, ภาคเหนือ, นึ่ง",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "เกาลัด",
+      "allergen": "nut",
+      "matched_string": "เกาลัด, ลูกใหญ่, ดิบ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "แมคคาเดเมีย",
+      "allergen": "nut",
+      "matched_string": "แมคคาเดเมียนัท, รสธรรมชาติ",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    },
+    {
+      "node": "เมล็ดงา",
+      "allergen": "sesame",
+      "matched_string": "เทเบิล วอเตอร์ วิท โทสเต็ด เซซามิ ซีดส์ (แครกเกอร์ผสมเมล็ดงา), คาร์ส",
+      "sources": [
+        "inmu"
+      ],
+      "public": false
+    }
+  ],
+  "run_context": {
+    "date": "2026-10-07",
+    "label_path": "eval/fixtures/allergen_kg_labels_v2.json",
+    "source_tree_state": "dirty worktree; source hashes identify evaluated contents, not a clean release",
+    "database_scope": "disposable in-memory SQLite only",
+    "provider_calls": 0,
+    "offline_guard_violations": 0
+  }
+}

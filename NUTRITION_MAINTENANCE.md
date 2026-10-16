@@ -113,3 +113,41 @@ compute_from_quantities helper correctly rejects incomplete N3; seed_postgres.se
 catches that error and writes its hand-typed fallback for affected recipes.
 This utility does not touch stored base_recipe nutrition or make that fallback
 grounded. Review that separate seed workflow before using it with partial rows.
+
+## N3 project-derived total (separate approved policy, not live activation)
+
+`nutrition.activate_n3_total` is a separate pinned transition after the reviewed
+herb activation. It calculates only N3 total by direct difference:
+`100 - (86.40 + 3.27 + 0.45 + 1.80) = 8.08g/100g`. It does not substitute
+available4.04, infer carbohydrate from kcal, or transfer sweet-basil composition.
+Published CHOCDF absence and the previous correction remain recorded; ENERC41,
+protein3.27, fat0.45, aliases and all other rows stay unchanged. The0.06g
+difference from available-plus-fibre8.14 remains unresolved, not proven rounding.
+
+The private `accepted_n3_total_records.json` pins the new approval/plan, original
+N3 PDF and unchanged herb code/bundle. It is not a public dataset. Missing or
+changed artifacts fail closed. A `carbs_g` estimate marker and project-derived
+macro entry retain exact reviewed identity but prevent complete source-published
+macro qualification. Both existing calculators can use the number while marking
+results estimated; it does not qualify as fully grounded. Values shown to users
+retain existing rounding:20g contributes1.616g before display, normally1.6g.
+
+Run `python tests/run_offline.py test_nutrition_n3_total_activation.py` from
+backend/ using the existing environment. Tests use the existing synthetic herb
+bundle and SQLite only, not private source files, real reviewer authentication,
+PostgreSQL, providers or held-out outputs.
+
+The CLI requires `--database-url-env` naming an explicit target URL; it does not
+load.env or infer a target. Default execution is a repeatable-read/read-only
+PostgreSQL preview. `--apply-snapshot` and `--restore-snapshot` are separate live
+write operations and need explicit target/snapshot/backup approval. They are not
+authorized by offline implementation acceptance. Selected rows/aliases must match
+the exact old reviewed herb state or new N3 state. Apply writes only N3, is atomic
+and repeatable as a no-op; guarded restore returns its complete old row metadata
+and missing total, and refuses to overwrite later changes.
+
+Do not relax or rerun the older herb utility over this new state: its guard should
+reject it. Restore this N3 transition first if an older-transition restore is
+subsequently approved. No automatic reseed, startup hook, history rewrite, frozen
+label change or held-out rescore is introduced. This module is opt-in: until live
+activation is separately approved and verified, actual N3 remains unchanged.

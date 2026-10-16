@@ -4,10 +4,37 @@
 @keyframes notification-arrive { from { opacity: .8; margin-top: -6px; } to { opacity: 1; margin-top: 0; } }
 @media (prefers-reduced-motion: reduce) { .notification-toast { animation: none; } }
 
+/* Official Noto Sans Thai variable subsets, self-hosted under the SIL OFL. */
+@font-face {
+  font-family: "Noto Sans Thai";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/noto-sans-thai/thai.woff2") format("woff2");
+  unicode-range: U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Sans Thai";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/noto-sans-thai/latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Noto Sans Thai";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/noto-sans-thai/latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 /* Design tokens derived from the previous hardcoded values (#EF5A3A, gray-50/300/400/700, etc.)
    to back the semantic class names used by the pages_v2 redesign. Placeholders until real
    Figma token values are provided. */
 @theme {
+  --font-sans: "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
   --color-background-primary: #ffffff;
   --color-background-tertiary: #f9fafb;
   --color-button-primary: #ef5a3a;
@@ -26,9 +53,17 @@
   --color-forms-otp-fill-filled: #fdece5;
 
   --text-h2: 1.25rem;
+  --text-h2--line-height: 1.5;
   --text-body-large: 1rem;
+  --text-body-large--line-height: 1.75;
   --text-body-medium: 0.875rem;
+  --text-body-medium--line-height: 1.65;
   --text-caption: 0.75rem;
+  --text-caption--line-height: 1.6;
+}
+
+@layer base {
+  body { font-family: var(--font-sans); line-height: 1.65; }
 }
 
 .scrollbar-hide {
@@ -80,6 +115,15 @@
 }
 
 /* Darker orange keeps small white action labels readable on these forms. */
+.custom-cooking-screen {
+  --color-button-primary: #b93e25;
+  caret-color: #b93e25;
+}
+.custom-cooking-screen fieldset > div { max-width: none; justify-content: flex-start; }
+.custom-cooking-screen :is(button, input, textarea):focus-visible {
+  outline: 2px solid #b93e25;
+  outline-offset: 3px;
+}
 .auth-screen {
   --color-button-primary: #c94328;
   --color-text-brands: #c94328;

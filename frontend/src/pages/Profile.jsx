@@ -13,6 +13,11 @@ import {
   Star,
   Heart,
   UserRound,
+  Search,
+  X,
+  BookOpen,
+  Lightbulb,
+  Info,
 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import NotificationBell from "../components/NotificationBell";
@@ -22,6 +27,7 @@ import { getTagColor } from "../utils/tagColors";
 import { useAuth } from "../context/AuthContext";
 import { useLocale } from "../context/LocaleContext";
 import ProfileEditor from "../components/ProfileEditor";
+import { filterHistory } from "../utils/history";
 import {
   OTHER_OPTION,
   NO_RESTRICTION,
@@ -40,8 +46,8 @@ import {
 } from "../constants/preferenceOptions";
 
 const LANGUAGE_OPTIONS = [
-  { code: "th", label: "ไทย" },
-  { code: "en", label: "English" },
+  { code: "th", label: "ไทย", description: "Thai", descriptionLang: "en" },
+  { code: "en", label: "English", description: "ภาษาอังกฤษ", descriptionLang: "th" },
 ];
 
 function Header({ title, onBack, notificationCount, onNotifications }) {
@@ -68,7 +74,7 @@ function Header({ title, onBack, notificationCount, onNotifications }) {
 function FlagIcon({ code }) {
   if (code === "th") {
     return (
-      <svg viewBox="0 0 30 20" className="w-5 h-3.5 rounded-sm overflow-hidden shrink-0">
+      <svg aria-hidden="true" viewBox="0 0 30 20" className="w-5 h-3.5 rounded-sm overflow-hidden shrink-0">
         <rect width="30" height="20" fill="#A51931" />
         <rect y="3.33" width="30" height="13.33" fill="#F4F5F8" />
         <rect y="6.67" width="30" height="6.67" fill="#2D2A4A" />
@@ -78,7 +84,7 @@ function FlagIcon({ code }) {
   if (code === "en") {
     const stripeHeight = 20 / 13;
     return (
-      <svg viewBox="0 0 30 20" className="w-5 h-3.5 rounded-sm overflow-hidden shrink-0">
+      <svg aria-hidden="true" viewBox="0 0 30 20" className="w-5 h-3.5 rounded-sm overflow-hidden shrink-0">
         <rect width="30" height="20" fill="#B22234" />
         {Array.from({ length: 6 }).map((_, i) => (
           <rect
@@ -115,6 +121,8 @@ function MenuRow({ icon, label, onClick }) {
 }
 
 export default function Profile({
+  view, setView,
+  historyBrowse, setHistoryBrowse,
   cookingHistory,
   activeTab,
   setActiveTab,
@@ -122,9 +130,7 @@ export default function Profile({
   onOpenHistoryItem,
   notificationCount, onNotifications, onNotificationPause,
 }) {
-  const [view, setView] = useState("main"); // main | history | language | preferences | helps
   useEffect(() => { onNotificationPause?.(view !== "main"); return () => onNotificationPause?.(false); }, [view, onNotificationPause]);
-  const [historyFilter, setHistoryFilter] = useState("all"); // all | favorites
 
   const { locale: language, t } = useLocale();
   const [languageSaving, setLanguageSaving] = useState(false);
@@ -271,10 +277,8 @@ export default function Profile({
     }
   };
 
-  const visibleHistory =
-    historyFilter === "favorites"
-      ? (cookingHistory || []).filter((item) => item.is_favorite)
-      : cookingHistory || [];
+  const visibleHistory = filterHistory(cookingHistory || [], historyBrowse);
+  const updateHistoryBrowse = patch => setHistoryBrowse(previous => ({ ...previous, ...patch }));
 
   if (view === "edit") {
     return (
@@ -296,23 +300,49 @@ export default function Profile({
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
           <Header title={t("Cooking History")} onBack={goMain} />
           <div className="flex-1 overflow-y-auto px-5 pb-32">
-            <div className="flex gap-2 mb-4">
+            <label htmlFor="history-search" className="block text-sm font-medium text-gray-700 mb-2">{t("ค้นหาประวัติ")}</label>
+            <div className="relative mb-4">
+              <Search aria-hidden="true" className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
+              <input id="history-search" type="search" value={historyBrowse.query}
+                onChange={event => updateHistoryBrowse({ query: event.target.value })}
+                placeholder={t("ชื่อเมนูหรือวัตถุดิบ")}
+                className="w-full min-h-12 rounded-xl border border-gray-300 pl-10 pr-12 text-gray-900 placeholder:text-gray-500 focus-visible:outline-2 focus-visible:outline-[#B93E25]" />
+              {historyBrowse.query && <button type="button" aria-label={t("ล้างคำค้น")}
+                onClick={() => updateHistoryBrowse({ query: "" })}
+                className="absolute right-0 top-0 min-w-12 min-h-12 flex items-center justify-center text-gray-600 rounded-xl focus-visible:outline-2 focus-visible:outline-[#B93E25]"><X className="w-5 h-5" /></button>}
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
               {[
                 { key: "all", label: "ทั้งหมด" },
                 { key: "favorites", label: "♥ รายการโปรด" },
               ].map((chip) => (
                 <button
                   key={chip.key}
-                  onClick={() => setHistoryFilter(chip.key)}
+                  onClick={() => updateHistoryBrowse({ favorite: chip.key })}
+                  aria-pressed={historyBrowse.favorite === chip.key}
                   className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
-                    historyFilter === chip.key
-                      ? "bg-[#EF5A3A] text-white border-[#EF5A3A]"
-                      : "bg-white text-[#EF5A3A] border-[#EF5A3A]"
-                  }`}
+                    historyBrowse.favorite === chip.key
+                      ? "bg-[#B93E25] text-white border-[#B93E25]"
+                      : "bg-white text-[#B93E25] border-[#B93E25]"
+                  } min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]`}
                 >
                   {t(chip.label)}
                 </button>
               ))}
+            </div>
+            <label htmlFor="history-rating-filter" className="block text-sm font-medium text-gray-700 mb-2">{t("กรองตามคะแนน")}</label>
+            <select id="history-rating-filter" value={historyBrowse.rating}
+              onChange={event => updateHistoryBrowse({ rating: event.target.value })}
+              className="w-full min-h-12 rounded-xl border border-gray-300 bg-white px-3 text-gray-900 focus-visible:outline-2 focus-visible:outline-[#B93E25]">
+              <option value="all">{t("ทุกคะแนน")}</option>
+              <option value="unrated">{t("ยังไม่ให้คะแนน")}</option>
+              {[1, 2, 3, 4, 5].map(stars => <option key={stars} value={stars}>{t("{stars} ดาว", { stars })}</option>)}
+            </select>
+            <div className="flex items-center justify-between gap-3 my-3">
+              <p role="status" className="text-sm text-gray-600">{t("พบ {count} รายการ", { count: visibleHistory.length })}</p>
+              <button type="button" onClick={() => setHistoryBrowse({ query: "", favorite: "all", rating: "all" })}
+                disabled={!historyBrowse.query && historyBrowse.favorite === "all" && historyBrowse.rating === "all"}
+                className="min-h-11 px-2 text-sm font-medium text-[#B93E25] disabled:text-gray-500 disabled:opacity-60 rounded-lg focus-visible:outline-2 focus-visible:outline-[#B93E25]">{t("ล้างตัวกรอง")}</button>
             </div>
             {!cookingHistory || cookingHistory.length === 0 ? (
               <div className="text-center text-gray-400 mt-10">
@@ -322,15 +352,15 @@ export default function Profile({
             ) : visibleHistory.length === 0 ? (
               <div className="text-center text-gray-400 mt-10">
                 <Heart className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p>{t("ยังไม่มีสูตรที่กด ♥ ไว้")}</p>
+                <p>{t("ไม่พบประวัติที่ตรงกับการค้นหาหรือตัวกรอง")}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {visibleHistory.map((item) => (
-                  <div
+                  <button type="button"
                     key={item.id}
                     onClick={() => onOpenHistoryItem?.(item)}
-                    className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3 shadow-sm cursor-pointer active:bg-gray-100"
+                    className="w-full text-left bg-gray-50 rounded-2xl p-3 flex items-center gap-3 shadow-sm cursor-pointer active:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
                   >
                     <div className="w-16 h-16 rounded-full overflow-hidden bg-white shrink-0">
                       <img
@@ -365,14 +395,14 @@ export default function Profile({
                               key={n}
                               className={`w-3.5 h-3.5 ${
                                 n <= item.stars
-                                  ? "text-orange-400 fill-orange-400"
-                                  : "text-gray-200"
+                                  ? "text-[#B93E25] fill-[#B93E25]"
+                                  : "text-gray-500"
                               }`}
                             />
                           ))}
                           {item.tag && (
                             <span className="text-[11px] text-gray-400 ml-1">
-                              {item.tag}
+                              {t(item.tag)}
                             </span>
                           )}
                         </div>
@@ -381,7 +411,7 @@ export default function Profile({
                     {item.is_favorite && (
                       <Heart className="w-4 h-4 text-red-500 fill-current shrink-0" />
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -397,40 +427,50 @@ export default function Profile({
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
           <Header title={t("Language")} onBack={goMain} />
-          <div className="flex-1 overflow-y-auto px-5 pb-32">
-            <div role="radiogroup" aria-label={t("ภาษา")} className="flex flex-col gap-2">
+          <main className="flex-1 overflow-y-auto px-6 pb-32">
+            <fieldset aria-busy={languageSaving} aria-describedby="language-help" className="min-w-0">
+              <legend className="text-xl font-semibold text-gray-900">{t("เลือกภาษาของแอป")}</legend>
+              <p id="language-help" className="mt-2 mb-6 text-sm text-gray-600 leading-relaxed">{t("เลือกแล้วบันทึกให้อัตโนมัติ")}</p>
+              <div className="flex flex-col gap-3">
               {LANGUAGE_OPTIONS.map((opt) => (
                 <label
                   key={opt.code}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border transition focus-within:outline-2 focus-within:outline-[#B93E25] ${languageSaving ? "opacity-60" : "cursor-pointer"} ${
+                  className={`w-full min-h-20 flex items-center justify-between gap-3 px-4 py-4 rounded-2xl border transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#B93E25] ${languageSaving ? "opacity-60 cursor-wait" : "cursor-pointer"} ${
                     language === opt.code
-                      ? "bg-orange-50 border-[#EF5A3A]"
-                      : "bg-gray-50 border-transparent hover:border-gray-200"
+                      ? "bg-[#FDECE5] border-[#B93E25]"
+                      : "bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400"
                   }`}
                 >
                   <input type="radio" name="profile-language" value={opt.code} checked={language === opt.code}
-                    onChange={() => changeLanguage(opt.code)} aria-disabled={languageSaving} className="sr-only" />
-                  <span className="text-[15px] font-medium text-gray-800 flex items-center gap-2">
+                    onChange={() => changeLanguage(opt.code)} aria-label={opt.label} lang={opt.code} aria-disabled={languageSaving} className="sr-only" />
+                  <span className="flex min-w-0 items-center gap-3">
                     <FlagIcon code={opt.code} />
-                    {t(opt.label)}
+                    <span className="flex flex-col gap-0.5">
+                      <span lang={opt.code} className="text-base font-semibold text-gray-900">{opt.label}</span>
+                      <span lang={opt.descriptionLang} className={language === opt.code ? "text-sm text-[#93402D]" : "text-sm text-gray-600"}>{opt.description}</span>
+                    </span>
                   </span>
+                  <span aria-hidden="true" className="flex shrink-0 items-center gap-3">
+                    {language === opt.code && <span className="text-xs font-semibold text-[#B93E25]">{t("ใช้งานอยู่")}</span>}
                   <span
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
                       language === opt.code
-                        ? "border-[#EF5A3A]"
-                        : "border-gray-300"
+                        ? "border-[#B93E25]"
+                        : "border-gray-400"
                     }`}
                   >
                     {language === opt.code && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#EF5A3A]" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#B93E25]" />
                     )}
+                  </span>
                   </span>
                 </label>
               ))}
-            </div>
-            <p role="status" className="mt-4 text-sm text-gray-600">{languageSaving ? t("กำลังบันทึกภาษา...") : ""}</p>
+              </div>
+            </fieldset>
+            <p role="status" className="mt-5 min-h-6 text-sm text-gray-600">{languageSaving ? t("กำลังบันทึกภาษา...") : ""}</p>
             {languageError && <p role="alert" className="mt-3 text-sm text-red-700">{t(languageError)}</p>}
-          </div>
+          </main>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       </div>
@@ -580,20 +620,27 @@ export default function Profile({
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
           <Header title={t("ช่วยเหลือ")} onBack={goMain} />
-          <div className="flex-1 overflow-y-auto px-5 pb-32 flex flex-col gap-5">
-            <div>
-              <h3 className="text-base font-bold text-black mb-2">{t("วิธีใช้งาน")}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{t("เพิ่มวัตถุดิบใน My Fridge หรือเลือกเมนูจากหน้าแรก แล้วกด \"สร้างเมนูอาหารกันเลย\" เพื่อให้ AI คิดสูตรอาหารจากวัตถุดิบที่มี")}</p>
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-black mb-2">{t("Tips")}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{t("ระบุอาการแพ้อาหารและอุปกรณ์ที่มีให้ครบ เพื่อให้สูตรอาหารที่ได้ปลอดภัยและทำได้จริง")}</p>
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-black mb-2">{t("ข้อกำหนดการใช้งาน (TOS)")}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{t("สูตรอาหารและข้อมูลโภชนาการที่สร้างโดย AI เป็นการคาดการณ์เพื่อการอ้างอิงเท่านั้น โปรดตรวจสอบวัตถุดิบและปริมาณจริงก่อนรับประทาน โดยเฉพาะผู้ที่มีอาการแพ้อาหาร")}</p>
-            </div>
-          </div>
+          <main className="flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-32">
+            <section aria-labelledby="help-how-to" className="mb-8">
+              <BookOpen aria-hidden="true" className="w-8 h-8 text-[#B93E25] mb-4" />
+              <h1 id="help-how-to" className="text-2xl font-bold text-gray-900 leading-snug mb-3">{t("วิธีใช้งาน")}</h1>
+              <p className="text-base text-gray-700 leading-7">{t("เพิ่มวัตถุดิบใน My Fridge หรือเลือกเมนูจากหน้าแรก แล้วกด \"สร้างเมนูอาหารกันเลย\" เพื่อให้ AI คิดสูตรอาหารจากวัตถุดิบที่มี")}</p>
+            </section>
+            <section aria-labelledby="help-tips" className="border-t border-gray-200 pt-6 mb-8">
+              <h2 id="help-tips" className="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-3">
+                <Lightbulb aria-hidden="true" className="w-5 h-5 text-[#B93E25] shrink-0" />
+                {t("Tips")}
+              </h2>
+              <p className="text-base text-gray-700 leading-7">{t("ระบุอาการแพ้อาหารและอุปกรณ์ที่มีให้ครบ เพื่อให้สูตรอาหารที่ได้ปลอดภัยและทำได้จริง")}</p>
+            </section>
+            <section aria-labelledby="help-terms" className="rounded-2xl bg-gray-50 p-5">
+              <h2 id="help-terms" className="flex items-start gap-2 text-base font-semibold text-gray-900 mb-3">
+                <Info aria-hidden="true" className="w-5 h-5 mt-0.5 text-gray-600 shrink-0" />
+                {t("ข้อกำหนดการใช้งาน (TOS)")}
+              </h2>
+              <p className="text-sm text-gray-600 leading-6">{t("สูตรอาหารและข้อมูลโภชนาการที่สร้างโดย AI เป็นการคาดการณ์เพื่อการอ้างอิงเท่านั้น โปรดตรวจสอบวัตถุดิบและปริมาณจริงก่อนรับประทาน โดยเฉพาะผู้ที่มีอาการแพ้อาหาร")}</p>
+            </section>
+          </main>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       </div>

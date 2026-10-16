@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Custom Cooking QA — synthetic data</title></head>
+<body style="overflow:hidden"><div id="root"></div><script type="module">
+// Development-only fixture; synthetic account, ingredients and generation response.
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { AuthProvider } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import CustomCookingPage from '../src/pages/CustomCookingPage.jsx';
+import '../src/index.css';
+
+const params = new URLSearchParams(location.search);
+const locale = params.get('locale') === 'en' ? 'en' : 'th';
+window.fetch = async (input) => {
+    if (input === '/api/auth/me') return Response.json({status:'success',data:{id:1,locale,has_avatar:false}});
+    throw new Error('Unexpected request blocked by Custom Cooking QA');
+};
+const ingredients = params.has('empty') ? [] : [
+    {id:1,name:'อกไก่',image:'/src/assets/HomeMade_Logo.png'},
+    {id:2,name:'ไข่ไก่',expiry_date:'2000-01-01'},
+    {id:3,name:'ใบกะเพรา'},
+    {id:4,name:'แครอท',image:'data:image/png;base64,broken'},
+];
+if (params.has('long')) ingredients.push({id:5,name:'ExtraLongIngredientNameWithoutSpaces'.repeat(3)});
+function Preview() {
+    const [tab,setTab] = React.useState('cooking');
+    const [result,setResult] = React.useState({calls:0});
+    const onGenerate = async (preferences,selected) => {
+        setResult(previous=>({calls:previous.calls+1,preferences,selected}));
+        await new Promise(resolve=>setTimeout(resolve,300));
+        return params.has('success') ? null : 'กรุณาระบุอาหารที่แพ้ให้ชัดเจน เช่น แพ้กุ้ง หรือเลือกไม่มีอาการแพ้';
+    };
+    return React.createElement(React.Fragment,null,
+        React.createElement(CustomCookingPage,{userIngredients:ingredients,activeTab:tab,setActiveTab:setTab,onBack:()=>setTab('home'),onGenerate}),
+        React.createElement('output',{id:'qa-result',style:{display:'block',overflowWrap:'anywhere'}},JSON.stringify({tab,...result})),
+    );
+}
+createRoot(document.getElementById('root')).render(React.createElement(AuthProvider,null,React.createElement(LocaleProvider,null,React.createElement(Preview))));
+</script></body></html>

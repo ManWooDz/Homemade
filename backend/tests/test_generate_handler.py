@@ -23,7 +23,7 @@ _STUB_NUTRITION_RESULT = NutritionResult(
 
 
 VALID_RECIPE = {
-    "recipe_name": "Thai Basil Pork",
+    "recipe_name": "Holy Basil Pork",
     "servings": 2,
     "adjusted_ingredients": [
         "หมูสับ 200 กรัม",
@@ -74,7 +74,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
     def make_request():
         return GenerateRecipeTextRequest(
             recipe={"name": "Custom Recipe from Fridge"},
-            ingredients=[{"id": 1, "name": "minced pork"}],
+            ingredients=[{"id": 1, "name": "minced pork"}, {"id": 2, "name": "holy basil leaves"}],
             preferences={"allergy": "", "taste": "", "equipment": "", "extra": ""},
         )
 
@@ -126,7 +126,8 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
                     "name": "minced pork",
                     "quantity": "250 grams",
                     "image": "pork.png",
-                }
+                },
+                {"id": 2, "name": "holy basil leaves"},
             ],
             preferences={"allergy": "", "taste": "", "equipment": "", "extra": ""},
         )
@@ -135,7 +136,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
             response = await call_handler(request)
 
         self.assertEqual(response["status"], "success")
-        self.assertEqual(captured["ingredients"], ["minced pork"])
+        self.assertEqual(captured["ingredients"], ["minced pork", "holy basil leaves"])
         self.assertEqual(response["data"]["servings"], 2)
         self.assertEqual(response["data"]["nutrition"]["basis"], "per_serving")
         mock_llm.assert_called_once()
@@ -148,6 +149,45 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response["status"], "success")
                 self.assertEqual(mock_llm.call_count, 2)
                 self.assertEqual(feedbacks, [None, "Invalid recipe"])
+
+    async def test_five_checks_send_first_reason_back_then_accept_correction(self):
+        candidates = []
+        unknown = deepcopy(VALID_RECIPE)
+        unknown["adjusted_ingredients"].append("กุ้ง 100 กรัม")
+        candidates.append((unknown, "Invalid ingredient found:"))
+        missing = deepcopy(VALID_RECIPE)
+        missing["instructions"].append("เติมน้ำปลา")
+        candidates.append((missing, "Undeclared ingredient"))
+        numeric = deepcopy(VALID_RECIPE)
+        numeric["nutrition"].update(calories=300, protein_g=10000, carbs_g=10000, fat_g=10000)
+        candidates.append((numeric, "Nutrition contradiction:"))
+        named = deepcopy(VALID_RECIPE)
+        named["recipe_name"] = "Shrimp soup"
+        candidates.append((named, "Missing named ingredient:"))
+        flavor = deepcopy(VALID_RECIPE)
+        flavor.update(recipe_name="Pad Thai", instructions=["ผัดนมวัวกับน้ำปลา"])
+        flavor["adjusted_ingredients"].extend(["นมวัว 50 ml", "น้ำปลา 5 ml"])
+        candidates.append((flavor, "Flavor F01:"))
+        for invalid, prefix in candidates:
+            with self.subTest(prefix=prefix):
+                body = self.make_request()
+                body.ingredients.append({"name": "cow milk"})
+                with patch("main.call_agentic_llm", side_effect=[invalid, deepcopy(VALID_RECIPE)]) as generator:
+                    response = await call_handler(body)
+                self.assertEqual(response["status"], "success")
+                self.assertEqual(generator.call_count, 2)
+                self.assertTrue(generator.call_args.kwargs["feedback"].startswith(prefix))
+
+    async def test_unresolved_identity_stops_after_three_and_does_not_save(self):
+        invalid = deepcopy(VALID_RECIPE)
+        invalid["adjusted_ingredients"].append("กุ้ง 100 กรัม")
+        with patch("main.call_agentic_llm", return_value=invalid) as generator:
+            response = await call_handler(self.make_request())
+        self.assertEqual(response["status"], "error")
+        self.assertEqual(generator.call_count, 3)
+        self.assertIn("Invalid ingredient found:", generator.call_args.kwargs["feedback"])
+        self.mock_save_history.assert_not_called()
+        self.mock_compute_nutrition.assert_not_called()
 
     async def test_handler_retries_missing_or_wrong_nutrient_value(self):
         invalid_recipes = []
@@ -266,6 +306,9 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
             call_agentic_llm(["minced pork"], {}, {"name": "test"})
 
         prompt = captured["contents"]
+        self.assertIn("ทุกวัตถุดิบที่ใช้ในขั้นตอน", prompt)
+        self.assertIn("หมูสับ", prompt)
+        self.assertIn("เฉพาะผัดไทย/ผัดกะเพรา", prompt)
         self.assertIn("servings คือจำนวนที่เสิร์ฟของสูตรนี้", prompt)
         self.assertIn(
             "ปริมาณใน adjusted_ingredients ต้องเป็นปริมาณรวมสำหรับทั้งสูตร ซึ่งครอบคลุมจำนวนที่เสิร์ฟตาม servings",
@@ -360,6 +403,8 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
         recipe = deepcopy(VALID_RECIPE)
         recipe["adjusted_ingredients"] = ["หมูสับ 200 กรัม"]
+        recipe["recipe_name"] = "Pork soup"
+        recipe["instructions"] = ["ต้มหมูสับให้สุก"]
         with patch("nutrition.calculator.match_ingredient", return_value=synthetic_match(alias="หมูสับ")), \
              patch("main.call_agentic_llm", return_value=recipe):
             response = await call_handler(self.make_request())
@@ -374,6 +419,8 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
         recipe = deepcopy(VALID_RECIPE)
         recipe["adjusted_ingredients"] = ["หมูสับ 200 กรัม"]
+        recipe["recipe_name"] = "Pork soup"
+        recipe["instructions"] = ["ต้มหมูสับให้สุก"]
         match = synthetic_match(alias="หมูสับ")
         match.macros.calories = 200
         with patch("nutrition.calculator.match_ingredient", return_value=match), \

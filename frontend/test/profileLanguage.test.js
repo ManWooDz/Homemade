@@ -32,6 +32,25 @@ test("both locales translate UI without changing Thai recipe/user content or all
     assert.equal(translate("กำลังค้นหาสินค้าจากบาร์โค้ด {barcode}", "en", { barcode: "00123456" }), "Looking up barcode 00123456");
 });
 
+test("revised Thai copy keeps original lookup aliases and canonical preferences intact", () => {
+    for (const [alias, thai, english] of [
+        ["ชื่อแสดง", "ชื่อที่แสดง", "Display name"],
+        ["ค่าการทำอาหาร", "ความชอบในการทำอาหาร", "Preferences"],
+        ["ลบออกจาก My Fridge", "ลบออกจากตู้เย็น", "Remove from My Fridge"],
+        ["ทาน Vegan", "กินวีแกน", "Vegan diet"],
+        ["แพ้แป้งสาลี / Gluten", "แพ้แป้งสาลี / กลูเตน", "Wheat / gluten allergy"],
+        ["ยืนยันครอป", "ใช้รูปนี้", "Confirm crop"],
+    ]) {
+        assert.equal(translate(alias), thai);
+        assert.equal(translate(alias, "en"), english);
+        assert.equal(translate(english), thai);
+    }
+    assert.ok(ALLERGY_OPTIONS.includes("แพ้แป้งสาลี / Gluten"));
+    assert.equal(translate("หมวดหมู่", "en"), "Categories");
+    assert.equal(translate("ประเภท", "en"), "Category");
+    assert.equal(translate('ลบ "{name}" ออกจากตู้เย็นของฉัน?', "th", { name: "ไข่ 🌶️" }), 'ลบ "ไข่ 🌶️" ออกจากตู้เย็นของฉัน?');
+});
+
 test("English generation errors stay safe and actionable while Thai behavior remains", () => {
     const kg = "ระบบตรวจสอบสารก่อภูมิแพ้ยังไม่พร้อม จึงยังสร้างสูตรไม่ได้ กรุณาลองใหม่ภายหลัง";
     assert.equal(toUserFacingGenerateError(kg), kg);

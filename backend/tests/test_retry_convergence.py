@@ -13,14 +13,14 @@ from eval.retry_convergence import check_confirmation, overall, run_arm, summari
 
 CASE = {
     "case_id": "c1",
-    "ingredients": [{"name": "หมูสับ"}],
+    "ingredients": [{"name": "หมูสับ"}, {"name": "กุ้ง"}],
     "user_prefs": {"allergy": "แพ้กุ้ง"},
     "base_recipe": {"name": "x"},
 }
 
 NO_ALLERGY_CASE = {
     "case_id": "c2",
-    "ingredients": [{"name": "หมูสับ"}],
+    "ingredients": [{"name": "หมูสับ"}, {"name": "กุ้ง"}],
     "user_prefs": {"allergy": ""},
     "base_recipe": {"name": "x"},
 }

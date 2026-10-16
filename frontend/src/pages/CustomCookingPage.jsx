@@ -1,9 +1,10 @@
 import { useLocale } from "../context/LocaleContext";
 import NotificationBell from "../components/NotificationBell";
 import { useState, useRef } from "react";
-import { ChevronLeft } from "lucide-react";
+import { Check, ChefHat, ChevronLeft, Refrigerator } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { OptionChips } from "../components/OptionPicker";
 import { expiryBadgeLabel } from "../utils/expiry";
 
 export default function CustomCookingPage({
@@ -118,220 +119,117 @@ export default function CustomCookingPage({
     };
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <div className="custom-cooking-screen h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
             <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-                {/* Header Actions */}
-                <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
-                    <button
-                        onClick={onBack}
-                        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
-                    >
+                <header className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
+                    <button type="button" onClick={onBack} aria-label={t("กลับ")}
+                        className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md">
                         <ChevronLeft className="w-6 h-6" />
                     </button>
-                    <img
-                        src={logo}
-                        alt="HomeMade"
-                        className="h-18 object-contain"
-                    />
+                    <img src={logo} alt="HomeMade" className="h-18 object-contain" />
                     <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
-                </div>
+                </header>
 
-                <div className="flex-1 overflow-y-auto px-5 pb-32">
-                    {/* Page Title */}
-                    <div className="mb-3 flex justify-center">
-                        <h2 className="text-2xl font-bold text-gray-900 leading-tight">{t("Custom Cooking")}</h2>
+                <main className="flex-1 min-h-0 overflow-y-auto px-6 pb-8">
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-bold text-gray-900 leading-snug">{t("Custom Cooking")}</h1>
+                        <p className="mt-2 text-sm text-gray-600 leading-relaxed">{t("เลือกวัตถุดิบ แล้วปรับสูตรให้เข้ากับคุณ")}</p>
                     </div>
 
-                    {/* Description Textarea */}
-                    <div className="mb-8">
-                        <div className="flex justify-between items-end mb-4">
-                            <h3 className="text-lg font-bold text-black">{t("วัตถุดิบที่ต้องการใช้")}</h3>
-                            <span className="text-sm text-red-700">{t("เลือกอย่างน้อย 1 อย่าง")}</span>
-                        </div>
-                        {/* Display Fridge Ingredients */}
+                    <section aria-labelledby="cooking-ingredients" className="mb-8">
+                        <h2 id="cooking-ingredients" className="text-lg font-semibold text-gray-900">{t("วัตถุดิบที่ต้องการใช้")}</h2>
+                        <p className="mt-1 mb-4 text-sm text-gray-600">{t("เลือกอย่างน้อย 1 อย่าง")}</p>
                         {userIngredients && userIngredients.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 mb-6">
+                            <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
                                 {userIngredients.map((ing) => {
-                                    const isSelected =
-                                        selectedIngredients.includes(ing.id);
+                                    const isSelected = selectedIngredients.includes(ing.id);
+                                    const expiry = expiryBadgeLabel(ing.expiry_date, locale);
                                     return (
-                                        <div
-                                            key={ing.id}
-                                            onClick={() =>
-                                                toggleIngredient(ing.id)
-                                            }
-                                            className={`px-3 py-1.5 rounded-full flex items-center gap-2 cursor-pointer transition-colors ${
-                                                isSelected
-                                                    ? "bg-orange-50 border border-[#EF5A3A]"
-                                                    : "bg-gray-50 border border-gray-300 opacity-60 hover:bg-gray-100/80"
-                                            }`}
-                                        >
-                                            <img
-                                                src={ing.image}
-                                                alt={ing.name}
-                                                className="w-5 h-5 rounded-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.src =
-                                                        "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150";
-                                                }}
-                                            />
-                                            <span
-                                                className={`text-sm font-medium ${
-                                                    isSelected
-                                                        ? "text-[#EF5A3A]"
-                                                        : "text-gray-500"
-                                                }`}
-                                            >
-                                                {ing.name}
+                                        <button key={ing.id} type="button" aria-pressed={isSelected}
+                                            onClick={() => toggleIngredient(ing.id)}
+                                            className={"min-h-20 w-full min-w-0 grid grid-cols-[2rem_minmax(0,1fr)_1.25rem] items-center gap-x-2 gap-y-1 p-3 rounded-2xl border text-left transition-colors " + (isSelected ? "bg-[#FDECE5] border-[#B93E25]" : "bg-white border-gray-300 hover:border-gray-400 hover:bg-gray-50")}>
+                                            {ing.image ? <img src={ing.image} alt="" className="w-8 h-8 rounded-full object-cover shrink-0"
+                                                onError={(event) => { if (event.currentTarget.getAttribute("src") !== logo) event.currentTarget.src = logo; }} />
+                                                : <Refrigerator aria-hidden="true" className="w-8 h-8 text-gray-500 shrink-0" />}
+                                            <span className="min-w-0 text-sm font-semibold text-gray-900 break-words">{ing.name}</span>
+                                            <span aria-hidden="true" className={"w-5 h-5 rounded-full border shrink-0 flex items-center justify-center " + (isSelected ? "bg-[#B93E25] border-[#B93E25] text-white" : "border-gray-400")}>
+                                                {isSelected && <Check className="w-3.5 h-3.5" />}
                                             </span>
-                                            {expiryBadgeLabel(ing.expiry_date, locale) && (
-                                                <span className="text-[10px] font-medium text-red-500">
-                                                    {expiryBadgeLabel(ing.expiry_date, locale)}
-                                                </span>
-                                            )}
-                                        </div>
+                                            {expiry && <span className="col-span-3 text-xs text-red-700 leading-relaxed">{expiry}</span>}
+                                        </button>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <div className="bg-gray-50 rounded-2xl p-4 text-center text-sm text-gray-500 mb-6">{t("ตู้เย็นของคุณว่างเปล่า คุณสามารถไปเพิ่มวัตถุดิบได้ที่ My Fridge")}</div>
+                            <div className="rounded-2xl bg-gray-50 p-5">
+                                <Refrigerator aria-hidden="true" className="w-7 h-7 text-gray-500 mb-3" />
+                                <p className="text-sm text-gray-600 leading-relaxed">{t("ตู้เย็นของคุณว่างเปล่า คุณสามารถไปเพิ่มวัตถุดิบได้ที่ My Fridge")}</p>
+                                <button type="button" onClick={() => setActiveTab("fridge")} className="mt-3 min-h-11 text-sm font-semibold text-[#B93E25] underline underline-offset-4">{t("ไปที่ตู้เย็นของฉัน")}</button>
+                            </div>
                         )}
+                    </section>
 
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("รสชาติ")}</h3>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {TASTE_OPTIONS.map((option) => (
-                                <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() => setTaste(option)}
-                                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                                        taste === option
-                                            ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                                            : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-                                    }`}
-                                >
-                                    {t(option)}
-                                </button>
-                            ))}
-                        </div>
-                        {taste === OTHER_OPTION && (
-                            <input
-                                type="text"
-                                value={tasteOther}
-                                onChange={(e) => setTasteOther(e.target.value)}
-                                placeholder={t("ระบุรสชาติที่ต้องการ")}
-                                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
-                            />
-                        )}
-                        {taste !== OTHER_OPTION && <div className="mb-2" />}
+                    <div className="space-y-8 border-t border-gray-200 pt-8">
+                        <fieldset className="min-w-0">
+                            <legend className="text-lg font-semibold text-gray-900">{t("รสชาติ")}</legend>
+                            <p className="mt-1 mb-4 text-sm text-gray-600">{t("เลือกได้ 1 รสชาติ หรือไม่ระบุ")}</p>
+                            <OptionChips options={TASTE_OPTIONS} selected={taste} onToggle={setTaste} />
+                            {taste === OTHER_OPTION && (
+                                <input type="text" value={tasteOther} onChange={(event) => setTasteOther(event.target.value)}
+                                    aria-label={t("ระบุรสชาติที่ต้องการ")} placeholder={t("ระบุรสชาติที่ต้องการ")}
+                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
+                            )}
+                        </fieldset>
 
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อาการแพ้อาหาร")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {ALLERGY_OPTIONS.map((option) => (
-                                <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() => {
-                                        toggleInList(allergies, setAllergies, option, ALLERGY_NONE);
-                                        setAllergyError(null);
-                                    }}
-                                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                                        allergies.includes(option)
-                                            ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                                            : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-                                    }`}
-                                >
-                                    {t(option)}
-                                </button>
-                            ))}
+                        <fieldset className="min-w-0">
+                            <legend className="text-lg font-semibold text-gray-900">{t("อาการแพ้อาหาร")}</legend>
+                            <p className="mt-1 mb-4 text-sm text-gray-600">{t("ระบุอาหารที่แพ้ เลือกได้มากกว่า 1 ข้อ")}</p>
+                            <OptionChips options={ALLERGY_OPTIONS} selected={allergies} multiple onToggle={(option) => {
+                                toggleInList(allergies, setAllergies, option, ALLERGY_NONE);
+                                setAllergyError(null);
+                            }} />
+                            {allergies.includes(OTHER_OPTION) && (
+                                <input type="text" ref={allergyInput} value={allergiesOther}
+                                    aria-label={t("ระบุอาการแพ้อาหาร")} aria-invalid={Boolean(allergyError)}
+                                    aria-describedby={allergyError ? "allergy-error" : undefined} maxLength={1000}
+                                    onChange={(event) => { setAllergiesOther(event.target.value); setAllergyError(null); }}
+                                    placeholder={t("ระบุอาการแพ้อาหาร")}
+                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
+                            )}
+                            {allergyError && <p id="allergy-error" role="alert" className="mt-3 text-sm text-red-700 break-words">{t(allergyError)}</p>}
+                        </fieldset>
+
+                        <fieldset className="min-w-0">
+                            <legend className="text-lg font-semibold text-gray-900">{t("อุปกรณ์ที่มี")}</legend>
+                            <p className="mt-1 mb-4 text-sm text-gray-600">{t("เลือกอุปกรณ์ที่ใช้ได้มากกว่า 1 อย่าง")}</p>
+                            <OptionChips options={EQUIPMENT_OPTIONS} selected={equipment} multiple onToggle={(option) => toggleInList(equipment, setEquipment, option, EQUIPMENT_NONE)} />
+                            {equipment.includes(OTHER_OPTION) && (
+                                <input type="text" value={equipmentOther} onChange={(event) => setEquipmentOther(event.target.value)}
+                                    aria-label={t("ระบุอุปกรณ์ที่มี")} placeholder={t("ระบุอุปกรณ์ที่มี")}
+                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
+                            )}
+                        </fieldset>
+
+                        <div>
+                            <label htmlFor="cooking-extra" className="block text-lg font-semibold text-gray-900">{t("ความต้องการอื่นๆ (ถ้ามี)")}</label>
+                            <textarea id="cooking-extra" rows={4} value={extra} onChange={(event) => setExtra(event.target.value)}
+                                placeholder={t("เช่น สิ่งที่ต้องระวัง หรือ ลักษณะของเมนูที่อยากได้")}
+                                className="mt-3 w-full border border-gray-400 rounded-2xl p-4 text-base text-gray-900 placeholder:text-gray-500 resize-y" />
                         </div>
-                        {allergies.includes(OTHER_OPTION) && (
-                            <input
-                                type="text"
-                                ref={allergyInput}
-                                value={allergiesOther}
-                                aria-label={t("ระบุอาการแพ้อาหาร")}
-                                aria-invalid={Boolean(allergyError)}
-                                aria-describedby={allergyError ? "allergy-error" : undefined}
-                                maxLength={1000}
-                                onChange={(e) => {
-                                    setAllergiesOther(e.target.value);
-                                    setAllergyError(null);
-                                }}
-                                placeholder={t("ระบุอาการแพ้อาหาร")}
-                                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
-                            />
-                        )}
-                        {allergyError && (
-                            <p id="allergy-error" role="alert" className="text-sm text-red-700 mb-4 break-words">
-                                {t(allergyError)}
-                            </p>
-                        )}
-                        {!allergies.includes(OTHER_OPTION) && <div className="mb-2" />}
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อุปกรณ์ที่มี")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {EQUIPMENT_OPTIONS.map((option) => (
-                                <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() =>
-                                        toggleInList(equipment, setEquipment, option, EQUIPMENT_NONE)
-                                    }
-                                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                                        equipment.includes(option)
-                                            ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                                            : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-                                    }`}
-                                >
-                                    {t(option)}
-                                </button>
-                            ))}
-                        </div>
-                        {equipment.includes(OTHER_OPTION) && (
-                            <input
-                                type="text"
-                                value={equipmentOther}
-                                onChange={(e) => setEquipmentOther(e.target.value)}
-                                placeholder={t("ระบุอุปกรณ์ที่มี")}
-                                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
-                            />
-                        )}
-                        <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("ความต้องการอื่นๆ (ถ้ามี)")}</h3>
-                        <textarea
-                            className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-                            placeholder={t("เช่น สิ่งที่ต้องระวัง หรือ ลักษณะของเมนูที่อยากได้")}
-                            value={extra}
-                            onChange={(e) => setExtra(e.target.value)}
-                        ></textarea>
                     </div>
+                </main>
 
-                    {/* Action Button */}
-                    <button
-                        onClick={handleGenerateClick}
-                        disabled={selectedIngredients.length === 0 || isSubmitting}
+                <div className="shrink-0 mb-24 border-t border-gray-200 bg-white px-6 pt-3 pb-4">
+                    <p role="status" className="mb-2 text-xs text-gray-600 tabular-nums">
+                        {selectedIngredients.length > 0 ? t("เลือกแล้ว {count} รายการ", { count: selectedIngredients.length }) : t("เลือกอย่างน้อย 1 อย่าง")}
+                    </p>
+                    <button type="button" onClick={handleGenerateClick} disabled={selectedIngredients.length === 0 || isSubmitting}
                         aria-busy={isSubmitting}
-                        className="w-full bg-[#EF5A3A] text-white py-4.5 rounded-full text-lg font-medium shadow-md flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 transition cursor-pointer"
-                    >
-                        <svg
-                            className="w-6 h-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M12 4v2m-6 4v2m12-2v2M4 14a8 8 0 0016 0H4zm0 0h16v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-1z"
-                            />
-                        </svg>
-                        {isSubmitting ? t("กำลังตรวจสอบอาการแพ้…") : t("สร้างเมนูจากวัตถุดิบในตู้เย็น")}
+                        className="w-full min-h-12 px-4 py-3 bg-[#B93E25] text-white rounded-full text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#9D341F] disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors">
+                        <ChefHat aria-hidden="true" className="w-5 h-5 shrink-0" />
+                        {isSubmitting ? t("กำลังตรวจสอบอาการแพ้…") : t("สร้างเมนูอาหารกันเลย")}
                     </button>
                 </div>
-
-                {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
         </div>

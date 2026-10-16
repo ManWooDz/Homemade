@@ -1,14 +1,115 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
-**Verify focus after disabled transitions and respect browser masking (2026-10-14):**
-- what: reset UI refinement disabled OTP during resend, so the existing immediate focus call targeted a disabled input. Fixed with deferred frame focus and confirmed activeElement.id=otp-code after real cooldown/resend. Initial QA value comparisons failed because credential DOM values were redacted; compareDocumentPosition was unavailable in the read-only browser mirror, and an exact geometry assertion rejected a0.2px rounding difference. A stored HMR LocaleProvider error was distinguished from a fresh fixture's zero console errors.
-- root cause: preserved a focus action without checking its new disabled timing, treated sanitized browser values as real input data, assumed full DOM API support and exact pixel arithmetic, and mixed old-document logs with current runtime evidence.
-- correct: schedule focus after controls re-enable and assert the browser's active element. Verify masked credential behavior with visible enabled/error/navigation states; test exact normalization in isolated handler tests without trying to recover redacted values. Use supported DOM geometry with a named1px rounding tolerance, reopen/verify fixture markers after HMR, and inspect fresh-document logs before attributing old console errors to current code.
+**Await verification completion before dependent Git commands (2026-10-17):**
+- what: an index scanner returned a running exec session, but only its output field was read; commit preparation continued before its message file existed. Git commit failed without creating a commit. An explicit rerun completed with 69 matching staged/worktree paths, no credential-pattern matches and no private paths before retrying delivery.
+- root cause: discarded session_id/exit_code while formatting a tool result, confusing an early yield with completed verification.
+- correct: retain the complete exec result; wait on any running session and require exit_code 0 before creating a commit or pushing. Gate dependent tool calls on completed results, not empty output.
 
-**Revalidate isolated auth fixtures after Vite reload (2026-10-14):**
-- what: an auth QA fixture replaced its URL with /login or /onboarding; a later HMR/full reload loaded the normal app and removed its fetch interception. One synthetic register attempt therefore tried the proxy; Vite logged ECONNREFUSED 127.0.0.1:8000, so no backend was reached. Its generic error was not accepted as duplicate-email evidence. Reopened the fresh fixture with a DOM marker/request log and confirmed the intended duplicate-email and English states. Early large combined spec/MEMORY reads also repeated truncation and a guessed optional api.js read was absent.
-- root cause: assumed in-memory fixture interception survived a document reload and took immediate post-action snapshots/screenshots before React/compositor caught up; discovery also ignored bounded-output guidance.
-- correct: finish source edits before isolated browser checks; reopen the explicit fixture URL after any full reload and verify its DOM marker before submitting. Confirm the target locale/state from a fresh snapshot before selecting a translated control, and capture final images only after the resulting page is observed. Treat proxy attempts, refused connections and fixture responses as distinct evidence. Read bounded relevant spec/MEMORY sections and discover exact source filenames before opening them.
+**Bound verification discovery and diagnose Windows local-socket stalls (2026-10-17):**
+- what: bare node --test and repository-wide frontend lint also traversed ignored copied checkouts under frontend/tmp; explicit test/source paths isolated the current code. Backend offline verification stalled before async tests; a temporary faulthandler trace located Windows asyncio's internal socketpair accept. The same guarded checks progressed when run outside the restricted sandbox.
+- root cause: default tool discovery includes local archives, and sandbox socket restrictions can block the event loop's internal loopback setup even when the repository guard permits that setup.
+- correct: enumerate current frontend/test/*.test.js and lint explicit source paths; if offline async tests stall, capture a traceback before retrying and retain the existing external-network/non-SQLite guards when requesting sandbox escalation. Never treat an interrupted run as a pass.
+
+**Respect shared render dependencies and ARIA label ownership in UI tests (2026-10-17):**
+- what: initial Help render tests omitted Profile's required historyBrowse/cookingHistory props, so shared history calculation failed before reaching Help. After supplying the existing contract, all34 checks passed. A browser caution probe then queried the heading's help-terms ID rather than its enclosing section, producing a false absence; the correct section selector confirmed the full text.
+- root cause: assumed a non-history view bypasses shared render calculations and that an aria-labelledby target owns the labelled region's whole text.
+- correct: supply the component's complete required props for every view; inspect which element owns an ID before asserting content, and query the labelled section for its body. Fix fixture/query mistakes without weakening assertions or changing production behavior.
+
+**Verify state after a rejected multi-file patch (2026-10-17):**
+- what: the initial shared-drag patch expected the wrong section immediately after Favorites' category strip. apply_patch rejected it; a focused check confirmed the new component was absent and the previous My Fridge source remained intact before the corrected patch.
+- root cause: assumed the Favorites strip was followed directly by the grid rather than its existing empty-state branches.
+- correct: inspect the exact surrounding block before patching; after a multi-file rejection, verify affected paths before retrying instead of assuming either partial edits or successful changes. Preserve unrelated branch/error/empty-state behavior.
+
+**Separate a drag's trailing click from keyboard activation (2026-10-17):**
+- what: extending Home category dragging exposed that the older filter-strip guard consumed any next activation when its moved flag remained set, including a keyboard click after leaving a drag.
+- root cause: selection suppression checked only shared gesture state and ignored how the click was produced; drag handlers were also tied to one row ref.
+- correct: use the event's currentTarget for reusable row dragging, reset gesture state before dispatch, and suppress only a moved gesture's mouse click. Test keyboard activation after mouseleave, the next ordinary click, secondary/released mouse buttons and independent rows.
+
+**Make action-looking text an operable control (2026-10-17):**
+- what: Home's See all looked clickable but was a span without a handler, so users could not expose categories beyond the horizontal strip through that action.
+- root cause: presentation shipped without an interaction or regression test for the promised action.
+- correct: implement actions with native buttons and visible keyboard focus; for disclosures expose expanded state and the controlled region. Test expand/collapse plus the real category-filter path and verify existing search/selection state is retained.
+
+**Use robust boundaries when replacing JSX render blocks (2026-10-17):**
+- what: a Custom Cooking source transform first failed on nested template quoting, then a CRLF-sensitive anchor and an unanchored substring-uniqueness assertion. All failures stopped before writing; a line-anchored render boundary succeeded and the pre-render component handlers were independently compared unchanged with HEAD.
+- root cause: mixed shell/JavaScript quoting and text/line boundaries without accounting for CRLF or deeper-indented map returns.
+- correct: prefer apply_patch for JSX; if a scripted transform is necessary, use a verified start-of-line boundary or AST, reject missing anchors before writes, set UTF-8 before piping bilingual source, and compare preserved regions afterward. Never treat a script-launch/anchor failure as an application or verification failure.
+
+**Verify screenshot format and clip emulated browser captures (2026-10-17):**
+- what: full-frame viewport-emulation screenshots included a large backing canvas; early JPEG bytes were saved with PNG names, and reading those bytes as PNG headers produced meaningless dimensions. Final delivery uses a JPEG clipped to the observed 390×844 shell after the viewport settled; earlier captures remain historical failed evidence.
+- root cause: assumed full-frame screenshots follow emulated CSS dimensions and inferred the image format from the chosen filename.
+- correct: inspect the byte signature/image decoder first; clip screenshots to current DOM bounds, verify decoded dimensions and save with the actual format before calling an artifact confirmed. Restore the temporary viewport override afterward.
+
+**Keep tab highlighting and page navigation consistent (2026-10-17):**
+- what: Cooking nav from Favorites/Profile updated the active tab but stayed on the originating page; the shared handler omitted both source views. A seven-source regression reproduced exactly those two failures before the fix.
+- root cause: page-entry coverage was a manually enumerated guard, while tab highlighting happened unconditionally; previous tests did not exercise these entry points.
+- correct: trace every caller of the shared navigation handler; test actual destination and selected-recipe state for every supported source, not just the highlighted tab. Preserve intentional recipe-flow guards. Scope documentation searches to the known ADR directory instead of traversing unrelated evidence trees.
+
+**Bind browser capability handles explicitly (2026-10-17):**
+- what: language UI QA referenced the documentation example's `browser` identifier although only a tab handle was bound; the runtime rejected that capability lookup. Binding the selected browser through the documented API resolved it. An expected controlled-radio rollback on synthetic save failure also rejected `check()`; the subsequent DOM confirmed the original selection and error.
+- root cause: assumed an example variable was initialized and treated `check()` as suitable for a deliberately rejected save.
+- correct: bind a named handle before capability use; use click plus the resulting DOM state for failure/rollback scenarios, and verify settled busy/locale/selection before saving evidence. Preserve the distinction between an automation assertion and an application failure.
+
+**Locate UI targets and bound inspection output (2026-10-17):**
+- what: the spacing audit initially truncated broad spec/source reads, passed an unverified MyFridge.jsx path to design context and used an unsupported PowerShell literal glob in rg. Subsequent file enumeration located UserIngredients.jsx; focused reads/render tests supplied the evidence. No backend changes occurred.
+- root cause: guessed a filename from the visible page title and underestimated the size of historical documents/search output.
+- correct: enumerate frontend filenames before selecting targets; read only relevant capped sections and use rg's `-g` filter instead of shell path globs. Treat truncated output as partial evidence, and inspect check exit codes before running dependent commands.
+
+**Normalize PowerShell JSON values before exact assertions (2026-10-17):**
+- what: the first design-sidecar verification compared `generatedAt` to a string after `ConvertFrom-Json`; PowerShell had materialized the ISO value as `System.DateTime`. A second assertion read `.PSObject.Properties.Count` directly instead of forcing property enumeration into an array. Both checks failed even though the serialized sidecar values were correct.
+- root cause: assumed `ConvertFrom-Json` preserves ISO date strings and that adapted-member collections expose a scalar count consistently.
+- correct: inspect parsed types, compare dates with `ToUniversalTime().ToString(...)` and invariant culture, and count properties with `@($object.PSObject.Properties).Count`. Validate the raw JSON token when exact serialization matters. Treat these as verification-harness failures, not sidecar-content failures.
+
+**Distinguish no-index differences from whitespace diagnostics (2026-10-17):**
+- what: final static verification initially treated exit1 from a clean new-file `git diff --no-index --check /dev/null` comparison as whitespace failure. Output contained only the existing CRLF advisory; a corrected diagnostic check passed all six new files without editing them.
+- root cause: applied ordinary command-success semantics to a Git diff operation that reports differences with exit1, rather than checking its diagnostic output separately.
+- correct: accept only documented no-index difference exits with no actual whitespace diagnostics, reject higher/error exits, and filter only the observed CRLF advisory. Keep the failed verification attempt distinct from the subsequent clean check; never edit source to satisfy a misclassified tool status.
+
+**Use an HTML discard dialog for controllable History navigation (2026-10-17):**
+- what: initial JavaScript confirm stalled the in-app browser's dialog/focus automation; dismiss/close/Escape attempts timed out and a second in-app tab did not navigate. Local sandbox socket access also blocked the first Vite preview. Oversized combined source reads and one PowerShell literal-glob search repeated earlier discovery failures. Completed QA using a standard HTML dialog and a separate Brave synthetic session; no backend/provider request or real account operation occurred.
+- root cause: native JavaScript modal interfered with the browser automation focus path, and the sandbox denied localhost sockets; repeated recovery attempts and combined long outputs delayed diagnosis. These are distinct from a failed product save.
+- correct: use the existing narrow source paths and cap total batched output; pass directories with rg globs rather than shell literal wildcard paths. For dirty-edit confirmation use an accessible HTML dialog with explicit Keep editing/Discard and test Escape. On a blocked native modal, stop repeated focus-dependent recovery and use another permitted synthetic session. For demonstrated sandbox socket denial, stop the sandbox preview normally and launch the same local fixture server through reviewed host execution. Retain failed evidence and distinguish synthetic QA from live integration.
+
+**Bound Package1 interview discovery (2026-10-16):**
+- what: initial full spec/MEMORY reads and later combined long excerpts exceeded output budgets; delegated broad discovery reached inaccessible held-out directory names without reading their contents. Parent reads also guessed absent personalization.py and normalizeThai.js paths; discovery confirmed the existing helper is in thaiText.js. The required Impeccable context output also exceeded its display cap; recovered with exact source/document reads. No application/backend change occurred.
+- root cause: repeated whole-history and filename assumptions despite existing discovery lessons; capped individual commands without capping the combined tool output.
+- correct: start with the exact selected spec section, cap total output before batching reads, and give delegates an explicit allowed-path list excluding evaluation/private trees. Discover source filenames before reading and treat truncated/absent-path output as incomplete evidence.
+
+**Use the user's diagram language and distinguish responsibilities from deployments (2026-10-16):**
+- what: prior system-diagram guidance substituted expanded Mermaid views for the user's Eraser figure and suggested renaming conceptual helpers; user reported some parts looked strange/nonexistent and supplied actual DSL. It did not identify the exact disputed boxes. Initial follow-up combined reads again truncated; recovered with exact bounded function reads and today's checker changes.
+- root cause: expanded a diagram-refresh request before inspecting its native editable source and did not sufficiently distinguish logical responsibilities/table domains from deployed services/databases; assumed yesterday's source description remained current.
+- correct: edit the supplied native DSL, preserve valid conceptual names, and map every added node/edge to inspected source. Explicitly label deployment boundaries and exclude unimplemented future modules from a current-state view. Re-read current spec headings and touched code after date/context changes; cap long historical output and do not invent which point the user disputed. Verify syntax against official docs and distinguish static checks from actual parser/render evidence.
+
+**Preserve identity boundaries and validate actual use in recipe checks (2026-10-16):**
+- what: first pure regressions exposed Thai SARA AM mismatch in method patterns and oil embedded in air-fryer equipment; crafted development cases exposed น้ำส้มสายชู/น้ำ, egg noodles/egg and ข้าว/ข่า collisions, same-pan Flavor continuation gaps, negated separation and absent-title-list scope. Affected fixtures also omitted declared pantry use, canonical basil inventory and the existing Notification table/mock. Corrected shared helpers and representative fixtures; final226affected/full1012offline tests pass with guard violations0.
+- root cause: independent pattern normalization, substring-only ingredient spans, per-clause Flavor co-occurrence and stale fake-provider/database fixtures hid intended semantics. The first sandbox TestClient run stalled like the prior documented Windows guard case; an unbounded wrapper delayed diagnosis.
+- correct: normalize text and Thai regex literals consistently; mask recognized longer ingredient/equipment names before short references; track only explicit same-component continuations and affirmative actions; propagate absence only through explicit conjunctions. Test both positive and negative forms. Keep fixture inventory/declarations/schema current without weakening Allergy expectations. Bound test duration, persist live logs and rerun the unchanged offline guard on the permitted host when sandbox stalls. Compare assertion expectations separately from intentionally changed fixture-call inputs; distinguish synthetic ERROR logs from unittest ERROR headers. Use capped reads instead of repeating whole-history output.
+
+
+**Keep five-check planning evidence bounded and UTF-8 (2026-10-16):**
+- what: several combined planning reads were truncated; a Python bilingual alias listing printed mojibake until stdout was explicitly set to UTF-8. A delegated filename search was too broad and entered held-out-directory names/access-denied entries; no held-out contents were opened. Recovered with exact files, compact table extraction and UTF-8 read-back before review conclusions.
+- root cause: repeated line-based output assumptions and Windows default stdout encoding; insufficient directory scoping in delegated discovery.
+- correct: give sub-agents explicit allowed source paths; never search held-out trees for development. Set Python stdout to UTF-8 before mixed-language output, cap each read by expected text volume, and inspect a complete bounded extract before using it as evidence.
+
+**Gate publication checks and account for concurrent shared documents (2026-10-16):**
+- what: a post-commit worktree hash audit correctly detected a concurrent MEMORY.md update, but the surrounding tool script still advanced to normal push after reporting the nonzero check result. All39commit blobs had already matched the verified candidate; independent remote verification matched12496fc2. Inspected/preserved the concurrent documentation and confirmed102other pre-existing hashes unchanged.
+- root cause: treated a blanket unchanged-file assumption as valid across concurrent work and did not gate a dependent mutation on the preceding tool exit code.
+- correct: inspect every prerequisite exit code before performing a dependent mutation. Capture content snapshots when byte-preservation comparisons must distinguish concurrent edits; classify inspected concurrent document changes separately and never overwrite them to make a snapshot check pass.
+
+**Use compact status facts instead of repeatedly printing historical paragraphs (2026-10-16):**
+- what: remaining-feature discovery again truncated combined long Thai spec/source reads and initially guessed notifications_repository.py before filename discovery showed notification_repository.py. Recovered with exact current functions, narrow searches, a retained frontend test log and isolated pure-helper probes.
+- root cause: limited line counts without accounting for long paragraphs and total token volume, and inferred a repository filename from the feature name.
+- correct: discover exact paths first; cap each read by both lines and expected paragraph size, extract only needed facts, and retain verbose evidence in a log. Check the newest dated completion before reporting an older backlog entry; do not treat truncated output as complete evidence or re-run completed live work.
+
+**Cap discovery output before system-diagram advice (2026-10-15):**
+- what: initial whole-spec and combined historical reads were truncated; a later rg call used wildcard path arguments that PowerShell passed literally. Initial static verification stopped on Windows default text decoding; explicit UTF-8 rerun passes24assertions. Recovered with bounded exact source/function ranges and verified current behavior before writing guidance.
+- root cause: repeated whole-history discovery despite existing output-bound lessons, assumed shell wildcard expansion for native rg and omitted encoding on some Python text reads.
+- correct: start with a capped heading index, read only relevant exact ranges, and pass directories plus rg -g filters or observed literal filenames. Specify UTF-8 for all Python project-text reads on Windows. Treat truncated/failed reads as incomplete; distinguish current source evidence from superseded historical diagram notes and future plans.
+
+**Separate XML content preservation from formatting and inspect new edge markers (2026-10-15, notification ER):**
+- what: ER preservation assertion initially rejected only the old final cell's changed indentation tail after appending cells; recursive tag/attributes/text/children comparison verified unchanged semantic content. First new edge passed table-collision checks but ran through old FK optional circles and placed its label over another label; visual review caught both and moving the new corridor/label fixed them. Initial broad combined reads again truncated; exact model/migration and existing verification scripts supplied the necessary context.
+- root cause: serialized XML whitespace was mistaken for graph changes, and geometric table checks do not detect marker/label intersections; repeated oversized discovery output.
+- correct: compare recursive XML content/geometry while ignoring formatting whitespace, preserve previous dated artifacts, and inspect actual renderer images for marker and label collisions after structural checks. Use capped exact source ranges, rerun corrected checks, and distinguish prior deployment receipts from a fresh READ ONLY/ROLLBACK schema check.
 
 **Confirm stable photo/loading state before delivery captures (2026-10-15):**
 - what: first post-navigation notification screenshot showed pending opacity and unloaded logo/photo; the earlier single-toast locator had also expired after its normal8-second timer. Recovered by focusing a real toast action immediately in the synthetic fixture and capturing the list only after DOM confirmed no disabled row and loaded image.
@@ -35,11 +136,142 @@
 - root cause: repeated broad discovery despite recorded output limits and assumed a page filename from its visible name.
 - correct: start with capped spec headings/relevant sections; exclude node_modules, venv, tmp and archived trees before every inventory. Resolve a screen to its observed component before reading it. Never treat truncated output or a failed path lookup as complete evidence.
 
+**Bound slide-advice discovery (2026-10-14):**
+- what: initial spec/MEMORY reads and a broad heading search were truncated during a small slide-example recommendation; recovered with the exact RAG section and limited source matches.
+- root cause: chose broad line counts before accounting for long historical entries and Thai token volume.
+- correct: for slide advice, read a capped relevant-heading search first, then a short exact section; cap match counts and source line lengths before executing. Do not treat truncated output as complete evidence.
+
+**Verify focus after disabled transitions and respect browser masking (2026-10-14):**
+- what: reset UI refinement disabled OTP during resend, so the existing immediate focus call targeted a disabled input. Fixed with deferred frame focus and confirmed activeElement.id=otp-code after real cooldown/resend. Initial QA value comparisons failed because credential DOM values were redacted; compareDocumentPosition was unavailable in the read-only browser mirror, and an exact geometry assertion rejected a0.2px rounding difference. A stored HMR LocaleProvider error was distinguished from a fresh fixture's zero console errors.
+- root cause: preserved a focus action without checking its new disabled timing, treated sanitized browser values as real input data, assumed full DOM API support and exact pixel arithmetic, and mixed old-document logs with current runtime evidence.
+- correct: schedule focus after controls re-enable and assert the browser's active element. Verify masked credential behavior with visible enabled/error/navigation states; test exact normalization in isolated handler tests without trying to recover redacted values. Use supported DOM geometry with a named1px rounding tolerance, reopen/verify fixture markers after HMR, and inspect fresh-document logs before attributing old console errors to current code.
+
+**Revalidate isolated auth fixtures after Vite reload (2026-10-14):**
+- what: an auth QA fixture replaced its URL with /login or /onboarding; a later HMR/full reload loaded the normal app and removed its fetch interception. One synthetic register attempt therefore tried the proxy; Vite logged ECONNREFUSED 127.0.0.1:8000, so no backend was reached. Its generic error was not accepted as duplicate-email evidence. Reopened the fresh fixture with a DOM marker/request log and confirmed the intended duplicate-email and English states. Early large combined spec/MEMORY reads also repeated truncation and a guessed optional api.js read was absent.
+- root cause: assumed in-memory fixture interception survived a document reload and took immediate post-action snapshots/screenshots before React/compositor caught up; discovery also ignored bounded-output guidance.
+- correct: finish source edits before isolated browser checks; reopen the explicit fixture URL after any full reload and verify its DOM marker before submitting. Confirm the target locale/state from a fresh snapshot before selecting a translated control, and capture final images only after the resulting page is observed. Treat proxy attempts, refused connections and fixture responses as distinct evidence. Read bounded relevant spec/MEMORY sections and discover exact source filenames before opening them.
 
 **Bound README refresh discovery before running it (2026-10-14):**
 - what: initial whole-spec and combined Thai source reads were truncated; guessed session/email/context paths were absent, and the first verbal untracked count42was corrected to43using porcelain -uall. No conclusion relied on the failed paths. Sandbox GitHub/worktree/index access failures were resolved through reviewed commands. Initial staged README byte comparison rejected Git's CRLF-to-LF normalization; decoded text was identical.
 - root cause: started discovery without applying existing output-bound and filename-discovery instructions, counted grouped status output by eye, and compared raw working bytes with Git-normalized documentation blobs.
 - correct: read spec headings before bounded relevant ranges, discover source filenames with scoped rg before opening them, and calculate modified/untracked/staged counts from git status --porcelain=v1 -uall. Compare branch commits with live remote heads and their reachability before calling an upstream-ahead commit unpublished; distinguish ignored private evidence from ordinary untracked files. For normal text docs, verify staged text with explicit CRLF-to-LF normalization; preserve raw hashes separately and do not apply this exception to pinned evidence bytes.
+
+**Bound barcode slide-example discovery (2026-10-14):**
+- what: initial whole-spec read and backend-wide barcode search exceeded the output budget and entered venv; recovered with the exact barcode contract, endpoint, tests and frontend callers before preparing the example.
+- root cause: repeated broad discovery despite existing bounded-read guidance.
+- correct: start with bounded relevant spec sections and exact source files; exclude venv from every backend-wide search, and never use truncated output as complete evidence. Verify illustrative API payloads against unchanged source with a mocked provider and label them as examples rather than live product responses.
+
+**Bound artifact inspection and compare logical uniqueness (2026-10-14, ER):**
+- what: initial whole spec/MEMORY and broad docs reads repeated truncation/denied archived paths. Default Python lacked SQLAlchemy; test venv lacked pgvector; existing backend/venv supported the read-only metadata check. Migration/ORM equality initially differed for refresh_tokens because ORM represents unique+index as a unique index while migration also declares a UNIQUE constraint. Geometry check initially rejected <0.04px renderer rounding; a patch failed on a guessed MEMORY heading and applied nothing.
+- root cause: ignored bounded-read lessons, selected runtimes without checking required imports, compared constraint representation rather than enforcement and assumed exact floating ports/heading.
+- correct: use known paths and bounded relevant spec sections; preflight all imports and use -B for source-only checks; compare the union of UNIQUE constraints and unique indexes without discarding their enforcing columns; bound renderer rounding explicitly to0.1px; read exact patch anchors and verify failed patches applied nothing. Retain failed checks, rerun corrected complete checks, and never claim fresh live DB verification when Docker is unavailable.
+
+**Bound six-check review discovery (2026-10-14):**
+- what: whole spec and several combined reads were truncated; a backend-wide rg reached venv, and guessed optional documentation/base paths were absent. Recovered with observed literal source files, bounded function reads and 30 source-bound diagnostic assertions; no runtime mutation or conclusion used missing-path output.
+- root cause: repeated broad output budgets and guessed support-file names despite earlier bounded-read instructions.
+- correct: read spec headings with per-line limits, then only the exact relevant section; restrict searches to observed source directories and exclude venv/archives. Discover a supporting filename before reading it; split reads by function and never treat truncated output as complete evidence.
+
+**Bind PDF reviews to the supplied exact file and bound source reads (2026-10-14, Chapter3):**
+- what: first extraction tried unavailable fitz; fallback recursive selection of a filename ending in3 selected N3.pdf rather than the supplied thesis. No thesis conclusion used that extract; corrected exact-path extraction rendered/read the37-page Chapter3. Several combined source reads were truncated; guessed auth paths and PowerShell literal wildcards also failed read-only before observed filenames/directory -g checks succeeded.
+- root cause: weakened exact-file identity while avoiding non-ASCII stdin arguments, assumed optional PDF module availability, and repeated broad output/glob/path assumptions.
+- correct: resolve the user's exact LiteralPath in PowerShell, pass it via a task-specific environment variable, assert PDF identity/page count before analysis, and use detected pdfplumber/pypdfium2 without installing. Locate source names first, use rg directory plus -g rather than literal shell wildcard paths, and split bounded reads; never use a truncated read as complete source evidence.
+
+**Verify dependency-link creation before reporting it (2026-10-14, cooking-time delivery):**
+- what: sandbox New-Item denied the source-only export junction, but its nonterminating error let a success line print; frontend imports then failed. Verified reviewed junction creation fixed imports (11/11); a separate sandbox Vite realpath denial required reviewed build execution, which passed.
+- root cause: treated a PowerShell cmdlet error as terminating and assumed the link existed before checking it.
+- correct: use ErrorAction Stop, verify the junction type/target and an expected dependency file before running tests or reporting success. Keep failed setup/build attempts separate; rerun unchanged checks through permitted execution without installing packages or changing assertions.
+
+**Use observed host browser locations for sandbox QA (2026-10-14, cooking time):**
+- what: the in-app tab call timed out; node ESM import/Playwright launches then failed against a sandbox browser cache. Registry discovery found existing host Edge, which passed actual-app QA through a reviewed headless command.
+- root cause: package import behavior and per-user cache paths differ inside the sandbox from the host's installed browser locations.
+- correct: keep failures separate, discover registered existing browser executables and launch the observed path through the permitted host test runner. Do not install a browser/package, guess executable locations or claim a failed launch performed QA; block API writes when language/auth are test fixtures.
+
+**Honor synthetic credential length checks (2026-10-14, cooking time):**
+- what: seed tests passed, but endpoint-test import rejected the synthetic OTP key as shorter than 32 bytes; no endpoint assertions ran in that attempt.
+- root cause: used a descriptive dummy key without checking its length against otp.py's configuration guard.
+- correct: supply synthetic JWT/OTP keys longer than 32 bytes before importing endpoint modules, retain the failed run and rerun the unchanged offline tests. Never use deployment secrets or weaken the length guard.
+
+**Bound session-start reads before combining output (2026-10-14, RecipeDetail):**
+- what: combined whole spec/MEMORY reads exceeded output limits again; narrower heading and relevant source reads followed before the edit.
+- what: later cooking-time proposal discovery again entered archived docs checkouts and two inaccessible directories; the known scoped plan/contract paths were used afterward.
+- root cause: large historical logs were read together despite the existing bounded-discovery rule.
+- correct: start with bounded spec headings/current sections and relevant MEMORY entries in separate output budgets; never treat truncated historical output as a complete read.
+
+**Preflight auth configuration in source-only image checks (2026-10-14):**
+- what: clean-export delivery checks passed the5seed tests but twice failed endpoint-test import because JWT_SECRET_KEY, then OTP_HMAC_SECRET, was absent. An inspection also guessed nonexistent emailer.py. Final check with synthetic keys/in-memory DB/empty provider keys passed8/8 without copying deployment secrets.
+- root cause: source-only export intentionally omits .env, but the initial harness did not inventory startup-required configuration and guessed a supporting filename.
+- correct: discover required environment reads/import-time validation before starting exported endpoint tests; provide all required synthetic keys, in-memory DB and empty provider keys. Discover actual module filenames instead of guessing; preserve failed checks as failures and publish only after configured checks pass.
+
+**Keep image diagnosis discovery bounded (2026-10-14):**
+- what: initial whole-spec/combined keyword reads exceeded output budgets again; PowerShell wildcard arguments passed to rg failed, broad docs discovery entered archived QA trees, and follow-up inspection guessed a nonexistent eval/offline_guard.py. Scoped source reads and reviewed read-only HTTP probes then verified the actual image404s. No backend or DB write occurred during diagnosis.
+- root cause: ignored existing bounded-discovery lessons and used wildcard paths without first discovering actual files.
+- correct: read relevant spec headings/ranges with bounded line lengths; pass observed literal file paths or rg glob filters; restrict ADR discovery to docs/adr and exclude archived checkouts. Discover actual helper filenames before reading them. Treat truncated or failed inspection as incomplete, never as verification.
+
+**Align completion with the requested actual-data outcome (2026-10-14, N3):**
+- what: reported the N3 code/tests as complete while actual DB stayed unchanged; user clarified their approval meant fixing the real application data. Acknowledged the mismatch and resumed exact-target/backup/snapshot checks for the bounded live correction.
+- root cause: the implementation proposal split offline work from live activation without making that intermediate outcome match the user's original request; then stopped at the intermediate milestone.
+- correct: state code-versus-actual-data effects before requesting approval and track the user's intended end result. When the user clarifies live intent, verify target/backup/reversibility, apply only the approved bounded correction, and report actual postchecks instead of treating offline tests as end-to-end completion. Do not infer authority for resets or unrelated writes.
+
+**Include unit basis in synthetic nutrition row identity (2026-10-14):**
+- what: a new synthetic N3 scoring assertion initially failed row identity because its accepted-source fixture omitted unit_basis; adding the observed100g basis corrected the fixture. No frozen labels or evaluator code were changed.
+- root cause: the fixture used source/ref only although the existing identity helper compares source/ref/basis.
+- correct: inspect the scorer's identity tuple before composing fixtures and include every required field. Keep fixture failures separate from product failures, then rerun the guarded regression suite after correction.
+
+**Run temporary-file nutrition regressions with verified filesystem permissions (2026-10-14):**
+- what: all11 new synthetic N3 tests passed, but the larger nutrition run reported24 errors because sandbox OS-temp fixtures could not be written/cleaned. The offline network/DB guard reported zero violations. A guarded reviewed rerun was requested instead of changing production code to satisfy environment failures.
+- root cause: existing tempfile-based suites inherited Windows sandbox temp-directory ACL restrictions; large exception output also exceeded the read budget.
+- correct: distinguish temporary-file PermissionError from business-logic failures, keep the persistent-DB/network guard enabled, and rerun the same test command in approved execution before claiming regression success. Read bounded summaries and do not disable guards, reset DBs or broaden the implementation to fix sandbox ACLs.
+
+**Use shared OS temp for cross-conversation handoffs (2026-10-14):**
+- what: a handoff saved in sandbox GetTempPath was readable in its creating command but missing when a reviewed command tried to copy it into normal Windows temp. Recreated and verified the final requested handoff directly in shared OS temp.
+- root cause: sandbox temp paths differ across executions and are not reliably visible outside the originating sandbox.
+- correct: for a handoff another conversation must read, use reviewed execution to write directly to the user's shared OS temp, then verify absolute path, read-back content and saved-byte hash. Do not treat a sandbox-local temp save as cross-conversation delivery.
+
+**Set extraction output encoding and bound context reads (2026-10-14, INMU explanation):**
+- what: a whole-spec read exceeded the output budget; PDF extraction stopped on page6 because Windows cp874 stdout could not encode a bullet. Bounded follow-up extraction and page renders recovered the relevant evidence.
+- root cause: ignored the recorded bounded-read rule and relied on the platform default stdout encoding for mixed-language PDF text.
+- correct: read only relevant spec headings/ranges; configure Python stdout as UTF-8 before printing extracted PDF text, check exit status, and inspect complete relevant rendered pages before answering.
+
+**Hash saved evidence bytes, not the pre-save string (2026-10-13, live nutrition audit):**
+- what: audit printed a hash of JSON LF string before Path.write_text converted newlines to CRLF on Windows; final saved-file hash assertion failed. Recipe/match/result assertions passed, and saved-file digest was corrected and rechecked.
+- root cause: assumed UTF-8 encoding of the source string equals saved bytes despite platform text newline translation.
+- correct: compute artifact SHA256 from Path.read_bytes after saving; assert the saved-file digest before recording it in docs. Distinguish a failed artifact-hash check from a failed business-data check and retain the failed log/diagnosis.
+
+**Observe request fields and browser capture state before fixture checks (2026-10-13, base nutrition):**
+- what: a compatibility test used user_prefs instead of the existing required preferences field and failed validation in both cases; the corrected fixture passed. A hidden-tab screenshot was unavailable, and assigning to a binding from that failed call then reported undefined; shown-tab capture with a fresh binding succeeded and verified JPEG signatures.
+- root cause: authored a fixture before consuming the request-model read result, and assumed a failed REPL call retained its declaration/capture capability.
+- correct: read and consume the actual request model before writing dependent fixture arguments. Keep failed fixture probes separate from product failures. Confirm a rendered/capturable tab and create a fresh binding after a failed REPL declaration; verify encoding and open captures before treating them as review evidence.
+
+**Trace base-menu provenance when sharing generated-recipe nutrition UI (2026-10-13):**
+- what: the new shared nutrition section correctly preserved unknown base-menu status, but supplied no calculated detail for those menus. Base seeding already calculates numeric nutrition, while the base API exposes only nutrition and seeding can retain hand-typed fallbacks.
+- root cause: extended the display using generated-response metadata without completing the separate base-menu provenance path. Presence of numeric nutrition does not distinguish seed calculations from fallback values.
+- correct: trace every recipe caller through its API and persistence source before claiming detailed nutrition integration complete. Propose explicit base-menu calculation/provenance behavior for backend approval; preserve unknown status until verified, and never manufacture a complete-calculation flag from stored numbers or historic seed success.
+
+**Inspect screenshot encoding before parsing its header (2026-10-13):**
+- what: browser screenshot bytes were JPEG despite being saved with .png names; the documentation agent's initial PNG-header dimension probe was invalid. Format-aware decoding confirmed the expected dimensions and readable captures; both reviewers opened the actual images successfully.
+- root cause: treated the requested output filename extension as evidence of the browser API's byte encoding.
+- correct: inspect returned screenshot magic bytes or use a format-aware decoder, and choose the matching extension for new captures. Never count a failed header probe as invalid rendered evidence; retain existing review paths when references already rely on them and record the actual encoding.
+
+**Bound discovery and bind verification to its runtime cwd (2026-10-13, fridge/nutrition):**
+- what (live base-menu audit): initial combined reads again exceeded output limits; a guessed database/base.py did not exist and broad docs discovery entered archived QA trees. Recovered with bounded known-path reads and explicit docs/adr discovery; none of those failed probes is audit evidence.
+- what: broad file discovery traversed dependency/QA trees and hit denied paths; large spec/context output was truncated. A translation patch used a root-relative filename from frontend cwd and did not run, and a root-cwd ESLint call found no config. The first existing Python runtime lacked sqlalchemy; sandbox endpoint checks stalled and the build returned EPERM. Corrected scoped paths/runtime/cwd and guarded reviewed execution passed. No failed probe is counted as product verification.
+- root cause: reused generic recursive discovery, relative paths and runtime assumptions despite the project's existing bounded-discovery and cwd lessons.
+- correct: search explicit source directories with dependency/fixture exclusions; use small headings/excerpts for large documents. Bind every command to one observed cwd and compatible runtime, using absolute file paths when scripts move between roots. Verify config/module availability before checks, inspect logs and actual exit status, and retain failed sandbox/runtime probes separately from the passing rerun.
+
+**Verify native date automation against controlled React state (2026-10-13):**
+- what: browser automation fill('') cleared the date input's DOM value while its React value attribute stayed unchanged; a save retained the old expiry. The explicit clear-expiry button then updated React state and saved null successfully.
+- root cause: the automation's native date fill did not dispatch a state-changing input event in this browser; a blank visible DOM field was mistaken for a changed controlled draft. This is harness evidence, not proof the native date picker fails for a person.
+- correct: after date automation, compare the visible value with the controlled value attribute and verify the saved result. Use the actual clear-date control for nullable reset checks; do not claim native-picker/date-edit coverage from fill alone or mutate state with evaluation to make a test pass.
+
+**Preserve original translation lookup priority when refining copy (2026-10-13):**
+- what: revising the Thai display label for Category to หมวดหมู่ initially captured the existing Categories Thai lookup; the full old-alias English comparison caught one mismatch before delivery, then passed after correction.
+- root cause: inserting revised display labels and original lookup aliases together let a new label win over an established lookup by dictionary order.
+- correct: register original Thai keys and English keys before revised Thai display aliases, and compare every previous alias in the untouched locale when changing dictionary copy. For browser evidence, separate navigation/viewport changes from screenshot saving and open every saved file to verify its actual surface and dimensions.
+
+**Do not shadow the locale translator in render callbacks (2026-10-13):**
+- what: Favorites tab rendering called a tab object as `t(t.label)` after UI translation was added, producing the reported white screen and `TypeError: t2 is not a function`. Actual-component server renders reproduced the exact error in all8 locale/tab/data cases, then passed8/8 after renaming the mapper variable.
+- root cause: the existing `.map((t) => ...)` tab parameter shadowed `const { t } = useLocale()`; static translation-string inventory and a successful production build did not execute this render path.
+- correct: name mapped domain objects explicitly (e.g. favoriteTab), keep translator `t` callable in every render scope, and exercise real translated component rendering for both locales and empty/populated states before declaring a translation change verified. Check no-shadow in the touched page; do not mask this root cause with an error boundary.
 
 **Run application smoke imports from their observed runtime cwd (2026-10-13):**
 - what: first PostgreSQL API postcheck imported main from project-root cwd and failed on its existing StaticFiles(directory="images") before creating synthetic test rows. Corrected to backend cwd and17checks passed with complete rollback and unchanged legacy/sequence hashes; retained the failed and corrected logs. A guessed auth_utils.py inspection was also corrected through bounded file discovery.
@@ -60,6 +292,79 @@
 - what: first profile/language UI inventory failed before writing its JSON because a directory walker and AST walker shared the same function name; the following read masked the native command exit status. No application source was transformed.
 - root cause: CommonJS block-function hoisting replaced the AST walker with the filesystem walker, and the shell did not stop on Node failure.
 - correct: use distinct walkDirectory/walkAst names and immediately check LASTEXITCODE before reading generated inventory. Consume only a completed JSON inventory; do not interpret a failed traversal as missing UI strings.
+
+**Bound status-inspection output before executing (2026-10-13):**
+- what (Favorites fix): repeated whole spec/MEMORY and combined reads exceeded budgets; a broad docs/frontend file inventory included source exports/node_modules and inaccessible archived fixtures. One guessed localeContext.js path and one malformed Node probe also failed. Recovered with scoped known files and a real component red/green loop; none of these failed inspections is verification evidence.
+- what (profile/language planning follow-up): repeated whole spec/MEMORY and oversized combined reads exceeded the output budget before the already-recorded bounding lesson was consulted. Switched to short relevant ranges and separate skill reads; truncated output is not treated as a complete read.
+- what (crop documentation follow-up): a lockfile inventory used a node_modules exclusion anchored to the wrong search root and included dependency files, truncating the combined output. Use `-g '!**/node_modules/**'` or enumerate only the known root lockfiles; the noisy inventory is not a complete dependency review.
+- what: feature inventory initially printed entire spec/MEMORY and several oversized combined reads, causing truncation; it also guessed frontend/tests before discovering frontend/test. The frontend run completed with its final 29/33 summary, but assertion dumps inflated its output.
+- root cause: chose output limits after broad reads rather than estimating Thai text and source-dumping test failures; inferred the test-directory name instead of discovering it.
+- correct: discover paths with scoped rg --files first; read short heading-selected ranges in separate bounded calls, and redirect verbose test output to a retained log while printing only failed test names and final counts. Never treat truncated instruction/evidence output as a complete read.
+
+**Bind detector targets to the actual working directory (2026-10-13):**
+- what: a final scan launched from frontend/ with repository-relative frontend/src/... arguments warned that both targets were inaccessible, yet printed[]/exit0. Corrected scans from the repository root read the page/scanner/navigation and returned[] without access warnings.
+- root cause: reused root-relative targets after changing cwd; exit0 was not sufficient evidence that files were scanned.
+- correct: pass absolute targets or bind relative paths to a verified cwd, inspect warnings as well as exit status, and rerun the intended scope after inaccessible-target warnings. Never label an empty scan of missing targets a clean result.
+
+**Respect the project force-command ban when creating QA directories (2026-10-13):**
+- what: an idempotent QA-directory creation used New-Item -Force despite the project force-command prohibition. No existing file was overwritten or deleted, but the flag was unnecessary.
+- root cause: reused a generic directory-creation idiom without checking the project's explicit command restriction.
+- correct: check Test-Path for the intended directory and use New-Item without -Force only when absent; never add a force flag merely for convenience under this project rule.
+
+**Separate existing frontend assertion failures from scoped UI regressions (2026-10-13):**
+- what: barcode fixes passed their four new tests and scoped ESLint, but the complete frontend run passed29/33. Four failures inspect CookingPage source text or assert quantity-free payload/form behavior that disagrees with HEAD. Every file read by those failing tests, and those test files themselves, matches HEAD; this barcode change does not edit them.
+- root cause: the existing suite mixes literal source-location assertions with product-contract expectations that disagree with current code. This review does not choose whether the quantity assertions or implementation should change. A green targeted run cannot justify calling the complete suite green.
+- correct: retain the complete failing log, verify all failing inputs against HEAD, report targeted and full results separately, and repair unrelated contracts/tests only in a separately scoped task. Do not remove assertions or hide failures to complete a barcode UI fix.
+
+**Press keys on a focusable UI target during browser QA (2026-10-13):**
+- what: a slow-lookup repeated-Enter probe timed out on locator('body').press after the first successful submission; it was a harness action failure, not evidence that the app dispatched twice. Repeating the probe on the actual tabindex feedback container passed with one lookup.
+- root cause: body was visible but not a focusable keyboard target for the locator API.
+- correct: inspect the current focused element and press on a documented focusable control/container; preserve the failed step and verify the request count before claiming a repeated-key check passed. Do not alter application behavior to accommodate the harness.
+
+**Verify browser reachability separately from local preview startup (2026-10-13):**
+- what: a hidden Start-Process returned a Vite PID but no process remained on the next inspection; browser preview was refused. A persistent sandbox exec reported Vite ready, but both IAB and Brave then timed out; the shell HTTP probe also reported a forbidden socket. No UI rendering or camera result was established by those launches.
+- root cause: a returned PID and a server-ready log were treated as enough to dispatch browser inspection without a verified transport path. Exact process-exit and browser transport causes are not established.
+- correct: keep a critique server in a recorded persistent session, verify browser rendering independently, and stop that exact session before reporting. If sandbox transport blocks the local preview, request reviewed execution of the same existing runtime without installing packages; preserve failed attempts and never report startup logs as visual evidence.
+
+**Let Vite transform preview package imports (2026-10-13):**
+- what: the first reachable offline barcode preview was blank because its direct optimized react-dom_client.js import did not expose named createRoot. The real application component was not rendered during that failed attempt.
+- root cause: the preview bypassed Vite's package-import interoperability transform by importing .vite/deps files directly.
+- correct: use bare package imports in Vite-served preview modules, verify rendered DOM before reviewing the target, and classify preview import failures separately from application defects.
+
+**Reuse the Windows socketpair exception in guarded HTTP harnesses (2026-10-13):**
+- what: the first live-KG HTTP smoke blocked socket.connect unconditionally and failed while Windows asyncio created its standard-library self-pipe, before any endpoint behavior was tested. No DB mutation or provider call occurred; live-app-red-01.log is a harness error, not the product red test.
+- root cause: reimplemented a stricter network guard instead of reusing the existing run_offline.py exception for socket.py's _fallback_socketpair.
+- correct: allow connect only when the call stack identifies _fallback_socketpair in the actual socket.__file__, as in the existing offline runner; keep all external sockets blocked and restrict live DB access to the explicitly guarded engine. Require a valid product-level red result with guard0 before treating the subsequent green result as repair evidence; retain the harness failure separately.
+
+**Display labels are not automatically valid allergy declarations (2026-10-13):**
+- what: the first live read-only readiness receipt used ALLERGEN_LABELS as preference input and falsely marked shellfish unready despite all 26 required KG names being present; its display text สัตว์มีเปลือก is not an accepted trigger. Corrected receipts used self-checked accepted inputs and actual frontend labels, finding only fish unready.
+- root cause: a diagnostic confused error-display copy with the parser's public declaration vocabulary.
+- correct: assert parse_allergy_preferences returns exactly the intended key with ambiguous=False before interpreting a per-key readiness result. Check actual selectable frontend labels separately, including multi-key labels such as แพ้อาหารทะเล; never change the parser or graph to hide a diagnostic fixture error. Retain corrected and initial receipts separately and identify which is authoritative.
+
+**Quote Git revision syntax and check native exit codes in PowerShell (2026-10-13):**
+- what: an unquoted HEAD^{tree} diagnostic was rewritten into stray encoded-command arguments and git rev-parse failed, while the following ls-remote made the combined shell call return success. A quoted, explicitly checked verification then confirmed the exact tested tree before push.
+- root cause: PowerShell interpreted the brace-containing argument, and native command failures were not checked before the next command.
+- correct: pass revision syntax as a literal quoted argument, e.g. 'HEAD^{tree}', and throw on a nonzero LASTEXITCODE immediately after every Git delivery gate. Confirm the committed tree and remote commit separately; never treat the last command's zero exit as proof all preceding checks passed.
+
+**Verify delivery from its exact source tree, not a convenient dirty checkout (2026-10-13):**
+- what: the full working-tree suite/build passed, but the staged-source export first failed because one test required an unpublished historical report and baseline BarcodeScanner imported html5-qrcode absent from the scanner-WIP dependency installation.
+- root cause: runtime source selection and local test/dependency closure differed; working-tree success could not prove source-only portability.
+- correct: archive the exact staged tree and run checks there before delivery. Keep private receipts private; request separate backend approval before adding an explicit absent-receipt skip, retain full assertions when present, and never skip frozen label/hash/scoring checks. Ask before installing dependencies; use a new isolated lockfile installation, not a junction into live node_modules. Record failed runs and skipped checks explicitly; never stage unrelated scanner/package work to hide the failure.
+
+**Use actual allergy wire contracts in integration fixtures (2026-10-13):**
+- what: early integration tests assumed raw nut was an accepted preference label and /api/history returned a bare list; older endpoint tests also called an empty/partial graph healthy. These tests failed after the readiness guard.
+- root cause: fixtures inferred interface/graph readiness from names instead of reading the actual parser, response envelope and approved seed policy.
+- correct: use the existing UI label ถั่วเปลือกแข็ง and history.data envelope; build healthy fixtures from the actual complete seed policy, and keep explicit empty/partial/unavailable refusal tests. Do not broaden accepted labels, weaken the guard or change runtime responses merely to satisfy stale fixtures. Retain red/failed logs separately from successful verification.
+
+**Discover paths and summarize inside the process before inspection (2026-10-13):**
+- what: read-only allergy inspection guessed nonexistent backend/personalization/service.py and backend/tests/test_personalization.py, and repeated combined long-output truncation. Later scoped rg located personalization/context.py and the actual test files. No backend/DB changes occurred; the fallback diagnostic completed separately with guard0.
+- root cause: inferred filenames from a module's role and requested multiple verbose source/document sections instead of respecting known output limits.
+- correct: enumerate relevant paths with rg --files before passing exact files to search/read; exclude source-export/checkout/node_modules and protected test-temp trees when searching tmp, since a regex matching an ancestor directory can select thousands of unrelated descendants. Request one bounded source section per call, and write long diagnostic receipts locally while printing only counts/status/path. Never treat a truncated output or a failed guessed-path read as a completed review.
+
+**Parenthesize arithmetic in PowerShell diagram coordinate arrays (2026-10-12):**
+- what: five internal arrows in the first Validation Pipeline render had identical start/end points; PowerShell parsed @(920,$rowY+29) as an array addition and the renderer silently used only its first two entries. Visual/SVG inspection caught this before delivery.
+- root cause: arithmetic inside a comma-separated array was not explicitly grouped, and the copied renderer checked text widths but not arrow coordinate arity or zero-length segments.
+- correct: write coordinates as @(920,($rowY+29)); assert each point has exactly two in-bounds coordinates and each segment has distinct endpoints. Inspect the final raster and parsed SVG before delivering diagrams.
 
 รูปแบบ: what (เกิดอะไรขึ้น) / root cause (ทำไมถึงพลาด) / correct (สิ่งที่ต้องทำแทน)
 
@@ -222,10 +527,65 @@
 - root cause: spec.md is a shared, always-loaded file; another session was helping review labels and recorded its notes there. Blindness to the labels file is not blindness to the labels if the labels' content is quoted in an auto-loaded file.
 - correct: from the moment ground-truth labels exist until the blind author's work is committed, run `git status` before dispatching it and treat spec.md / MEMORY.md / AGENTS.md / CLAUDE.md as frozen (they are auto-loaded); keep label discussion only under the gitignored `docs/` folder. Also mechanically flag any evaluation string that already appears in those files as "public" and report results with and without it.
 
+**Gemini embedding free-tier quota counts each input inside a batch, not only the outer HTTP call (2026-09-30):**
+- what: WP1 วางเพดานไว้ไม่เกิน 12 batched calls แต่รอบแรกส่งหลายข้อความต่อ call จนครบ 100 embedded inputs แล้ว call ถัดไปถูก 429 (`embed_content_free_tier_requests`, retry 59s); script ไม่ checkpoint จึงต้องรันใหม่ ทำให้ยอดจริงทั้ง session เป็น 16 calls สำเร็จ + 1 call ถูกปฏิเสธ แทนเพดานที่สื่อกับ user
+- root cause: ประเมิน quota/cost จากจำนวน SDK/HTTP calls แต่ service นับแต่ละ content item ใน batch เป็น request unit และ probe ไม่คำนวณ input budget/ไม่มี resume checkpoint ก่อนเรียกจริง
+- correct: ก่อนรัน embedding eval ให้คำนวณทั้ง `batch_call_count` และ `embedded_input_count`; จำกัดตาม metric ที่ API ใช้, แบ่ง phase ให้ต่ำกว่า per-minute input quota พร้อมเว้น quota window, และเขียนผลแต่ละ phase แบบ resumable เพื่อไม่ต้องเรียกข้อมูลเดิมซ้ำเมื่อ 429 — รายงานยอด attempts/successful inputs ทั้ง session ไม่ใช่เฉพาะรอบที่สำเร็จ
+
+**A same-decoder physical A/B cannot prove a barcode failure is purely hardware when another decoder succeeds on the same camera/scene (2026-10-02):**
+- what: สรุปว่า laptop fixed-focus webcam เป็น root cause ที่โค้ดแก้ไม่ได้ หลัง `html5-qrcode` อ่านรูปบาร์โค้ดแบนได้แต่ขวดจริงไม่ได้; ภายหลัง user ทดสอบ demo ของ `@yudiel/react-qr-scanner` ด้วยกล้องและระยะเดียวกันแล้วอ่านบาร์โค้ดชัดที่อยู่ไกลได้ แปลว่าข้อสรุป hardware-only แรงเกินหลักฐานและมองข้าม decoder gap.
+- root cause: A/B เดิมเปลี่ยนทั้ง physical target (รูปแบนเทียบขวดโค้ง/สะท้อน) แต่ไม่เปลี่ยน decoder จึงพิสูจน์ได้เพียงว่า scene มีผลกับ ZXing-JS pipeline เดิม ไม่ได้แยกว่า hardware กับ decoder ใครเป็นข้อจำกัด; แล้วปิด investigation ก่อนทำ cross-decoder control ที่คุมกล้อง ระยะ แสง และบาร์โค้ดให้เหมือนกัน.
+- correct: ก่อนประกาศว่า camera hardware เป็นข้อจำกัดที่ software แก้ไม่ได้ ให้รัน cross-decoder control ด้วยกล้อง/ระยะ/แสง/บาร์โค้ดเดียวกันกับ demo หรือ decoder อีกตระกูลหนึ่ง; ถ้าตัวอื่นอ่านได้ ให้ถือว่า pipeline/decoder ยังเป็นผู้ต้องสงสัย เก็บ frame + `getSettings()` ไว้เทียบ และห้ามปิดเป็น hardware root cause จน decoder control ล้มเหมือนกัน.
+
+**Installing or replacing a Vite dependency while an old dev server remains active can produce `504 Outdated Optimize Dep` (2026-10-02):**
+- what: หลังเปลี่ยน scanner package เบราว์เซอร์เรียกไฟล์ optimized `@yudiel_react-qr-scanner.js` จาก dev server เดิมแล้วได้ HTTP 504.
+- root cause: Vite process ที่เริ่มก่อน dependency migration ยังคงถือ dependency graph/hash เก่า ขณะที่ `node_modules` และ lockfile เปลี่ยนแล้ว; browser request จึงอ้าง optimized artifact คนละรุ่น.
+- correct: หลังเพิ่ม/ถอด dependency ให้หยุดเฉพาะ Vite process ของ worktree/port นั้น แล้วเริ่มด้วย `npm run dev -- --force --host 127.0.0.1 --port 5173`; ยืนยันทั้ง root URL และ `/node_modules/.vite/deps/<dependency>.js` ตอบ 200 ก่อนให้ทดสอบ UI และห้ามแก้ด้วยการลบ cache โดยไม่จำเป็น.
+
+**PowerShell `$env:GEMINI_API_KEY=''` removes the variable instead of preserving an empty guard value (2026-09-30):**
+- what: ระหว่างตรวจแผนป้องกันเทสต์ยิง Gemini จริง ตั้ง `$env:GEMINI_API_KEY=''` แล้วเรียก Python + `load_dotenv(override=False)` แต่ assertion ว่า key ยังว่างล้ม เพราะ `.env` โหลด key จริงกลับเข้ามา (ไม่ได้ print หรือเรียก API)
+- root cause: บน PowerShell/Windows การ assign empty string ให้ environment variable มีผลเหมือนลบตัวแปร; `load_dotenv(override=False)` จึงเห็นว่า key ไม่มีอยู่และเติมค่าจาก `backend/.env` ตามปกติ ไม่ได้ละเมิด `override=False`
+- correct: เมื่อต้องรัน suite แบบกัน network ให้เริ่ม Python process แล้วสั่ง `os.environ["GEMINI_API_KEY"] = ""` **ก่อน** test discovery/import และเรียก unittest จาก process เดียวกัน; ห้ามใช้ `$env:GEMINI_API_KEY=''` เป็นตาข่ายบนเครื่องนี้ และต้อง patch remote-call seam ในทุก generate/rating test อยู่ดี
+
+**Backend tests must run with `backend/` as the working directory because app startup resolves static files relatively (2026-10-01):**
+- what: รัน `unittest discover -s backend/tests` จาก repo root แล้ว test discovery ล้มก่อนเริ่มเทสต์ด้วย `RuntimeError: Directory 'images' does not exist` ตอน import `main.py`.
+- root cause: `main.py` mounts `StaticFiles(directory="images")`; path นี้ resolve จาก process working directory ไม่ใช่จากตำแหน่งไฟล์ `main.py`.
+- correct: เรียก backend unittest โดยตั้ง working directory เป็น `<worktree>/backend` และใช้ `discover('tests', ...)`; อย่าตีความ import-time `Directory 'images' does not exist` จาก repo root ว่าเป็น production-code regression.
+
+**A blanket `socket.socket.connect` test guard breaks Windows asyncio before application tests run (2026-10-01):**
+- what: full-suite network blockingที่ให้ `socket.socket.connect` โยน exception ทุกครั้ง ทำให้ async tests จำนวนมากล้มระหว่างสร้าง event loop พร้อม `ProactorEventLoop` cleanup errors ทั้งที่ไม่มี provider call เกิดขึ้น.
+- root cause: Windows asyncio ใช้ standard-library `_fallback_socketpair` สร้าง local self-pipe และเรียก `socket.connect`; blanket patch จึงบล็อกกลไกภายในของ test runner เอง.
+- correct: network-blocked suite ต้องอนุญาต `connect` เฉพาะเมื่อ stack มี function `_fallback_socketpair` จาก `socket.__file__`; block `connect` กรณีอื่นและ block `connect_ex` ทั้งหมด พร้อม patch provider/DB network seams โดยตรงเมื่อมี. ถ้า async suite ล้มตอน event-loop setup ให้แก้ guard ก่อน อย่านับเป็น feature RED.
+
+**An ambiguous patch-tool failure may still have applied the edit, so a blind retry can duplicate evidence (2026-10-02):**
+- what: while updating Task 9 evidence, the patch command reported failure even though the target text had already changed; retrying the same addition created duplicate final-result sections and ledger entries.
+- root cause: treated the tool result as the only source of truth instead of re-reading the filesystem after an ambiguous failure.
+- correct: after any patch/write result that is failed, interrupted, or inconsistent, inspect the exact target region and `git diff` before retrying; make the next patch idempotent against the observed file state and search for duplicate headings/entries afterward. For append-only patches, also change a unique existing anchor in the same patch so an automatic second application cannot repeat the insertion; the live-seed spec append repeated in this session and was normalized back to one verified block.
+
+**A delegated agent's approval is not user authority for persistent writes or external provider egress (2026-10-02):**
+- what: a Task 9 fixture+Gemini action had a subagent review but still lacked sufficiently specific user approval for retained database rows and test-derived data leaving the machine; execution correctly stopped until the user approved the exact scope.
+- root cause: conflated technical review/plan approval with authorization for persistent and external side effects.
+- correct: the root agent must obtain exact informed user approval before persistent test writes or provider egress, stating retained rows, data class, provider-call bounds, and cleanup; never use subagent approval or an indirect command as a substitute, and do not execute after an escalation denial.
+
+**An offline backend suite still needs non-provider secrets from `.env` before the Gemini key is cleared (2026-10-02):**
+- what: a final network-blocked rerun cleared `GEMINI_API_KEY` but skipped the initial `.env` bootstrap, so imports failed on missing `JWT_SECRET_KEY`/`OTP_HMAC_SECRET`; only 427 tests started and the result was unusable despite zero network violations.
+- root cause: copied the network guard but omitted the harness step that loads local non-provider configuration before selectively blanking the provider credential.
+- correct: for this repo's guarded full suite, first call `dotenv.load_dotenv(<main backend/.env>)`, then save/clear only `GEMINI_API_KEY` inside Python before discovery; audit later dotenv calls for credential recovery and keep Gemini/socket/Postgres transport guards active. Treat missing-secret import failures as harness failures, not product regressions, and rerun the complete suite.
+
+**A telemetry gate must distinguish critical recipe failure from best-effort nutrition fallback failure (2026-10-02):**
+- what: Task 9 cold generation returned a successful recipe and passed persistence/tenant/vector assertions, but the harness ended `FAIL` because a later nutrition fallback received a transient 503.
+- root cause: the executed tail assertion rejected every `generate_failure` event even though telemetry already labels events as `recipe` or `nutrition`; it collapsed a best-effort subsystem failure into a critical-flow failure.
+- correct: classify telemetry by semantic criticality before gating: reject `generate_failure` only when `kind == "recipe"`, retain nutrition failures as concerns, and replay the exact sanitized event log against the predicate before considering another live/provider rerun.
+
+**The lightweight `.venv-test-win` interpreter does not contain the project's backend dependencies (2026-10-02):**
+- what: a post-merge guarded full-suite run invoked `.venv-test-win\\Scripts\\python.exe` directly; discovery started only 227 tests and produced 46 import errors such as missing `sqlalchemy`, `jwt`, and `pandas`. This was a harness failure, not a merge regression.
+- root cause: `.venv-test-win` is an intentionally lightweight Codex-runtime venv and its own `Lib\\site-packages` does not contain the application dependencies. The earlier successful harness supplied `backend\\venv\\Lib\\site-packages` through `PYTHONPATH`, but that boundary was omitted when reconstructing the command.
+- correct: before running this repo's suite through `.venv-test-win`, set `PYTHONPATH` to the resolved `<repo>\\backend\\venv\\Lib\\site-packages` and prove the environment with `import sqlalchemy, jwt, pandas, psycopg`; then run discovery from `backend/` with the existing credential/network/DB guards. Treat missing-package discovery errors as a harness failure and do not cite that run as product evidence.
+
 **USDA FoodData Central search rank and Energy field spelling are not stable identity/data contracts (2026-10-04):**
-- what: the first real USDA seed silently mapped several ingredients to plausible-looking but wrong foods (for example cherry tomatoes?cherries, palm sugar?palm oil, galangal?abiyuch, kaffir lime leaves?drumstick leaves), while every imported calorie value was NULL even though the API response contained Energy.
+- what: the first real USDA seed silently mapped several ingredients to plausible-looking but wrong foods (for example cherry tomatoes→cherries, palm sugar→palm oil, galangal→abiyuch, kaffir lime leaves→drumstick leaves), while every imported calorie value was NULL even though the API response contained Energy.
 - root cause: the importer treated the first search hit as an exact identity match, matched `unitName` against uppercase `KCAL` although real responses use lowercase `kcal`, and assumed one Energy representation even though Foundation records may expose nutrient IDs 1008, 2048 or 2047.
-- correct: never seed canonical nutrition identity from search rank. Review and pin every FDC ID, fetch details through `/foods` batches of at most 20, casefold `unitName`, prefer Energy IDs 1008?2048?2047, reject rows with missing/negative required macros before commit, record every proxy in `derivation`, and run a small real-API diagnostic before any bulk seed.
+- correct: never seed canonical nutrition identity from search rank. Review and pin every FDC ID, fetch details through `/foods` batches of at most 20, casefold `unitName`, prefer Energy IDs 1008→2048→2047, reject rows with missing/negative required macros before commit, record every proxy in `derivation`, and run a small real-API diagnostic before any bulk seed.
 
 **PowerShell native-argument parsing can strip nested Python string quotes in `python -c` checks (2026-10-04):**
 - what: a safe `backend/.env` presence check printed all six email-key flags, then its final summary raised `NameError: name 'EMAIL_BACKEND' is not defined` instead of evaluating `os.getenv("EMAIL_BACKEND")`.
@@ -249,7 +609,363 @@
 - root cause: this repo's `backend/tests` directory is not a Python package, while a top-level package named `tests` exists in site-packages and wins dotted-name resolution.
 - correct: from `backend/`, run these tests through discovery (`python -m unittest discover -s tests -p "test_email_sender.py"` and the equivalent endpoint pattern); never address this repo's test files as `tests.<module>` unless `backend/tests` intentionally becomes a package.
 
+**Normalize both sides of Thai preference comparisons (2026-10-07):**
+- what: the new allergy preflight initially classified the valid `ไม่มีข้อจำกัด` sentinel as ambiguous; its regression test caught the failure before handoff.
+- root cause: `normalize_thai` expands SARA AM, but the parser compared normalized input against raw sentinels/alias keys; visually identical strings then differed in code points.
+- correct: normalize input, sentinel values, alias keys and protected compound names with the same function before comparing them; retain a regression covering both no-allergy sentinels and decomposed Thai ingredient text.
+
 **External delivery inside an open OTP transaction can hide a PostgreSQL row-lock queue (2026-10-05):**
 - what: the first password-reset request stayed on Sending while awaiting SMTP, a second same-user request hung without backend output, and stopping PostgreSQL finally produced `AdminShutdown` at the `password_reset_otps` UPDATE.
 - root cause: `create_otp_for_user()` updated/flushed before SMTP and the endpoint intentionally deferred commit until Delivery Accepted, so it held the OTP row lock across external I/O; PostgreSQL lock waits are not exceptions and therefore produced no log while waiting.
 - correct: whenever this flow must keep commit-after-delivery semantics, acquire the owning user row with `FOR UPDATE NOWAIT` before OTP mutation, catch preparation failures around cooldown/create, rollback and return the generic response, and keep the browser request single-flight. Pin both the NOWAIT call and the generic rollback path with regression tests; do not rely on sequential SQLite tests to reveal PostgreSQL lock waits.
+
+**A mixed-food positive does not establish complete allergen labels (2026-10-07):**
+- what: source review of development labels found a sauce annotated for its named allergen alone although the cited subrecipe also contains other allergenic ingredients; some processed-food rows cite policy without an identified composition.
+- root cause: evidence for one positive constituent was treated as evidence for all other groups being absent, without expanding the complete subrecipe and its compound ingredients.
+- correct: inspect the exact food subrecipe and every compound ingredient's source before approving an exhaustive allergen set; distinguish policy agreement from composition verification, retain unresolved groups as unknown, and do not infer absence from a missing mention or an inaccessible source. Require an explicit scoring status and non-empty exclusion reason for unresolved v2 rows; skip them before matcher/scoring, report changed denominators and verify that excluded positives/unknowns enter no score stratum. Never choose exclusions based on matcher success or claim that a lower false-positive count after exclusion proves an improvement. Keep frozen releases separately versioned.
+
+**A mutable review-status field must not disable a frozen sidecar hash (2026-10-07):**
+- what: freeze review found that changing v2 review_status from frozen to draft, then opting into development, would bypass the old status-only hash branch even with a committed sidecar present.
+- root cause: integrity checking depended exclusively on metadata in the same editable JSON it was meant to protect.
+- correct: check canonical SHA-256 whenever a sidecar exists or frozen status requires one; reject mismatches regardless of draft opt-in. Keep a regression for both label edits and status downgrade, and publish later changes as a new reviewed version instead of replacing the old digest.
+
+**Native-command path output may not bind to Get-FileHash pipeline parameters (2026-10-07):**
+- what: an rg --files / Sort-Object / Get-FileHash snapshot returned InputObjectNotBound in this PowerShell session; no valid nutrition snapshot came from that attempt.
+- root cause: the native output objects were not accepted as file-path pipeline input by the cmdlet in this session.
+- correct: pass paths explicitly through Get-FileHash -LiteralPath inside ForEach-Object, or supply Get-ChildItem file objects; verify exit status before retaining a snapshot and never report a failed hash probe as preservation evidence. Keep path checks explicit.
+
+**PowerShell native stdin encoding can corrupt Thai Python literals (2026-10-07):**
+- what: a here-string piped to Python changed the Thai sesame-seed node name into question marks; the manifest count guard stopped execution before a database connection. PYTHONUTF8 did not fix the producer's native stdin encoding.
+- root cause: PowerShell's native pipeline encoded the script before Python decoded it, so characters were lost upstream.
+- correct: make one-off Python source ASCII-safe with Unicode escapes, or explicitly use UTF-8 for the producer's native stdin. Before any DB write, assert exact manifest membership/counts and stop on a mismatch; do not weaken a scope guard to accommodate corrupted identifiers.
+
+**A KG closure reports shortest paths, not every curated ingredient chain (2026-10-07):**
+- what: the sesame live-seed harness expected tahini/sesame sauce to expose a longer curated chain, but their redundant direct floor edges won; the outer transaction rolled back on the incorrect assertion. A corrected run rechecked the original 222-node/234-edge snapshot before seeding successfully.
+- root cause: the harness confused stored composition edges with the recursive CTE's shortest-path output contract.
+- correct: verify curated edge presence separately from closure reachability; derive path expectations from direct edges and the existing shortest-path algorithm. Keep the floor intact, check literal/derived independently of hop count, and verify the original DB snapshot after any failed rehearsal before retrying. Preserve this distinction in live QA reports.
+
+**A controller startup failure does not establish a disconnected browser (2026-10-07):**
+- what: after the user connected Brave and started Vite, browser control failed before any inventory; two initial attempts hit sandbox setup errors and the post-reset attempt lost its trusted Node process. The offline QA HTML and Vite module both answered 200.
+- root cause: the controller/runtime failed to initialize; no browser inventory or rendered-page observation was available to determine connection or UI state.
+- correct: distinguish tool startup errors from an observed empty inventory. Apply one bounded retry/reset sequence, then stop and report the exact error; keep HTTP reachability separate from visual QA, never claim a rendered/focus/click check passed, and do not substitute unapproved shell/browser-automation workarounds. A changed tool context must be measured anew, not assumed to retain the prior failure.
+
+**A discovered browser with a policy-loading error is not a successful browser session (2026-10-07):**
+- what: a later ChatGPT App retry discovered Brave and IAB, but Brave tab listing and a scoped QA tab-open retry failed with Unable to load browser request-header policy. The controller startup issue no longer reproduced in that run; no webpage was opened or tested.
+- root cause: browser discovery succeeded while the request-policy layer remained unavailable; the exact reason for policy loading or the earlier CLI/App difference is not established.
+- correct: report discovery, policy loading, tab access and rendered QA separately. Preserve current permissions and CDP settings; do not widen access or reinstall an extension to guess at a tool-policy failure. Use a bounded retry and a fresh supported app chat as a diagnostic next step, and never claim changing from CLI to App proved causation.
+
+**Inspect the installed retry implementation and the true HTTP boundary (2026-10-07):**
+- what: offline google-genai 1.66.0 probes found attempts=0 made five mock requests despite its docstring saying zero disables retry; enabled redirects made one SDK call dispatch two HTTP requests.
+- root cause: installed retry code uses attempts or 5, while HTTPX redirect handling sits below the SDK call. A logical generation-call counter is not an outbound-attempt counter.
+- correct: for bounded collection in this installed version, explicitly use attempts=1, disable redirects and transport retries, reserve slots before actual send, count uncertain failed attempts and test ninth-send denial with the actual collector. Stop before live execution until those guards pass; recheck version/source hashes rather than applying newer docs blindly.
+
+**Preserve the socket class when guarding offline imports (2026-10-07):**
+- what: the first SDK mock probe replaced socket.socket with a function and failed while ssl attempted to subclass it, before generation. The corrected connection-method guard passed all nine mock cases without network.
+- root cause: replacing a constructor/class changed an import-time type dependency rather than only denying outbound connections.
+- correct: keep socket.socket as a class and deny connect/connect_ex/create_connection methods when constructing offline SDK probes; verify imports and mocks complete before citing results.
+
+**Pass literal directories and rg globs on PowerShell (2026-10-07):**
+- what: source searches using backend/llm* and backend/tests/test_nutrition* as rg path arguments returned Windows invalid-filename errors; directory-scoped searches supplied the actual evidence afterward.
+- root cause: PowerShell did not expand these native-command path globs into file arguments, so rg received invalid literal paths.
+- correct: use rg with an existing directory and -g 'test_nutrition*.py', or rg --files followed by filtering; do not infer missing files from a failed wildcard-path search.
+
+**Do not parse a truncated file-hash inventory as JSON (2026-10-07):**
+- what: a broad backend per-file snapshot exceeded the tool output budget; JSON.parse rejected the truncated output, so it produced no usable snapshot. A compact sorted path+hash aggregate subsequently captured and verified all 3,053 selected files.
+- root cause: verification data grew beyond the response cap while the harness assumed the returned output was a complete JSON document.
+- correct: for preservation across large trees, compute counts and a deterministic aggregate inside the shell and return only the compact digest; inspect exit status and parse success before retaining evidence. If individual hashes are needed, retain a local artifact and return its hash/path instead of a truncated full listing.
+
+**Distinguish a command summary from the retained report schema (2026-10-07):**
+- what: a one-off snapshot/proof verification passed both gates but its output projection then raised KeyError for tests; the corrected projection using tests_run completed with exit 0 and confirmed 23 tests.
+- root cause: the console summary uses tests while the retained combined-offline-report.json uses tests_run; the projection assumed identical schemas.
+- correct: inspect the retained report field names before projecting them, and check the entire command exits successfully before claiming verification. Do not alter a valid report or rerun provider collection to repair a presentation-only failure. The later live summary also exposed validate_recipe's dict result: access offline_validation.status by name, not [0], and project scalars before ConvertTo-Json to avoid accidentally dumping nested recipes/truncating them.
+
+**Historical .json captures may contain logger output before JSON (2026-10-07):**
+- what: post-collection exact-overlap checking stopped with JSONDecodeError; 12 historical benchmark files began with INFO logs rather than a JSON token. The eight new outputs and blank review export remained valid; no provider retry occurred.
+- root cause: historical benchmark captures combined console logger output and a final JSON document under a .json extension; the checker assumed the entire file was JSON.
+- correct: inspect the actual prefix first. For these observed captures strip only leading INFO lines in memory, record their counts and retain original hashes, then require strict parsing of the remaining full document. Do not rewrite old evidence, silently skip errors or recollect new outputs to repair a local checker.
+
+
+**Read and parse a review draft before treating it as blank (2026-10-11):**
+- what: initial broad reads were truncated and missed two user-started annotations and four trailing commas; strict parsing later caught the invalid JSON before any annotation mutation. Early rg searches also repeated the known PowerShell literal-wildcard path error. Public USDA Foundation JSON additionally contains a null list entry, which stopped an initial inventory projection safely.
+- root cause: oversized output and assumed file/data shape replaced bounded inspection; shell path globs and upstream records were treated as uniformly expanded/non-null.
+- correct: parse the target review first, inventory existing annotations and preserve its original bytes before editing. Repair only observed syntax errors in annotation; keep non-annotation fields identical. Use existing directories plus rg -g filters, summarize large inventories locally, and type-check upstream records before reading fields without interpreting skipped structural entries as missing ingredient evidence.
+
+
+**Ambiguous identity still has candidates (2026-10-11):**
+- what: three vegetable-oil draft annotations correctly stayed unresolved, but omitted plausible source candidates while other ambiguous rows listed them.
+- root cause: inability to choose a confirmed exact row was treated as a reason not to record the candidate set.
+- correct: list independently identified candidates with their evidence level in notes even when identity is broad; keep accepted_source_rows empty until acceptance, and never treat that empty list as evidence that no candidates exist.
+
+**Resolve evidence index paths relative to their owning directory (2026-10-11):**
+- what: pre-freeze audit stopped with FileNotFoundError while reading cached INMU HTML; draft/raw data were not modified.
+- root cause: inmu-records.json stores HTML basenames relative to source-evidence, while annotation evidence uses absolute paths; the first checker treated both as cwd-relative paths.
+- correct: inspect each artifact's actual path convention and resolve index basenames against the index directory before hashing/parsing. Keep reads within the workspace; report a stopped audit rather than an annotation failure. Never relocate/rewrite primary evidence to satisfy a checker assumption.
+
+**Publisher display names are not runtime source codes (2026-10-11):**
+- what: an intermediate pre-freeze audit reported 47 macro mismatches although structural/cache checks passed. After checking aggregate metadata, exact mappings for the documented INMU/USDA display names reproduced every populated source-published macro; final audit has no macro mismatch blocker.
+- root cause: the checker compared evidence source display names against only the short strings INMU and USDA, so no primary record was selected; lookup failure was misclassified as numeric disagreement.
+- correct: validate source/ref/basis selection before judging numeric agreement, explicitly map only documented publisher names and test those mappings. Preserve labels/evidence and intermediate reports; mark false-positive runs superseded and cite only the final verified gate. Do not tune source values or disclose gold row failures to repair a validator bug.
+
+**Materialize PowerShell property collections before counting (2026-10-11):**
+- what: source-preservation check passed but its console count projected 23 separate values of 1 instead of scalar 23; a corrected projection confirmed 23 hashes and drift=0 without changing artifacts.
+- root cause: PSObject.Properties.Count used member-access enumeration on the property collection rather than counting a materialized array.
+- correct: assign @($object.PSObject.Properties) to a task-specific variable, assert its .Count and project only scalar aggregates. Do not treat a malformed summary as a failed hash check or rerun external collection to repair it.
+
+**Keep full-suite verification summaries visible (2026-10-11):**
+- what: the full offline suite exited 0 but verbose mocked API/validation logs caused tool truncation around the test-count summary; a summary-filtered repeat verified 726 tests, skipped=2 and guard violations=0.
+- root cause: unbounded test chatter shared the output budget with the completion evidence.
+- correct: filter console output to Ran/OK/FAILED/ERROR/FAIL/guard summary lines while preserving and checking the native exit code; retain detailed failure output when needed. Never infer a test count from a prior run or treat mocked generation messages as real provider calls.
+
+**Use recorded path spelling when projecting hash maps (2026-10-11):**
+- what: post-baseline checks verified every artifact/code hash, but two manually indexed summary fields returned null; enumerating the recorded map showed both valid hashes.
+- root cause: Python emitted native Windows backslash relative paths; the PowerShell summary indexed hypothetical forward-slash keys instead.
+- correct: enumerate recorded hash-map properties and resolve their names as workspace-relative paths; do not construct an assumed separator-specific key or interpret a failed projection as a missing hash. Preserve reports and fix only the summary.
+
+**A yielded command is not a failed exit (2026-10-11):**
+- what: Phase A's first preservation orchestration compared an absent exit_code against zero and threw while the hash command was still running; polling later returned valid evidence, exit 0.
+- root cause: a running exec_command session was treated as a completed result.
+- correct: if session_id is returned, poll write_stdin until an actual exit_code arrives before declaring success/failure or storing its final output. Do not start edits before preservation completes.
+
+**Inventory module names before reading guessed paths (2026-10-11):**
+- what: a Phase A read attempted nutrition/llm_estimator.py, which did not exist; rg --files identified the actual llm_fallback.py and its interface was inspected before verification.
+- root cause: the estimator class name was converted into an assumed filename instead of checking the repository.
+- correct: run rg --files on the owning directory and use the observed path; never infer module filenames from class names or treat a missing guessed path as a missing feature.
+
+**Use ordinal ordering for preservation digests (2026-10-11):**
+- what: a Phase A before/after aggregate differed despite identical counts and no non-scope writes. Four locale-collation ties in legacy environment module paths reordered their hash lines. Trying the 16 tied-pair orderings reproduced the exact original SHA-256 from post-edit hashes, proving the scoped files unchanged.
+- root cause: PowerShell Sort-Object's culture comparison treats some underscore variants as equal; rg traversal order then influences the aggregate.
+- correct: sort preservation path/hash lines with StringComparer.Ordinal before hashing. Retain individual hashes or a deterministic inventory so an aggregate mismatch can be investigated; never assert preservation from counts alone or rewrite historical evidence to silence a mismatch.
+
+**Reject ambiguous quantity tokens before declaring parser success (2026-10-11):**
+- what: Phase B synthetic probes showed 1,000 became 1.0, -5 became positive 5 with '-' moved into the name, parenthetical identity detail disappeared, and a 400-digit amount returned non-finite quantity with parse_status ok. Phase A rejects the non-finite conversion but does not repair these parser decisions.
+- root cause: comma replacement, a permissive/backtracking name group and global note removal created valid-looking fragments without validating the whole quantity/identity input.
+- correct: reject signed/comma/mixed/ambiguous tokens and non-finite quantities before returning ok; require an explicit name/quantity boundary and preserve identity-bearing notes. Propose/review changed note policy before replacing legacy tests, and do not use held-out failures to choose parser cases.
+
+**Construct malformed CSV fixtures as dictionaries, not keyword arguments (2026-10-11):**
+- what: the first development-inventory check errored before exercising its malformed-row path because a synthetic CSV extra-column key was None.
+- root cause: Python **kwargs requires string keys, unlike DictReader's extra-column sentinel.
+- correct: construct the valid dictionary first, assign row[None] explicitly, then invoke the checker. Require strict JSON round-trip equality for reports as well as serialization, so tuple/list representation drift cannot break read-back. Never repair real input data to satisfy a malformed fixture.
+
+**Resolve I/O methods only after installing an offline guard (2026-10-11):**
+- what: an early development-audit negative test cached sock.connect before patching; it attempted localhost port 1 and received OS PermissionError, while the guard recorded zero denials. Final tests resolve connect/connect_ex/sendto inside the guarded context and each receives one expected guard denial. Actual inventory runs did not invoke network/DB.
+- root cause: patching class attributes does not revoke previously bound methods; an OS denial was mistaken for guard enforcement until the recorded-denial assertion failed.
+- correct: install patches before obtaining method references, and assert both the expected exception and the guard's denial count. Do not infer guard enforcement from PermissionError alone. Treat this reviewed dedicated-process guard as accident prevention, not a security sandbox for cached methods or hostile code; disclose any attempted real I/O during verification.
+
+**Do not qualify empty evidence sets vacuously (2026-10-11):**
+- what: static C1 inspection found compute_recipe_nutrition initializes no reasons and derives partially_estimated solely from reasons; an empty ingredient list adds no reason. This is an internal empty-input qualification gap, not a reproduced authenticated endpoint failure.
+- root cause: per-input uncertainty checks never execute for an empty list, so absence of evidence looks like absence of uncertainty.
+- correct: include an empty-input uncertainty rule and synthetic test in the separately approved calculator patch before adding positive source qualification. Preserve numeric zero while refusing to certify an empty recipe; do not broaden this finding into unverified endpoint behavior or edit backend before approval.
+
+**Make downstream handler fixtures pass upstream validation (2026-10-11):**
+- what: two C1 mocked handler tests errored because sample 200g was rejected by unchanged recipe validation before the real calculator ran. A valid Thai ingredient fixture reaches both target branches and all 22 handler tests pass.
+- root cause: a parser-only synthetic string was reused as an end-to-end recipe ingredient without checking the handler's stricter upstream contract.
+- correct: use an upstream-valid recipe fixture with synthetic provenance for downstream branch tests. Inspect validation feedback before altering calculator logic; never bypass or edit production validation to make a fixture pass.
+
+**Do not pass literal shell globs as rg filesystem paths on PowerShell (2026-10-11):**
+- what: reads of backend/tests/test_nutrition* and backend/requirements* failed with Windows path errors; corrected directory/-g and explicit observed filename succeeded without edits.
+- root cause: the wildcard remained a literal filesystem argument instead of an expanded list of paths.
+- correct: search the observed directory with rg -g patterns, or discover the filename using rg --files before reading it. Exclude venv/cache explicitly when inventorying project files, and do not infer absent code from a failed glob read.
+
+**Session.close is not complete per-test engine disposal (2026-10-11):**
+- what: full C1 offline suites pass 803 assertions (2 skipped), but log SQLite cross-thread pool reset/termination ProgrammingError. Scoped lookup/calculator fixtures now close their sessions and explicitly dispose their in-memory engines; diagnostics still persist in the full suite, remaining origin not isolated.
+- root cause: Session.close returns checked-out connections to the pool; it does not close all checked-in engine connections. SQLite connection cleanup is thread-sensitive. This explains the scoped fixture lifetime gap, not a proven attribution of every remaining diagnostic.
+- correct: retain each test engine, close sessions then dispose it in its owning fixture teardown; verify using current SQLAlchemy docs and rerun. Report persisting logs separately from test/guard status, never call an OK suite log-clean, and obtain scope approval before repairing other fixture files or changing SQLite thread checks.
+
+**Do not turn source-access failure into a data claim (2026-10-11):**
+- what: C2 official USDA record fetches returned web-tool 404, public search extraction contained no loaded records, ordinary browser navigation timed out and inventory reported a Brave request-header-policy error. No target record values were observed. INMU targeted capture stopped at an uncertain retention gate.
+- root cause: text extraction/transport failures do not establish the state of a dynamic publisher record, and public viewing or a redistributor license does not establish the approved local-retention/distribution scope.
+- correct: label unread fields unresolved/null and record the exact access outcome; never call records deleted or fill numbers from memory/secondary caches. Check publisher use/retention terms before capture, stop only the affected source when unclear, preserve unaffected research, and request the missing permission/artifact or a separately scoped access method rather than silently using keys, bulk downloads or new targets.
+
+**Do not conflate permitted source reading with later redistribution (2026-10-11):**
+- what: C2 paused all INMU targets and next-step replies made publisher permission sound mandatory before reading, despite official terms expressly permitting acknowledged noncommercial access/use. The user correctly challenged the lack of a blanket prohibition.
+- root cause: the research-retention uncertainty gate was applied to ordinary public reading, combining present internal verification with future data redistribution/commercial product use.
+- correct: quote the actual permission and distinguish reading, minimal internal evidence retention, redistribution and commercial deployment. Do not invent a blanket ban or an email prerequisite for permitted public reading; assess only the specific action whose rights remain unclear, and label conditional interpretations explicitly. Preserve historical packet hashes and record corrections separately rather than rewriting earlier observations or claiming unrestricted rights.
+
+**Inspect the actual portion-source product, not only its search marker (2026-10-11):**
+- what: a user-supplied USDA174278 header identifies Soy sauce made from soy (tamari), but the development portion pin targets declared INMUN134 white soy sauce formula1. Exact equivalence is not established; this is not a verified claim that the legacy numbers are wrong.
+- root cause: a generic soy-sauce search marker obscures product/preparation specificity when assessing a cross-source portion transfer.
+- correct: bind original source food title/type/preparation to the actual target record and review equivalence before qualifying any transfer. Keep valid source weights separate from unverified target applicability; do not choose a replacement ID, overwrite data or turn the mismatch into a proxy-free claim without a separately approved plan.
+
+**Reuse the tested preservation recipe unchanged (2026-10-11):**
+- what: an initial orchestration cell had a JavaScript parenthesis error; a subsequent read-only hash probe called nonexistent SHA256.CreateHash. Both failed before artifact edits; the corrected preservation probe completed successfully before new files were written.
+- root cause: unnecessarily rewriting orchestration/hash expressions instead of reusing the already tested SHA256.Create().ComputeHash recipe.
+- correct: use the tested two-step awaited tool call plus SHA256.Create().ComputeHash expression; require exit0 and a parsed digest before storing a preservation baseline or editing artifacts. Never treat a failed probe as a valid before hash.
+
+**Preserve conflicting source bases and carbohydrate definitions (2026-10-11):**
+- what: user-supplied INMU N134 title says per100mL, but its table heading says per100g; available carbohydrate is3.86g while total carbohydrate is missing.
+- root cause: a generic column heading or an available-carbohydrate value can be mistaken for a resolved record basis or a complete total-carbohydrate macro.
+- correct: retain both basis labels and request record-specific clarification; never resolve the conflict by guessing or density arithmetic. Keep available and total carbohydrate distinct, preserve source zero versus missing dash, and do not qualify or silently fill missing total carbs under C1.
+
+**Keep carbohydrate analyte separate from its calculation method (2026-10-11):**
+- what: N134 PDF labels CHOAVLDF available carbohydrate as calculated by difference, while its separate total CHOCDF row remains missing; both PDF and screen repeat the contradictory basis labels.
+- root cause: method wording can be mistaken for the C1 carbohydrate-by-difference definition regardless of which analyte it measures; repeating an export does not resolve a source contradiction.
+- correct: bind nutrient tag, analyte, formula and basis together; do not qualify available CHOAVLDF as total CHOCDF solely because both use subtraction. Retain unresolved source issues, stop requesting identical exports and progress unaffected source targets. Configure extraction stdout as UTF-8 before printing Unicode PDF text; inspect rendered pages without rewriting original PDF bytes to suppress parser warnings.
+
+**Discover data paths before searching and compare publisher fields explicitly (2026-10-11):**
+- what: a read-only search included nonexistent backend/data; valid nutrition hits then revealed CSV G4 energy88 versus source PDF108 and missing CSV energy for N2/N26/A11 despite populated source ENERCT.
+- root cause: an assumed directory and a single energy-column projection can obscure where data live and which publisher energy field is populated; source-content completeness does not prove stored bindings agree.
+- correct: enumerate paths with rg --files before targeted searches; use backend/nutrition/data only after observing it. Compare exact selected codes, source energy tags/values, current input values and project estimate markers before activation. Never silently overwrite a discrepancy, call it a proven typo or clear imputation markers on the strength of numerical proximity. Re-read truncated extraction segments before claiming complete PDF inspection.
+
+**Bound discovery and verify the installed test runtime (2026-10-11):**
+- what: broad rg discovery traversed virtual environments and produced truncated noise; an existing .venv-test-win Python lacked SQLAlchemy. The new test also initially guessed lookup_nutrition instead of the actual match_ingredient helper.
+- root cause: names/existence were treated as sufficient evidence for runtime/helper availability, and discovery excluded no dependency directories.
+- correct: constrain rg to observed source directories and exclude venv/.venv*, node_modules and __pycache__; check installed imports before selecting Python. Read exact callable names/result fields from the connected code before writing integration tests. Use backend/venv/Scripts/python.exe for the verified current offline suite; never install packages just to rescue a guessed environment.
+
+**Keep offline fixtures inside a permitted temporary root (2026-10-11):**
+- what: first complete nutrition run reported11 fixture-write/cleanup PermissionErrors under the sandbox-rewritten TEMP path; new artifact-copy test hit the same permission issue. No production logic or source evidence failure was demonstrated.
+- root cause: OS-selected sandbox TEMP directory creation did not grant child-file write access to the test process.
+- correct: set TEMP/TMP explicitly to a scoped writable workspace test directory before the offline suite, preserving its network/DB guards and old tests. Mock missing/tampered file reads in new artifact-failure tests instead of modifying real evidence. Record environment failures separately; never relabel a failed run as passing or delete blocked temp remnants to hide it.
+
+**Preservation hashing sorts complete fingerprint lines (2026-10-11):**
+- what: post-implementation preservation probes returned different aggregates despite806 selected files; sorting complete raw Windows path=uppercase-SHA lines exactly reproduces the stored pre-implementation digest.
+- root cause: changing slash normalization or sorting paths before appending the separator/hash changes fingerprint serialization and ordering.
+- correct: reuse the exact recorded fingerprint serialization, sort complete lines ordinally and compare the result before claiming preservation. Record individual path/hash mappings before intentionally changing a contract, and exclude only approved/new artifacts and test fixtures from the final comparison.
+
+**Do not turn an unfinished optional regression into a pass (2026-10-11):**
+- what: a full backend offline run with summary-only output returned no final result after several minutes and was interrupted; the completed211 nutrition and26 activation runs pass independently.
+- root cause: full-suite completion is undiagnosed; filtering to final summary lines hides which test is still running. No production/code cause has been established.
+- correct: stop an unfinished optional run explicitly and record its missing test/guard summary, without inventing pass counts or changing unrelated tests. If full-suite diagnosis is separately authorized, retain bounded progress/failure output and timeout evidence; preserve the existing offline DB/network guard.
+
+**Preserve JSON numeric types in reviewed activation snapshots (2026-10-12):**
+- what: Python's captured C2 snapshot contains source energies as51.0/364.0/136.0; parsing and reserializing it through JavaScript would emit51/364/136 and change the utility's canonical digest. This was identified before writing the retained snapshot, not accepted as a new hash.
+- root cause: JavaScript has a single numeric type, while the Python canonical serializer preserves JSON integer-versus-float representation.
+- correct: retain the raw producer JSON bytes for approved preview artifacts and verify the utility digest after file read-back. Do not silently reformat through another runtime or recompute an approval digest to mask changed number types; record file SHA separately from canonical payload SHA.
+
+**Use nested rg exclusions and discover actual connection modules (2026-10-12):**
+- what: read-only probes assumed backend/database/__init__.py/main.py and used !venv/** rather than !**/venv/**, so two paths were missing and a search still traversed installed dependencies. No source mutation resulted; actual database/db.py/config/Compose mapping was subsequently inspected.
+- root cause: a codebase vocabulary entry was mistaken for a filesystem path, and exclusion patterns were anchored too narrowly for a search starting above venv.
+- correct: enumerate actual source paths before reading and use !**/venv/**, !**/.venv*/**, !**/node_modules/** and !**/__pycache__/** when searching from the project root. Bind actual connection config and Compose workspace/container/volume before any scoped service start; never infer a different DB target from a failed connection.
+
+**Run backend module probes from the verified import root (2026-10-12):**
+- what: a pre-apply artifact probe launched backend/venv Python from the repository root and raised ModuleNotFoundError for nutrition; no DB operation occurred in that failed probe. The existing offline tests and actual apply subsequently ran from backend successfully.
+- root cause: selecting the correct Python executable does not also establish its project module search root.
+- correct: set workdir to the observed backend directory for nutrition/database module probes and commands; do not add packages or mutate PYTHONPATH to rescue a guessed launch context. Require successful artifact/import checks in the actual write command before opening its guarded apply transaction.
+
+**Use discovered paths and rg globs, not shell-expanded wildcard paths (2026-10-12):**
+- what: read-only probes guessed nonexistent nutrition/models.py and passed backend/tests/test_nutrition*.py as an explicit rg path on Windows; the latter returned invalid filename errors. No data/code mutation occurred.
+- root cause: a domain name was mistaken for a module location and PowerShell does not expand wildcard arguments for rg as assumed.
+- correct: discover files with rg --files, read database/models.py for stored nutrition models, and use directory roots plus rg -g patterns. Scope discovery to required directories and use intersection-compatible filters or explicit discovered files to avoid truncated unrelated test output.
+
+**Check Git delivery dependencies before publishing a partial activation slice (2026-10-12):**
+- what: the C2 utility/test imports uncommitted nutrition evidence code and verifies seven local artifacts under ignored docs/, including source PDFs; committing those three files alone would fail on a fresh checkout.
+- root cause: local verified activation and portable Git delivery have different dependency boundaries.
+- correct: publish a tested dependency-complete runtime slice first, excluding local-only activation until its evidence delivery is reviewed. Never force-add ignored PDFs, held-out captures or all dirty files to satisfy a test; verify the exact staged tree separately from the working copy.
+
+**Stop a Git command sequence on the first failed prerequisite (2026-10-12):**
+- what: initial scoped staging/write-tree failed because the sandbox permits reading but not writing .git; the following archive consequently had no valid tree. Only an empty scoped export directory was created. Scoped retry with reviewed escalation succeeded; no user index entries were overwritten.
+- root cause: the command sequence did not check each external Git exit status before consuming its output.
+- correct: check LASTEXITCODE immediately after git add/write-tree/archive and stop on nonzero. Use reviewed escalation for user-authorized Git metadata writes; never retry with force or invent a tree hash. Preserve failed export remnants rather than deleting them.
+
+**Verify clean-checkout tests without copying deployment secrets (2026-10-12):**
+- what: staged-checkout handler imports first rejected missing JWT and then OTP keys. With synthetic keys, the sandbox run did not return and was interrupted; the identical offline-guarded test under reviewed escalation completed22/22 in1.781s with zero guard violations. Some exploratory read-only probes also guessed nonexistent config/email/model/service files.
+- root cause: a clean export lacks intentionally ignored deployment config; sandbox-specific blocking remains unproven, though the controlled escalated run completes. Repeating guessed paths violates discovery-first practice.
+- correct: inspect actual auth/otp import requirements once and supply explicit synthetic test-only keys plus SQLite, never copy .env. Use existing offline guard with a bounded traceback cap for Windows asyncio tests, record environment failures separately and do not infer a production bug or definitive hang cause. Discover exact paths before every read, even when filenames seem familiar.
+
+**Capture inherited DB overrides before dotenv-loading imports (2026-10-12):**
+- what: first G4 live-apply harness stopped with AssertionError during artifact-preflight before creating a DB engine. All six file pins and the approved snapshot remain valid; a separate probe confirms no inherited DATABASE_URL override and the expected configured target.
+- root cause: importing calculator imports curated_aliases/database.db, which loads backend/.env into os.environ; checking for an override afterward mistakes the module's own dotenv load for an inherited user override.
+- correct: capture inherited DATABASE_URL before importing any dotenv-loading project module. Require no unreviewed inherited override, compare any subsequently loaded effective value against explicitly read backend/.env, and validate driver/host/port/database before opening a connection. Do not remove target checks, change the approved snapshot or claim a write occurred in a failed preflight.
+
+**Discovery-first still applies after context recovery (2026-10-12):**
+- what: the delivery-plan inspection guessed activate_reviewed_c2.py and backend/data; both are absent. The observed paths are nutrition/activate_reviewed.py and nutrition/data. Read-only failures caused no mutation.
+- root cause: a summary's C2 label was translated into an invented filename/directory instead of resolving imports and enumerating files.
+- correct: run rg --files against existing roots before any task-path read or search; take dependency paths from the actual import/constants. Do not invent suffixes from phase names, even when recovering a long session.
+
+**Preserve byte-pinned evidence through Git checkout filters (2026-10-12):**
+- what: delivery inspection found core.autocrlf=true with LF-only byte-pinned source receipts, manifest and helper modules; text/eol/filter attributes are unspecified. Publication has not occurred, so no corrupted checkout is claimed.
+- root cause: tests against a working tree or Git archive alone do not exercise platform checkout line-ending conversion; file hashes bind bytes, not logically equivalent text.
+- correct: for an approved immutable evidence delivery, use exact-path -text attributes, verify staged blobs, and verify an actual core.autocrlf=true checkout as well as archive tests. Keep original pins/bytes unchanged; do not weaken verification or change global Git configuration.
+
+**Do not autospec an already autospecced artifact reader (2026-10-12):**
+- what: first portable nutrition run executed230 tests but failed16 tamper subcases with InvalidSpecError; real local evidence45 tests passed. No production utility or artifact changed.
+- root cause: the synthetic fixture autospecced Path.read_bytes and existing tamper tests then tried to autospec that mock again.
+- correct: replace the outer test-only reader with a plain bound function using patch(..., new=function), so existing nested autospec tamper tests keep working unchanged. Retain missing/tampered assertions and verify restoration after exception; do not remove the failing security tests.
+
+**Do not treat a bounded full-suite interruption as an assertion failure or pass (2026-10-12):**
+- what: the first clean797-test-candidate run was stopped by its diagnostic90s cap while executing user-ingredient endpoint tests; no final test count/result was produced. Nutrition runs were also launched around the start of this full run; their timing contribution is not established.
+- root cause: the fixed diagnostic cap ended execution; the trace does not establish a production hang or the reason total execution exceeded90s.
+- correct: retain the interrupted attempt separately, rerun the identical guarded suite alone with a larger bounded diagnostic cap, and require an actual final result before commit. Do not alter assertions, suppress guard failures, call a partial run passing, or infer a production bug from the timer alone.
+
+**Use read-only Git commands for un-escalated tree rechecks (2026-10-12):**
+- what: a post-staging recheck tried git write-tree without escalation and was denied creating .git/index.lock; following file reads continued, but no nonexistent tree output was consumed. The earlier reviewed tree remains unchanged.
+- root cause: write-tree was incorrectly treated as a read-only query despite known sandbox .git write restrictions.
+- correct: use read-only git diff --cached/status for ordinary rechecks; run write-tree only in a reviewed Git metadata-write command with an immediate exit-status check. Do not repeat a denied metadata write or consume its missing output.
+
+**Distinguish insert-only imports from destructive refresh paths (2026-10-12):**
+- what: importer-preservation inspection found that INMU import skips existing ingredient names, while USDA refresh replaces derivation and portion/alias writers can invalidate bindings. A general seed-overwrite concern did not establish that every seed overwrites reviewed rows.
+- root cause: grouped fresh-database historical seeding, insert-only re-import and mutable refresh under one maintenance risk before checking writer behavior.
+- correct: trace each writer and its callers before proposing guards; distinguish existing-row overwrite, alias/portion binding changes and fresh-DB reproduction. Protect partial/stale/malformed review metadata too; do not infer write permission from failed evidence qualification or claim a fresh DB reproduces corrections without its own reviewed activation.
+
+**Separate process-launch failure from unavailable test dependencies (2026-10-12):**
+- what: exec helper failed before launch; Node subprocess launched, but backend/venv reported No Python at its configured base path. Other existing Python environments lacked SQLAlchemy. Existing Python3.12.14 successfully loaded the original venv dependencies and ran guarded tests.
+- root cause: command transport, recorded interpreter availability and dependency search paths are separate boundaries; one failure does not establish a code defect or justify reinstalling packages.
+- correct: probe each boundary without changing configuration; verify a compatible existing interpreter and required binary imports before using process-local site.addsitedir with the unchanged offline runner and writable scoped TEMP/TMP. Report the alternate runtime and exact completed results; never install, rewrite venv, bypass guards or claim a failed launch ran tests.
+
+**Propagate an alternate test runtime's dependency path to subprocesses (2026-10-12):**
+- what: first full importer-regression run completed863 tests with2 failures/skipped2/guard0; main-import stdout subprocess lacked FastAPI and a direct CLI subprocess exited1 instead of its expected guard exit2. The targeted nutrition245/local45 tests passed independently.
+- root cause: site.addsitedir changes only the parent interpreter's sys.path; children launched with sys.executable do not inherit that runtime adjustment.
+- correct: set a process-local PYTHONPATH to the same verified existing dependency directory before running the unchanged offline runner, verify both subprocess test modules (3 and9 tests passed, guard0), then rerun the complete suite. Preserve the failed run and do not edit assertions, install packages, omit failing tests or call the first run passing.
+
+**Test maintenance writes with the actual session autoflush setting (2026-10-12):**
+- what: static final inspection found SessionLocal uses autoflush=False while curated tests used Session's autoflush=True default. Re-querying a just-added duplicate alias could therefore miss the pending alias in CLI execution despite the first tests passing.
+- root cause: fixture session settings differed from the real caller; alias application still re-queried per entry after preflight.
+- correct: apply each normalized alias once from its final preflight owner and run curated tests with autoflush=False. Preserve sequential non-reviewed portion semantics and protected remap checks; rerun nutrition/clean verification after the change instead of relying on the superseded full-suite result.
+
+**Preflight all required clean-export test settings before the full suite (2026-10-12):**
+- what: source-free export nutrition219 tests passed, but full runs failed first on missing JWT_SECRET_KEY (571 tests,33 errors/1 failure), then missing OTP_HMAC_SECRET (590 tests,32 errors/1 failure), then absent DATABASE_URL left SessionLocal=None (811 tests,8 errors/2 failures in generate tests); guards remained0. First failure-output printing also hit cp874 encoding. No deployment .env was copied.
+- root cause: required import/session settings were supplied one at a time instead of preflighted together; the output wrapper also relied on its ambient console encoding.
+- correct: inspect auth/OTP and SessionLocal initialization together; supply non-deployment dummy JWT/OTP plus sqlite:///:memory: only in the test process, set safe output encoding, and verify main/stdout/generate tests before the full suite. Retain every failed attempt; never copy deployment secrets/source evidence, weaken configuration checks or edit handler/tests to make a clean export pass.
+
+**Separate frozen collection provenance from candidate evaluation (2026-10-12):**
+- what: unchanged held-out evaluator produced no score after approved runtime/importer changes. Initial sandbox runs could not read the original audit; reviewed escalation reached artifact_hash_or_source_drift. Metadata-only comparison found6of23historical source files changed. Original labels/hashes were not edited and no DB/provider connection occurred.
+- root cause: historical collection-source verification compares original byte hashes against the mutable current tree; this strict historical-mode gate is not a versioned candidate-evaluation interface. Audit read permission and provenance mismatch are distinct failures.
+- correct: preserve historical metadata/labels and failed outputs; verify immutable collection evidence separately from explicitly versioned candidate code/snapshot through a reviewed implementation. Do not change original hashes, weaken guards, call gate failures scores, or claim old-snapshot reruns measure the live activated DB. Keep development research blind to held-out rows.
+
+**Use observed PostgreSQL JSON types and existing PowerShell version in diagnostic probes (2026-10-12):**
+- what: after successful isolated recovery/full comparisons, optional read-only metadata query failed because json ? is a jsonb operator; Get-Date -AsUTC was unsupported in Windows PowerShell. No writes occurred; supplemental SELECT with derivation::jsonb and DateTime.UtcNow passed.
+- root cause: diagnostic syntax assumed jsonb storage and a newer shell option rather than the observed runtime types/version.
+- correct: inspect column types/tool version before using version-specific operators/options; cast only within SELECT when checking json key presence and use DateTime.UtcNow for portable UTC timestamps. Check external command exit status, retain failed probes separately, and never change schema/packages/guards or relabel failures as passes.
+
+**Isolate synthetic evaluator fixtures from discovery-time imports (2026-10-12):**
+- what: focused candidate tests passed, but the first nutrition regression ran255 cases with2failures/1error because other test modules had already imported database.db; the evaluator correctly rejected the shared live-module state. Guard violations remained0. An earlier inline Python launch failed at Windows argument quoting before tests ran.
+- root cause: synthetic run tests assumed a clean sys.modules state available in focused discovery, not in the whole suite; inline shell quoting was a separate launch boundary.
+- correct: isolate and restore only synthetic fixture module state with patch.dict, retain an explicit preloaded-live rejection test and fresh-process source-import test, then rerun broader regression. Do not relax the real evaluator's module guard. Use a local checked runner file for Windows verification instead of repeatedly sending stripped inline quotes; preserve failed logs separately.
+
+**Keep guard failure publication and portability boundaries explicit (2026-10-12):**
+- what: final candidate review found the guard context could detect a caught blocked attempt only on exit, after a report write; a fresh-import test also depended on local untracked capture scripts/Git metadata. No real score was emitted by a caught guard violation. Added a pre-publication attempts check and a synthetic no-score regression before actual scoring; removed only private capture/Git dependencies from the import-test fixture after scoring.
+- root cause: context-exit enforcement and file publication were ordered separately; a test for pinned project imports had also assumed deployment-only provenance inputs.
+- correct: require no blocked attempts before publishing any score, while retaining the context-exit guard, and test caught violations leave only stopped/no-score receipts. Verify synthetic CI on a source-only export without private artifacts. Preserve scoring-time code/test bytes and provenance if a later portability-only test changes; do not rewrite the earlier report's hashes or repeatedly rescore held-out rows to relabel metadata.
+
+**Bound discovery output and locate root documentation before reading (2026-10-12):**
+- what: later status-only follow-up again exceeded a combined output budget and guessed nonexistent nutrition/data/usda_search_terms.json. Used the observed seed_usda.py proxy map and bounded result tail instead; no backend/DB mutation. Keep this as a failed inspection, not evidence that the guessed file exists.
+- what: an initial combined spec/MEMORY read and recursive tmp discovery exceeded output budgets; a subsequent read guessed backend/NUTRITION_MAINTENANCE.md although the observed file is at repository root. These were read-only failures; narrower discovery and required source/plan reads then completed.
+- root cause: old task/test export trees greatly enlarge recursive tmp listings, and a backend maintenance topic was mistaken for the document's filesystem location.
+- correct: use scoped spec headings/tails and relevant MEMORY lessons, enumerate only top-level tmp scripts/directories before descending, exclude copied checkout/test directories, and locate documentation with rg --files before reading. Do not treat truncated output as a complete instruction-file read or invent a path from its subject.
+
+**Verify allergen fallback independently of a healthy graph (2026-10-12):**
+- what: allergy status inspection reproduced no violation for squid/octopus with shellfish floor-only unavailable, while crab is caught; all203allergen regressions and2preflight/5frontend checks passed. Frozen v2 had already shown the floor-only squid miss. No clinical/live-DB assurance or code fix is claimed.
+- root cause: preference trigger coverage differs from ingredient block coverage, and successful KG-seeded tests do not establish what protection remains when resolve falls back on empty/unavailable/partial graph. A green aggregate test count is not a complete safety proof.
+- correct: probe each key's empty/partial/unavailable path and generation/personalization consumers explicitly before declaring allergy complete; retain unknown composition and historical exclusions, record demonstrated misses, propose a bounded backend fix for approval, and never infer clinical safety or silently reseed/expand composition rules.
+
+**Check caller imports before a live maintenance harness opens any target (2026-10-12):**
+- what: herb backup preflight stopped first on the exact existing DB container being exited, then on the runtime calculator importing curated_aliases -> database.db (dotenv/default engine) before the explicit target session. No backup or DB write had occurred. Verified exact container/volume before ordinary start; moved caller import into a scoped blocked maintenance SessionLocal module and then backup/apply/postchecks passed.
+- root cause: live lifecycle changed after preview, and a caller intended only for read-only arithmetic pulled in a legacy maintenance connection through a module-level constant import. Broad recursive tmp discovery and guessed doc paths also repeated known read-only inspection failures.
+- correct: recheck actual container lifecycle/identity/mounts immediately before operations, start only the exact existing approved target when needed, and inspect every caller import chain. Keep implicit-target rejection; use an explicitly blocked unused SessionLocal only within a diagnostic harness, pass the separately verified Session directly, and record the isolation. Never fix by allowing hidden targets or rewriting runtime/backend without separate approval. Use bounded top-level discovery and observed filenames, never guessed paths.
+
+**Read mapped table names before database inspection (2026-10-12):**
+
+- what: final read-only fingerprint check guessed ingredient_aliases and failed with relation-not-found; models.py confirmed ingredient_nutrition_aliases, then the corrected read-only transaction passed with original fingerprints. No writes occurred.
+- root cause: used a conversational dataset name as a database identifier rather than checking the mapped table.
+- correct: read __tablename__ or reuse an already verified inspection query before querying DB identifiers; retain failed checks as failures and rerun the complete read-only check after correction.
+
+**Bind only typed Float columns when converting SQL JSON inventories (2026-10-12):**
+- what: first herb-focused run executed23tests with15errors/guard0; canonical original-state hash rejected SQLite ORM state because raw SQL JSON wrote some Float values as integers. The same distinction existed in the real PostgreSQL inventory (41 versus ORM41.0). Original artifact bytes were not changed; corrected typed conversion then passed focused and live read-only preview checks.
+- root cause: row_to_json numeric spelling does not preserve the ORM column's Float representation, while Python canonical serialization distinguishes integer and float. Treating raw SQL JSON and ORM state as byte-canonical equivalents conflated receipt bytes with typed selected-state values.
+- correct: validate finite non-boolean macro values and convert only known Float columns to float when constructing selected state, retaining original inventory/PDF pins unchanged. Normalize desired Float values the same way; test integer-spelled source input, raw byte preservation and preview digest read-back. Never reserialize/re-pin an already approved preview to hide a mismatch.
+
+**Preflight each optional inspection capability separately (2026-10-12):**
+
+
+- what: Docker template inspection failed on the live container's absent HostConfig.Tmpfs key after inspecting the test successfully. PDF rendering succeeded but pdftotext was unavailable; the fallback extraction then failed printing private-use Thai glyphs to a cp874 console before successful UTF-8 rerun. No PDF/container/DB source mutation occurred.
+- root cause: assumed optional Docker fields and a sibling Poppler executable from other detected capabilities; did not apply the existing safe-console rule to the new extraction script.
+- correct: inspect optional Docker fields separately or null-safely and verify each executable before use. Configure UTF-8/backslashreplace before printing PDF extraction, retain raw PDF bytes despite parser recovery warnings, compare partial extracts without overwriting, and cross-check complete rendered pages. Check transport/command/parsing status separately; never relabel failed probes as passes or install/normalize/delete without authority.

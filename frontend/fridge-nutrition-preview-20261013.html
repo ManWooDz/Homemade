@@ -1,0 +1,60 @@
+<!-- Deprecated: synthetic offline QA fixture, retain for manual removal; never deploy. -->
+<!doctype html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fridge and nutrition QA</title></head><body><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { AuthProvider } from './src/context/AuthContext.jsx';
+import { LocaleProvider } from './src/context/LocaleContext.jsx';
+import IngredientDetail from './src/pages/IngredientDetail.jsx';
+import RecipeNutrition from './src/components/RecipeNutrition.jsx';
+import './src/index.css';
+const h = React.createElement;
+const params = new URLSearchParams(location.search);
+const locale = params.get('locale') === 'en' ? 'en' : 'th';
+const storageKey = 'homemade-fridge-synthetic-qa-20261013';
+const initial = { id: 7, name: 'ไข่ไก่', category: 'Other', image: '/src/assets/HomeMade_Logo.png', expiry_date: '2026-10-20', quantity_amount: 6, quantity_unit: 'ฟอง', selected: false, nutrition_data: { basis: 'per_100g_or_ml', calories: 140, protein_g: 12, carbs_g: null, fat_g: 9 } };
+let item = JSON.parse(localStorage.getItem(storageKey) || 'null') || initial;
+let failures = 0, writes = 0;
+const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+const originalFetch = window.fetch.bind(window);
+window.fetch = async (input, options = {}) => {
+    if (input === '/api/auth/me') return json({ status: 'success', data: { id: 1, email: 'synthetic@example.test', locale } });
+    if (String(input).startsWith('/api/user-ingredients/') && options.method === 'PUT') {
+        writes++;
+        await new Promise(resolve => setTimeout(resolve, 400));
+        if (failures) { failures--; return json({ detail: 'synthetic failure' }, 500); }
+        item = { ...item, ...JSON.parse(options.body) };
+        localStorage.setItem(storageKey, JSON.stringify(item));
+        return json({ status: 'success', data: item });
+    }
+    if (String(input).startsWith('/api/')) return json({ status: 'success', data: [] });
+    return originalFetch(input, options);
+};
+function QA() {
+    const [current, setCurrent] = React.useState(item);
+    const [items, setItems] = React.useState([item]);
+    const [count, setCount] = React.useState(0);
+    const [failure, setFailure] = React.useState(false);
+    if (params.get('view') === 'nutrition') {
+        const macros = { basis: 'per_serving', calories: 420, carbs_g: 40, protein_g: 24, fat_g: 12 };
+        const state = params.get('state') || 'partial';
+        let recipe = state === 'missing' ? {} : state === 'legacy' ? { nutrition: macros } : {
+            nutrition: state === 'calculated' ? { ...macros, calories: 380 } : macros, computed_nutrition: { ...macros, calories: 380 }, llm_estimated_nutrition: macros, nutrition_partially_estimated: state !== 'calculated',
+        };
+        if (state.startsWith('base-')) recipe = {
+            nutrition: state === 'base-unavailable' ? null : macros,
+            computed_nutrition: state === 'base-unavailable' ? null : macros,
+            nutrition_origin: 'base_calculation',
+            nutrition_calculation_status: state.slice(5),
+            nutrition_partially_estimated: state !== 'base-calculated',
+            nutrition_calculation_reasons: state === 'base-unavailable' ? ['inputs_incomplete'] : state === 'base-limited' ? ['source_unverified', 'proxy_composition'] : [],
+        };
+        return h('main', { className: 'mx-auto max-w-107.5 bg-white p-5 min-h-screen' }, h('p', { className: 'mb-4 text-sm text-gray-600' }, 'Synthetic QA'), h(RecipeNutrition, { recipe }));
+    }
+    return h(React.Fragment, null,
+        h('div', { style: { position: 'fixed', top: 0, right: 0, zIndex: 100, background: 'white', fontSize: 11 } },
+            h('button', { onClick: () => { failures = 1; setFailure(true); } }, failure ? 'Failure armed' : 'Simulate save failure'),
+            h('span', { 'data-testid': 'writes' }, ` Writes: ${count}`)),
+        h(IngredientDetail, { ingredient: current, userIngredients: items, setUserIngredients: setItems, onUpdated: updated => { setCurrent(updated); setCount(writes); setFailure(false); }, onBack: () => setCurrent(items[0]), onDeleted: () => {}, activeTab: 'ingredients', setActiveTab: () => {} }));
+}
+createRoot(document.getElementById('root')).render(h(AuthProvider, null, h(LocaleProvider, null, h(QA))));
+</script></body></html>

@@ -64,10 +64,14 @@ def validate_generated_recipe_shape(recipe):
 
     for nutrient in ("calories", "protein_g", "carbs_g", "fat_g"):
         value = nutrition.get(nutrient)
+        try:
+            finite = isinstance(value, (int, float)) and math.isfinite(value)
+        except OverflowError:
+            finite = False
         if (
             isinstance(value, bool)
             or not isinstance(value, (int, float))
-            or not math.isfinite(value)
+            or not finite
             or value < 0
         ):
             return False, f"Invalid nutrition value: {nutrient}"

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Home categories QA — synthetic data</title></head>
+<body data-home-categories-fixture="20261017"><div id="root"></div><script type="module">
+// Development-only fixture; all API requests are intercepted and use synthetic data.
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from '../src/App.jsx';
+import { AuthProvider } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import '../src/index.css';
+const params = new URLSearchParams(location.search);
+const locale = params.get('locale') === 'en' ? 'en' : 'th';
+const tags = ['Breakfast','Dinner','Vegan','Thai','Lunch','Vegetarian','Low Carb','Brunch'];
+const recipes = tags.map((tag,index)=>({id:index+1,name:`เมนูทดสอบ${index+1}`,tags:[tag],ingredients:[],image:'/src/assets/HomeMade_Logo.png'}));
+const stock = params.has('stocked') ? [
+    {id:1,name:'หมูสับทดสอบ',category:'Meat & poultry',image:'/src/assets/HomeMade_Logo.png'},
+    {id:2,name:'กะเพราทดสอบ',category:'Vegetables',image:'/src/assets/HomeMade_Logo.png'},
+    {id:3,name:'ไข่ทดสอบ',category:'Other',image:'/src/assets/HomeMade_Logo.png'},
+] : [];
+const ok = data => Response.json({status:'success',data});
+window.fetch = async input => {
+    const path = new URL(typeof input === 'string' ? input : input.url,location.origin).pathname;
+    if(path==='/api/auth/me')return ok({id:1,locale,display_name:'Synthetic QA',has_avatar:false});
+    if(path==='/api/recipes')return ok(recipes);
+    if(path==='/api/user-ingredients')return ok(stock);
+    if(path==='/api/base-favorites')return ok(params.has('stocked') ? recipes.map(recipe=>recipe.id) : []);
+    if(path==='/api/history')return ok([]);
+    if(path==='/api/user-preferences')return ok({});
+    if(path==='/api/notifications/sync')return ok({created_items:[],unread_count:0});
+    if(path==='/api/notifications')return ok({items:[],unread_count:0,next_before_id:null});
+    throw new Error('Unexpected request blocked by Home categories QA: '+path);
+};
+createRoot(document.getElementById('root')).render(React.createElement(BrowserRouter,null,
+    React.createElement(AuthProvider,null,React.createElement(LocaleProvider,null,React.createElement(App)))));
+</script></body></html>

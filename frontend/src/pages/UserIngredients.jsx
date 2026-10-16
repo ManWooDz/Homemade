@@ -17,6 +17,7 @@ import {
 import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import DragScrollRow from "../components/DragScrollRow";
 import { expiryBadgeLabel, sortByExpiry } from "../utils/expiry";
 import { normalizeForSearch } from "../utils/thaiText";
 import { quantityDimension, normalizedQuantityAmount } from "../utils/quantityUnits";
@@ -138,7 +139,6 @@ export default function UserIngredients({
     const filteredIngredients = applySort(bySearch, sortBy);
 
     const hasAnyIngredients = userIngredients.length > 0;
-    const hasActiveFilter = selectedCategory !== "All" || normalizedQuery !== "";
     const selectedCategoryLabel =
         CATEGORY_CHIPS.find((c) => c.value === selectedCategory)?.label ??
         selectedCategory;
@@ -169,7 +169,7 @@ export default function UserIngredients({
                     <div className="px-5 mb-4 flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-gray-900">{t("My Fridge")}</h2>
                         <span className="text-sm font-medium text-gray-500">
-                            {userIngredients.length}{t("Items")}</span>
+                            {userIngredients.length} {t("Items")}</span>
                     </div>
 
                     {/* Search + Sort filter */}
@@ -198,12 +198,13 @@ export default function UserIngredients({
                     </div>
 
                     {/* Categories Strip */}
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide mb-4 px-5">
+                    <DragScrollRow id="fridge-categories" className="flex gap-3 pb-2 scrollbar-hide mb-4 px-5">
                         {CATEGORY_CHIPS.map((chip) => (
                             <button
                                 key={chip.value}
                                 onClick={() => setSelectedCategory(chip.value)}
-                                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-sm transition ${
+                                aria-pressed={selectedCategory === chip.value}
+                                className={`min-h-11 shrink-0 px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25] ${
                                     selectedCategory === chip.value
                                         ? "bg-[#EF5A3A] text-white"
                                         : "bg-white border border-[#EF5A3A] text-[#EF5A3A] hover:bg-orange-50"
@@ -212,7 +213,7 @@ export default function UserIngredients({
                                 {t(chip.label)}
                             </button>
                         ))}
-                    </div>
+                    </DragScrollRow>
 
                     {/* Ingredients List */}
                     <div className="flex flex-col gap-3 px-5">

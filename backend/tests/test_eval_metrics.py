@@ -8,7 +8,7 @@ from eval.metrics import (
 
 
 VALID_RECIPE = {
-    "recipe_name": "Thai Basil Pork",
+    "recipe_name": "Holy Basil Pork",
     "servings": 2,
     "adjusted_ingredients": ["หมูสับ 200 กรัม", "ใบกะเพรา 1 ถ้วย", "น้ำมัน 1 ช้อนโต๊ะ"],
     "diet_tags": ["Thai"],
@@ -20,7 +20,7 @@ VALID_RECIPE = {
 
 class CheckSchemaAndConstraintsTests(unittest.TestCase):
     def test_valid_recipe_passes(self):
-        result = check_schema_and_constraints(VALID_RECIPE, ["หมูสับ"], {})
+        result = check_schema_and_constraints(VALID_RECIPE, ["หมูสับ", "ใบกะเพรา"], {})
         self.assertTrue(result["valid"])
         self.assertIsNone(result["reason"])
 
@@ -31,6 +31,13 @@ class CheckSchemaAndConstraintsTests(unittest.TestCase):
 
 
 class CheckIngredientHallucinationTests(unittest.TestCase):
+    def test_runtime_and_metric_share_thai_identity_and_near_miss_policy(self):
+        from recipe_checks import check_ingredients
+        for line, selected in [("กุ้ง 100 กรัม", ["minced pork"]), ("eggplant 100 g", ["egg"]), ("หมูสับ 100 กรัม", ["minced pork"])]:
+            candidate = dict(VALID_RECIPE, adjusted_ingredients=[line])
+            metric = check_ingredient_hallucination(candidate, selected)
+            self.assertEqual(metric["hallucinated"], not check_ingredients(candidate, selected)[0])
+
     def test_recipe_using_only_provided_ingredients_and_staples_is_clean(self):
         result = check_ingredient_hallucination(VALID_RECIPE, ["หมูสับ", "ใบกะเพรา"])
         self.assertFalse(result["hallucinated"])

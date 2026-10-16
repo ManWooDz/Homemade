@@ -1,0 +1,53 @@
+<!-- Deprecated: offline QA fixture only; never deploy. Retain for manual removal under AGENTS.md. -->
+<!doctype html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homemade profile QA</title></head><body><div id="root"></div><script type="module">
+const originalFetch = window.fetch.bind(window);
+// QA-only fault injection: the real cropper must let the user retry an export.
+if (new URLSearchParams(location.search).has("cropfail")) {
+  const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+  let failOnce = true;
+  HTMLCanvasElement.prototype.toBlob = function(callback, ...options) {
+    if (failOnce) { failOnce = false; callback(null); }
+    else originalToBlob.call(this, callback, ...options);
+  };
+}
+const key = "homemade-profile-qa-20261013";
+let store = JSON.parse(localStorage.getItem(key) || "null") || { signedIn: true, owner: 1, accounts: { 1: { id: 1, email: "qa@example.test", display_name: null, locale: "th", has_avatar: false }, 2: { id: 2, email: "other@example.test", display_name: "Second account", locale: "th", has_avatar: false } }, pictures: {} };
+const persist = () => localStorage.setItem(key, JSON.stringify(store));
+const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
+const success = data => json({ status: "success", data });
+const user = () => store.accounts[store.owner];
+window.fetch = async (input, options = {}) => {
+  const pathname = new URL(typeof input === "string" ? input : input.url, location.origin).pathname;
+  const method = options.method || "GET";
+  if (!pathname.startsWith("/api/")) return originalFetch(input, options);
+  if (pathname === "/api/auth/me") return store.signedIn ? success(user()) : json({}, 401);
+  if (pathname === "/api/auth/login") { store.owner = options.body.get("username") === "other@example.test" ? 2 : 1; store.signedIn = true; persist(); return success(user()); }
+  if (pathname === "/api/auth/logout") { store.signedIn = false; persist(); return success(null); }
+  if (pathname === "/api/auth/refresh") return json({}, 401);
+  if (!store.signedIn) return json({}, 401);
+  if (pathname === "/api/user-profile/language") { if (new URLSearchParams(location.search).has("fail")) return json({ code: "profile_save_failed" }, 500); user().locale = JSON.parse(options.body).locale; persist(); return success(user()); }
+  if (pathname === "/api/user-profile" && method === "PUT") {
+    if (new URLSearchParams(location.search).has("fail")) return json({ code: "profile_save_failed" }, 500);
+    const form = options.body;
+    user().display_name = form.get("display_name");
+    if (form.get("avatar_action") === "replace") {
+      const picture = await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(form.get("avatar")); });
+      store.pictures[store.owner] = picture; user().has_avatar = true;
+    } else if (form.get("avatar_action") === "remove") { store.pictures[store.owner] = null; user().has_avatar = false; }
+    persist(); return success(user());
+  }
+  if (pathname === "/api/user-profile/avatar") return store.pictures[store.owner] ? originalFetch(store.pictures[store.owner]) : json({}, 404);
+  if (pathname === "/api/recipes") return success([{ id: 1, name: "ไข่เจียวทดสอบ", recipe_name: "ไข่เจียวทดสอบ", short_description: "เนื้อหาสูตรยังเป็นภาษาไทย", description: "เนื้อหาสูตรยังเป็นภาษาไทย", tags: ["Breakfast"], ingredients: ["ไข่"], image: "/src/assets/HomeMade_Logo.png", usage_time: "10 นาที", nutrition: { calories: 200 }, instructions: ["ทอดไข่"] }]);
+  if (pathname === "/api/user-ingredients") return success([{ id: 1, name: "ไข่ทดสอบ", category: "Other", image: "/src/assets/HomeMade_Logo.png", expiry_date: "2000-01-01", quantity_amount: 2, quantity_unit: "ฟอง" }]);
+  if (pathname === "/api/history" || pathname === "/api/base-favorites") return success([]);
+  if (pathname === "/api/user-preferences") return success({ age: 20, cuisine_preferences: ["อาหารไทย"], dietary_restrictions: ["แพ้งา"], equipment: ["กระทะ"], cooking_frequency: null, cooking_goals: [] });
+  if (pathname === "/api/ingredient-images") return success({ fallback: "/src/assets/HomeMade_Logo.png", images: [] });
+  if (pathname === "/api/ingredient-images/search") return success({ images: [] });
+  if (pathname === "/api/validate-allergy-preferences") return success(null);
+  if (pathname === "/api/generate-recipe-text") return json({ status: "error", code: "allergy_validation_unavailable", message: "ระบบตรวจสอบสารก่อภูมิแพ้ยังไม่พร้อม จึงยังสร้างสูตรไม่ได้ กรุณาลองใหม่ภายหลัง" });
+  return json({ status: "error", message: "QA fixture does not implement this endpoint" }, 404);
+};
+const options = new URLSearchParams(location.search);
+history.replaceState({}, "", "/home" + location.search);
+await import("/src/main.jsx");
+</script></body></html>

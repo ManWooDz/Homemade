@@ -22,6 +22,7 @@ import AddIngredient from "./pages/AddIngredient";
 import BarcodeScanPage from "./pages/BarcodeScanPage";
 import IngredientDetail from "./pages/IngredientDetail";
 import Favorites from "./pages/Favorites";
+import DragScrollRow from "./components/DragScrollRow";
 import Profile from "./pages/Profile";
 import HistoryDetail from "./pages/HistoryDetail";
 import NotificationBell from "./components/NotificationBell";
@@ -58,6 +59,13 @@ function App() {
     const [historyReturnView, setHistoryReturnView] = useState("profile");
     const [favoritesTab, setFavoritesTab] = useState("base"); // "base" | "mine"
     const [cookingHistory, setCookingHistory] = useState([]);
+    const [profileView, setProfileView] = useState("main");
+    const [historyBrowse, setHistoryBrowse] = useState({ query: "", favorite: "all", rating: "all" });
+    const historySessionRef = useRef(null);
+    useLayoutEffect(() => {
+        historySessionRef.current = { pending: new Set() };
+        return () => { historySessionRef.current = null; };
+    }, []);
     const [barcodePrefill, setBarcodePrefill] = useState(null);
     const [selectedIngredientDetail, setSelectedIngredientDetail] = useState(null);
 
@@ -297,6 +305,9 @@ function App() {
     };
 
     const rateRecipe = async (historyId, rating) => {
+        const session = historySessionRef.current;
+        if (!session || session.pending.has(historyId)) return false;
+        session.pending.add(historyId);
         try {
             const response = await apiFetch(`/api/history/${historyId}/rating`, {
                 method: "PUT",
@@ -309,16 +320,19 @@ function App() {
             });
             if (!response.ok) return false;
             const result = await response.json();
-            if (result.status !== "success") return false;
+            if (result.status !== "success" || historySessionRef.current !== session) return false;
             setCookingHistory((prev) =>
                 prev.map((item) =>
                     item.id === historyId ? { ...item, ...result.data } : item
                 )
             );
+            setSelectedHistoryItem(item => item?.id === historyId ? { ...item, ...result.data } : item);
             return true;
         } catch (error) {
             console.error("Error saving rating:", error);
             return false;
+        } finally {
+            session.pending.delete(historyId);
         }
     };
 
@@ -404,11 +418,12 @@ function App() {
         };
 
         const fetchHistory = async () => {
+            const session = historySessionRef.current;
             try {
                 const response = await apiFetch("/api/history");
                 if (!response.ok) return;
                 const result = await response.json();
-                if (result.status === "success") {
+                if (result.status === "success" && session === historySessionRef.current) {
                     setCookingHistory(result.data.map(toHistoryItem));
                 }
             } catch (error) {
@@ -499,40 +514,6 @@ function App() {
             );
         }
     }, [showFilterPanel]);
-
-    const badgeRowRef = useRef(null);
-    const badgeDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
-
-    const handleBadgeMouseDown = (e) => {
-        const el = badgeRowRef.current;
-        if (!el) return;
-        badgeDrag.current.isDown = true;
-        badgeDrag.current.moved = false;
-        badgeDrag.current.startX = e.pageX - el.offsetLeft;
-        badgeDrag.current.scrollLeft = el.scrollLeft;
-    };
-
-    const handleBadgeMouseMove = (e) => {
-        const el = badgeRowRef.current;
-        if (!el || !badgeDrag.current.isDown) return;
-        e.preventDefault();
-        const x = e.pageX - el.offsetLeft;
-        const walk = x - badgeDrag.current.startX;
-        if (Math.abs(walk) > 5) badgeDrag.current.moved = true;
-        el.scrollLeft = badgeDrag.current.scrollLeft - walk;
-    };
-
-    const stopBadgeDrag = () => {
-        badgeDrag.current.isDown = false;
-    };
-
-    const handleFilterTabClick = (key) => {
-        if (badgeDrag.current.moved) {
-            badgeDrag.current.moved = false;
-            return;
-        }
-        setFilterTab(key);
-    };
 
     const toggleInList = (value, list, setList) => {
         setList(
@@ -648,8 +629,12 @@ function App() {
         } else if (tab === "favorites") {
             setCurrentView("favorites");
         } else if (tab === "me") {
+            setProfileView("main");
             setCurrentView("profile");
-        } else if (tab === "cooking" && (currentView === "home" || currentView === "user-ingredients" || currentView === "add-ingredient" || currentView === "barcode-scan" || currentView === "ingredient-detail")) {
+        } else if (tab === "cooking" && [
+            "home", "user-ingredients", "add-ingredient", "barcode-scan",
+            "ingredient-detail", "favorites", "profile",
+        ].includes(currentView)) {
             setSelectedRecipe(null);
             setCurrentView("custom-cooking");
         }
@@ -798,9 +783,11 @@ function App() {
     if (currentView === "ingredient-detail") {
         return (
             <IngredientDetail
+                key={selectedIngredientDetail?.id}
                 ingredient={selectedIngredientDetail}
                 userIngredients={userIngredients}
                 setUserIngredients={setUserIngredients}
+                onUpdated={setSelectedIngredientDetail}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => {
@@ -944,6 +931,8 @@ function App() {
     if (currentView === "profile") {
         return (
             <Profile
+                view={profileView} setView={setProfileView}
+                historyBrowse={historyBrowse} setHistoryBrowse={setHistoryBrowse}
                 notificationCount={notificationCount} onNotifications={openNotifications}
                 onNotificationPause={setProfileNotificationPaused}
                 cookingHistory={cookingHistory}
@@ -965,7 +954,9 @@ function App() {
     if (currentView === "history-detail") {
         return (
             <HistoryDetail
+                key={selectedHistoryItem?.id}
                 item={selectedHistoryItem}
+                onRateRecipe={rateRecipe}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView(historyReturnView)}
@@ -1032,16 +1023,14 @@ function App() {
                     </div>
 
                     {/* Categories */}
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">{t("Categories")}</h3>
-                        <span className="text-[#EF5A3A] text-sm font-medium cursor-pointer">{t("See all")}</span>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide mb-6 -mx-5 px-5">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">{t("Categories")}</h3>
+                    <DragScrollRow id="home-categories" className="flex gap-3 pb-2 mb-6 -mx-5 px-5 scrollbar-hide">
                         {categories.map((category, index) => (
                             <button
                                 key={index}
                                 onClick={() => setSelectedCategory(category)}
-                                className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-sm transition ${
+                                aria-pressed={selectedCategory === category}
+                                className={`min-h-11 shrink-0 max-w-full px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-sm transition cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25] ${
                                     selectedCategory === category
                                         ? "bg-[#EF5A3A] text-white"
                                         : "bg-white border border-[#EF5A3A] text-[#EF5A3A] hover:bg-orange-50"
@@ -1050,7 +1039,7 @@ function App() {
                                 {t(category)}
                             </button>
                         ))}
-                    </div>
+                    </DragScrollRow>
 
                     {/* Recipe Cards */}
                     <div className="grid grid-cols-2 gap-4">
@@ -1124,18 +1113,13 @@ function App() {
                             <p className="text-xs text-gray-400 font-medium px-5 pt-4">{t("Explore recipe by")}</p>
 
                             {/* Tab badges */}
-                            <div
-                                ref={badgeRowRef}
-                                onMouseDown={handleBadgeMouseDown}
-                                onMouseMove={handleBadgeMouseMove}
-                                onMouseUp={stopBadgeDrag}
-                                onMouseLeave={stopBadgeDrag}
+                            <DragScrollRow
                                 className="flex gap-2 overflow-x-auto scrollbar-hide px-5 py-3 cursor-grab active:cursor-grabbing select-none"
                             >
                                 {FILTER_TABS.map((tab) => (
                                     <button
                                         key={tab.key}
-                                        onClick={() => handleFilterTabClick(tab.key)}
+                                        onClick={() => setFilterTab(tab.key)}
                                         className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
                                             filterTab === tab.key
                                                 ? "bg-[#EF5A3A] text-white"
@@ -1147,7 +1131,7 @@ function App() {
                                             ` (${filterCounts[tab.key]})`}
                                     </button>
                                 ))}
-                            </div>
+                            </DragScrollRow>
 
                             {/* Tab content */}
                             <div className="flex-1 overflow-y-auto px-5 pb-4 scrollbar-hide">
@@ -1402,4 +1386,7 @@ function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {
     );
 }
 
-export default App;
+export default function AccountApp() {
+    const { user } = useAuth();
+    return <App key={user?.id ?? "anonymous"} />;
+}

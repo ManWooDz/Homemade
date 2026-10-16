@@ -1,0 +1,61 @@
+<!doctype html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>History QA — synthetic data only</title></head>
+<body data-history-fixture="20261017"><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from '../src/App.jsx';
+import { AuthProvider, useAuth } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import '../src/index.css';
+
+const params = new URLSearchParams(location.search);
+const locale = params.get('locale') === 'en' ? 'en' : 'th';
+let owner = 1, writes = 0, blocked = 0, releaseSave, historyLoads = 0;
+const image = '/src/assets/HomeMade_Logo.png';
+const user = () => ({id:owner,email:`fixture${owner}@example.com`,display_name:`Synthetic ${owner}`,locale,has_avatar:false});
+function entry(id, name, stars, favorite, ingredients) {
+  return {id,image,created_at:'2026-10-17T00:00:00Z',is_favorite:favorite,
+    rating:stars ? {stars,tag:'Great',feedback:'ความคิดเห็นเดิมที่บันทึกไว้'} : null,
+    recipe_data:{recipe_name:name,servings:1,usage_time:'15 นาที',diet_tags:['Thai'],
+      adjusted_ingredients:ingredients,instructions:['เตรียมวัตถุดิบตามรายการ','ปรุงให้สุกและเสิร์ฟ'],
+      nutrition:{basis:'per_serving',calories:300,protein_g:20,carbs_g:30,fat_g:10}}};
+}
+const rows = params.has('empty') ? [] : [entry(3,'กะเพราหมู',5,true,['หมูสับ 100 กรัม','กระเทียม 2 กลีบ']),entry(2,'Chicken Soup',3,true,['chicken breast','น้ำปลา 1 ช้อนชา']),entry(1,'ไข่เจียว',0,false,['ไข่ไก่ 2 ฟอง'])];
+const target = entry(99,'เมนูจากแจ้งเตือน',4,false,['ข้าวสวย']);
+const notices = [{id:10,kind:'recipe_history_saved',target_type:'history',target_id:99,payload:{name:'เมนูจากแจ้งเตือน'},created_at:'2026-10-17T00:00:00Z',read_at:null}];
+const ok = data => new Response(JSON.stringify({status:'success',data}),{status:200,headers:{'Content-Type':'application/json'}});
+function status() { const output=document.getElementById('qa-status'); if(output) output.textContent=`owner:${owner} writes:${writes} blocked:${blocked} pending:${Boolean(releaseSave)}`; }
+window.fetch = async (input, options={}) => {
+  const url = new URL(typeof input==='string'?input:input.url,location.origin), path=url.pathname;
+  const method=options.method||'GET';
+  if(path==='/api/auth/me')return ok(user());
+  if(path==='/api/auth/login'){owner=2;status();return ok(user());}
+  if(path==='/api/recipes'||path==='/api/user-ingredients'||path==='/api/base-favorites')return ok([]);
+  if(path==='/api/user-preferences'||path==='/api/preferences')return ok({});
+  if(path==='/api/history'&&method==='GET'){historyLoads++;return ok(owner===2?[]:historyLoads===1?rows:[...rows,target]);}
+  if(/^\/api\/history\/\d+\/rating$/.test(path)&&method==='PUT') {
+    writes++;status();
+    if(params.has('failFirst')&&writes===1)return new Response('{}',{status:503});
+    const row=[...rows,target].find(item=>item.id===Number(path.split('/')[3]));
+    const value=JSON.parse(options.body);
+    const finish=()=>{row.rating=value;releaseSave=null;status();return ok(value);};
+    if(params.has('defer'))return new Promise(resolve=>{releaseSave=()=>resolve(finish());status();});
+    return finish();
+  }
+  if(path==='/api/notifications/sync')return ok({created_items:[],unread_count:owner===1&&!notices[0].read_at?1:0});
+  if(path==='/api/notifications')return ok({items:owner===1?notices.filter(item=>url.searchParams.get('state')==='read'?item.read_at:!item.read_at):[],unread_count:owner===1&&!notices[0].read_at?1:0,next_before_id:null});
+  if(path==='/api/notifications/10/read'){notices[0].read_at='2026-10-17T00:01:00Z';return new Response(JSON.stringify({status:'success',data:notices[0],unread_count:0}),{status:200,headers:{'Content-Type':'application/json'}});}
+  blocked++;status();throw new Error('Fixture blocked unexpected request: '+method+' '+path);
+};
+function Fixture(){
+  const {authLoading,login}=useAuth();
+  return React.createElement(React.Fragment,null,
+    React.createElement('details',{style:{position:'fixed',right:4,top:4,zIndex:100,background:'white',padding:4,fontSize:12}},
+      React.createElement('summary',null,'Synthetic QA'),
+      React.createElement('output',{id:'qa-status'},'owner:1 writes:0 blocked:0 pending:false'),
+      React.createElement('button',{onClick:()=>releaseSave?.(),style:{display:'block'}},'Release synthetic save'),
+      React.createElement('button',{onClick:()=>login('fixture2@example.com','fixture-password'),style:{display:'block'}},'Switch synthetic account')),
+    authLoading?null:React.createElement(App));
+}
+createRoot(document.getElementById('root')).render(React.createElement(BrowserRouter,null,React.createElement(AuthProvider,null,React.createElement(LocaleProvider,null,React.createElement(Fixture)))));
+</script></body></html>

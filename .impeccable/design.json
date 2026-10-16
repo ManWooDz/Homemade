@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T17:37:59.758Z",
+  "title": "Design System: HomeMade",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "HomeMade Orange",
+        "canonical": "#ef5a3a",
+        "tonalRamp": ["oklch(15% 0.19 37)", "oklch(27% 0.19 37)", "oklch(39% 0.19 37)", "oklch(51% 0.19 37)", "oklch(63% 0.19 37)", "oklch(75% 0.19 37)", "oklch(87% 0.19 37)", "oklch(95% 0.19 37)"]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Soft Apricot",
+        "canonical": "#fdece5",
+        "tonalRamp": ["oklch(15% 0.035 45)", "oklch(27% 0.035 45)", "oklch(39% 0.035 45)", "oklch(51% 0.035 45)", "oklch(63% 0.035 45)", "oklch(75% 0.035 45)", "oklch(87% 0.035 45)", "oklch(95% 0.035 45)"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Kitchen White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(95% 0 0)"]
+      },
+      "surface-subtle": {
+        "role": "neutral",
+        "displayName": "Counter Mist",
+        "canonical": "#f9fafb",
+        "tonalRamp": ["oklch(15% 0.003 264)", "oklch(27% 0.003 264)", "oklch(39% 0.003 264)", "oklch(51% 0.003 264)", "oklch(63% 0.003 264)", "oklch(75% 0.003 264)", "oklch(87% 0.003 264)", "oklch(95% 0.003 264)"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Kitchen Ink",
+        "canonical": "#111827",
+        "tonalRamp": ["oklch(15% 0.034 264)", "oklch(27% 0.034 264)", "oklch(39% 0.034 264)", "oklch(51% 0.034 264)", "oklch(63% 0.034 264)", "oklch(75% 0.034 264)", "oklch(87% 0.034 264)", "oklch(95% 0.034 264)"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "canonical": "#6b7280",
+        "tonalRamp": ["oklch(15% 0.027 264)", "oklch(27% 0.027 264)", "oklch(39% 0.027 264)", "oklch(51% 0.027 264)", "oklch(63% 0.027 264)", "oklch(75% 0.027 264)", "oklch(87% 0.027 264)", "oklch(95% 0.027 264)"]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Deep Slate",
+        "canonical": "#374151",
+        "tonalRamp": ["oklch(15% 0.034 260)", "oklch(27% 0.034 260)", "oklch(39% 0.034 260)", "oklch(51% 0.034 260)", "oklch(63% 0.034 260)", "oklch(75% 0.034 260)", "oklch(87% 0.034 260)", "oklch(95% 0.034 260)"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Soft Steel",
+        "canonical": "#d1d5db",
+        "tonalRamp": ["oklch(15% 0.01 258)", "oklch(27% 0.01 258)", "oklch(39% 0.01 258)", "oklch(51% 0.01 258)", "oklch(63% 0.01 258)", "oklch(75% 0.01 258)", "oklch(87% 0.01 258)", "oklch(95% 0.01 258)"]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Strong Steel",
+        "canonical": "#9ca3af",
+        "tonalRamp": ["oklch(15% 0.022 261)", "oklch(27% 0.022 261)", "oklch(39% 0.022 261)", "oklch(51% 0.022 261)", "oklch(63% 0.022 261)", "oklch(75% 0.022 261)", "oklch(87% 0.022 261)", "oklch(95% 0.022 261)"]
+      },
+      "nutrition-calorie": {
+        "role": "tertiary",
+        "displayName": "Calorie Blush",
+        "canonical": "#fff6f2",
+        "tonalRamp": ["oklch(15% 0.012 47)", "oklch(27% 0.012 47)", "oklch(39% 0.012 47)", "oklch(51% 0.012 47)", "oklch(63% 0.012 47)", "oklch(75% 0.012 47)", "oklch(87% 0.012 47)", "oklch(95% 0.012 47)"]
+      },
+      "nutrition-carbs": {
+        "role": "tertiary",
+        "displayName": "Carbohydrate Mint",
+        "canonical": "#e4fbec",
+        "tonalRamp": ["oklch(15% 0.025 153)", "oklch(27% 0.025 153)", "oklch(39% 0.025 153)", "oklch(51% 0.025 153)", "oklch(63% 0.025 153)", "oklch(75% 0.025 153)", "oklch(87% 0.025 153)", "oklch(95% 0.025 153)"]
+      },
+      "nutrition-protein": {
+        "role": "tertiary",
+        "displayName": "Protein Sky",
+        "canonical": "#eaf3ff",
+        "tonalRamp": ["oklch(15% 0.021 250)", "oklch(27% 0.021 250)", "oklch(39% 0.021 250)", "oklch(51% 0.021 250)", "oklch(63% 0.021 250)", "oklch(75% 0.021 250)", "oklch(87% 0.021 250)", "oklch(95% 0.021 250)"]
+      },
+      "nutrition-fat": {
+        "role": "tertiary",
+        "displayName": "Fat Custard",
+        "canonical": "#fffad8",
+        "tonalRamp": ["oklch(15% 0.048 100)", "oklch(27% 0.048 100)", "oklch(39% 0.048 100)", "oklch(51% 0.048 100)", "oklch(63% 0.048 100)", "oklch(75% 0.048 100)", "oklch(87% 0.048 100)", "oklch(95% 0.048 100)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {"displayName": "Display", "purpose": "Rare promotional emphasis inside imagery."},
+      "headline": {"displayName": "Headline", "purpose": "Primary page and recipe titles."},
+      "title": {"displayName": "Title", "purpose": "The semantic h2 role for section headings and factual groups; existing uses choose semibold or bold weight."},
+      "body": {"displayName": "Body", "purpose": "Default page text and controls inheriting body spacing."},
+      "body-large": {"displayName": "Body large", "purpose": "Semantic reading text, auth inputs and choice options with extra Thai line spacing."},
+      "body-medium": {"displayName": "Body medium", "purpose": "Semantic supporting text and compact options."},
+      "label": {"displayName": "Label", "purpose": "The semibold body-medium role for form actions and labels."},
+      "caption": {"displayName": "Caption", "purpose": "Semantic helper text and navigation captions; navigation overrides weight to 600."}
+    },
+    "shadows": [
+      {"name": "quiet-card", "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)", "purpose": "Tappable cards and lightly lifted information tiles."},
+      {"name": "floating-control", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Directional buttons and emphasized floating actions."},
+      {"name": "raised-sheet", "value": "0 -10px 40px rgb(0 0 0 / 0.1)", "purpose": "Bottom navigation, filters, and draggable sheets."},
+      {"name": "desktop-frame", "value": "0 25px 50px -12px rgb(0 0 0 / 0.25)", "purpose": "Frames the narrow app shell inside wider viewports."}
+    ],
+    "motion": [
+      {"name": "ease-standard", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default state transition for controls."},
+      {"name": "shake-error", "value": "500ms ease-in-out", "purpose": "Brief validation attention for incomplete custom fields."}
+    ],
+    "breakpoints": [
+      {"name": "mobile-shell-max", "value": "430px", "purpose": "Hard maximum width for the centered application workspace."}
+    ],
+    "provenance": {
+      "visualOrigin": "The current HomeMade UI was designed in Figma by another member of the project team.",
+      "figmaInspectionStatus": "The original Figma file was not inspected during this documentation pass; the Figma provenance is team-provided context.",
+      "snapshotSource": "Token values, component patterns, layout behavior, shadows, motion, and responsive constraints were extracted from the current implementation on 2026-10-06. Only the user-approved font family, semantic type roles and navigation captions were refreshed from the shipped implementation on 2026-10-13; unrelated drift remains recorded in docs/thai-copy-typography-review-2026-10-13.md.",
+      "authority": "This is a descriptive implementation snapshot, not a redesign brief and not proof of the original designer's intent.",
+      "qualitativeLanguageStatus": "The Creative North Star, mood language, descriptive color names, named rules, and design philosophy are working qualitative language pending confirmation by the original Figma designer.",
+      "conflictPolicy": "If Figma and the implementation disagree, report the exact difference and ask the team before choosing a source of truth, changing the documentation, changing Figma, or changing application code."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main form or recipe action: warm, full-width when needed, and unmistakably primary.",
+      "html": "<button class=\"ds-btn-primary\">สร้างสูตรอาหาร</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-width: 180px; height: 44px; padding: 0 20px; border: 0; border-radius: 9999px; background: var(--color-button-primary, #ef5a3a); color: #fff; font: 600 14px/1.65 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); cursor: pointer; transition: opacity 150ms cubic-bezier(0.4,0,0.2,1), background-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: #d94f30; } .ds-btn-primary:focus-visible { outline: 3px solid rgb(239 90 58 / 0.35); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Circular Direction Button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "A raised back or next control used in headers and stepped onboarding.",
+      "html": "<button class=\"ds-btn-icon\" aria-label=\"ย้อนกลับ\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></button>",
+      "css": ".ds-btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 9999px; background: var(--color-button-primary, #ef5a3a); color: #fff; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); cursor: pointer; transition: opacity 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-btn-icon:hover { opacity: 0.95; } .ds-btn-icon:focus-visible { outline: 3px solid rgb(239 90 58 / 0.35); outline-offset: 2px; } .ds-btn-icon:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "The standard compact form field with a capsule shape and restrained brand focus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">วัตถุดิบ</span><input class=\"ds-input\" placeholder=\"เช่น ไข่ไก่\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: #374151; font: 600 14px/1.65 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); } .ds-input { width: 100%; height: 44px; padding: 0 16px; border: 1px solid var(--color-stroke-text-field, #d1d5db); border-radius: 9999px; background: #fff; color: #111827; font: 400 16px/1.75 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); outline: none; transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-input::placeholder { color: #6b7280; } .ds-input:hover { border-color: #9ca3af; } .ds-input:focus-visible { border-color: #ef5a3a; box-shadow: 0 0 0 2px rgb(239 90 58 / 0.4); }"
+    },
+    {
+      "name": "Choice Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "A compact cuisine, preference, or filter choice with clear selected and unselected states.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\"><span aria-hidden=\"true\">🇹🇭</span> อาหารไทย</button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 20px; border: 1px solid #9ca3af; border-radius: 9999px; background: #fff; color: #374151; font: 400 16px/1.75 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), border-color 150ms cubic-bezier(0.4,0,0.2,1), color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-chip:hover { background: #f9fafb; } .ds-chip[aria-pressed=\"true\"] { border-color: #ef5a3a; background: #ef5a3a; color: #fff; } .ds-chip:focus-visible { outline: 3px solid rgb(239 90 58 / 0.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Recipe Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The friendly tappable card used in two-column recipe and favorite grids.",
+      "html": "<article class=\"ds-recipe-card\" tabindex=\"0\"><div class=\"ds-recipe-photo\" aria-hidden=\"true\"><span>เมนูแนะนำ</span></div><h3>ข้าวผัดไข่</h3><p>ทำง่าย • 20 นาที</p></article>",
+      "css": ".ds-recipe-card { display: grid; gap: 10px; padding: 12px; border: 1px solid #f3f4f6; border-radius: 24px; background: #fff; color: #111827; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); cursor: pointer; transition: transform 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-recipe-photo { display: grid; place-items: center; aspect-ratio: 1; border-radius: 9999px; background: #f3f4f6; color: #6b7280; font: 600 12px/1.3 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); overflow: hidden; } .ds-recipe-card h3 { margin: 0; font: 700 16px/1.35 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); } .ds-recipe-card p { margin: 0; color: #6b7280; font: 400 12px/1.35 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); } .ds-recipe-card:hover { transform: translateY(-1px); } .ds-recipe-card:focus-visible { outline: 3px solid rgb(239 90 58 / 0.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Bottom Navigation",
+      "kind": "nav",
+      "refersTo": "button-icon",
+      "description": "The anchored five-destination navigation with cooking raised as the central action.",
+      "html": "<nav class=\"ds-bottom-nav\" aria-label=\"เมนูหลัก\"><button class=\"ds-nav-item ds-nav-active\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\"/></svg><span>HOME</span></button><button class=\"ds-nav-cook\" aria-label=\"ทำอาหาร\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 10h14v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6zM8 6h8M12 2v4\"/></svg></button><button class=\"ds-nav-item\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z\"/></svg><span>FAVORITES</span></button></nav>",
+      "css": ".ds-bottom-nav { display: flex; align-items: center; justify-content: space-around; min-width: 340px; padding: 12px 24px; border-top: 1px solid #e5e7eb; border-radius: 24px 24px 0 0; background: #fff; box-shadow: 0 -10px 40px rgb(0 0 0 / 0.05); } .ds-nav-item, .ds-nav-cook { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #9ca3af; cursor: pointer; } .ds-nav-item { flex-direction: column; gap: 4px; font: 600 12px/1.6 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); } .ds-nav-item svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-nav-active { color: #ef5a3a; } .ds-nav-cook { width: 56px; height: 56px; margin-top: -36px; border-radius: 9999px; background: #ef5a3a; color: #fff; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); } .ds-nav-cook svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .ds-bottom-nav button:focus-visible { outline: 3px solid rgb(239 90 58 / 0.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Nutrition Summary",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "The signature calorie-and-macro composition; pastels are deliberately restricted to this context.",
+      "html": "<section class=\"ds-nutrition\" aria-label=\"โภชนาการต่อหนึ่งที่\"><div class=\"ds-calories\"><strong>420</strong><span>แคลอรี่ต่อ 1 ที่</span></div><div class=\"ds-macros\"><div class=\"ds-macro ds-carbs\"><strong>48g</strong><span>คาร์บ</span></div><div class=\"ds-macro ds-protein\"><strong>24g</strong><span>โปรตีน</span></div><div class=\"ds-macro ds-fat\"><strong>14g</strong><span>ไขมัน</span></div></div></section>",
+      "css": ".ds-nutrition { display: grid; gap: 12px; width: 100%; color: #111827; font-family: var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); } .ds-calories { display: grid; gap: 4px; padding: 20px; border-radius: 24px; background: #fff6f2; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); } .ds-calories strong { color: #ef5a3a; font-size: 36px; line-height: 1; } .ds-calories span { color: #6b7280; font-size: 18px; font-weight: 500; } .ds-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; } .ds-macro { display: grid; place-items: center; min-height: 100px; padding: 16px; border-radius: 24px; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); } .ds-macro strong { font-size: 24px; line-height: 1; } .ds-macro span { color: #767676; font-size: 12px; font-weight: 500; } .ds-carbs { background: #e4fbec; } .ds-protein { background: #eaf3ff; } .ds-fat { background: #fffad8; }"
+    },
+    {
+      "name": "Safety Notice",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "A restrained factual warning with moderate corners and explicit semantic treatment.",
+      "html": "<aside class=\"ds-safety\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01\"/></svg><span>ตรวจสอบวัตถุดิบและปริมาณจริงก่อนเริ่มทำอาหาร</span></aside>",
+      "css": ".ds-safety { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid oklch(88.5% 0.062 18.334); border-radius: 16px; background: oklch(97.1% 0.013 17.38); color: oklch(50.5% 0.213 27.518); font: 500 14px/1.5 var(--font-sans, \"Noto Sans Thai\", \"Leelawadee UI\", Tahoma, sans-serif); } .ds-safety svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Friendly Kitchen Counter",
+    "overview": "As working qualitative language, HomeMade is described as a clean, welcoming kitchen counter where the next useful action is always within reach. The world is warm, cheerful, and easy to use, expressed through a white canvas, HomeMade Orange actions, generous breathing room, friendly rounded forms, and direct Thai-first language.\n\nThe current working philosophy uses restraint to communicate trust rather than clinical styling. Nutrition, allergen, and safety information uses calmer hierarchy, explicit labels, moderate corners, and limited semantic color so factual content feels clear and dependable without turning the product into a medical dashboard. The system should not feel luxurious, premium-restaurant-like, visually crowded, or childlike.",
+    "keyCharacteristics": [
+      "Mobile-first and task-focused within a narrow app shell.",
+      "Warm white surfaces with one energetic general-purpose accent.",
+      "Soft, confident controls and large friendly cards.",
+      "Selective light elevation for genuinely raised layers.",
+      "Restrained factual styling for nutrition, allergens, and warnings."
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "HomeMade Orange is the only general-purpose accent. Nutrition pastels stay inside nutrition displays, and safety colors stay inside status or warning contexts.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plain-Language Type Rule",
+        "body": "Use one Noto Sans Thai family with the established Thai-capable fallbacks, and create hierarchy with size, weight and line spacing; do not introduce ornamental display faces.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift What Moves Rule",
+        "body": "Resting content stays flat or lightly raised. Stronger shadows are reserved for the app shell, floating controls, navigation, and sheets.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use HomeMade Orange to identify primary actions, active filters, and directional icon buttons.",
+      "Do keep important nutrition and allergen information explicit, readable, and visually calmer than promotional content.",
+      "Do reserve pastel macro colors for nutrition summaries.",
+      "Do use 8–24px spacing steps and large empty areas to keep narrow screens scannable.",
+      "Do use shadows only when an element genuinely sits above another layer."
+    ],
+    "donts": [
+      "Don't style HomeMade like a premium restaurant, a clinical health product, or a children's app.",
+      "Don't introduce additional general-purpose accent colors or multicolor decoration.",
+      "Don't apply capsule shapes to cards, warnings, or dense information blocks.",
+      "Don't stretch the interface past the 430px mobile shell or convert it into a dense desktop dashboard.",
+      "Don't give factual warnings promotional styling or make them compete visually with the primary task."
+    ]
+  }
+}

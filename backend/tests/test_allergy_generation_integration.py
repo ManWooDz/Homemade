@@ -14,7 +14,7 @@ from allergen_kg.fixtures import add_edges
 from auth import create_access_token
 from database.db import get_db
 from database.models import (AllergenEdge, Base, BaseRecipe, Favorite, GenerateHistory,
-                             IngredientNode, IngredientNutrition, IngredientNutritionAlias, Rating, User)
+                             IngredientNode, IngredientNutrition, IngredientNutritionAlias, Notification, Rating, User)
 from database.seed_allergen_graph import seed_allergen_graph
 from main import app
 
@@ -35,7 +35,7 @@ class AllergyGenerationIntegrationTests(unittest.TestCase):
                                     connect_args={"check_same_thread": False}, poolclass=StaticPool)
         self.addCleanup(self.engine.dispose)
         Base.metadata.create_all(self.engine, tables=[User.__table__, BaseRecipe.__table__,
-            GenerateHistory.__table__, Rating.__table__, Favorite.__table__,
+            GenerateHistory.__table__, Rating.__table__, Favorite.__table__, Notification.__table__,
             IngredientNode.__table__, AllergenEdge.__table__,
             IngredientNutrition.__table__, IngredientNutritionAlias.__table__])
         self.sessions = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
@@ -127,13 +127,13 @@ class AllergyGenerationIntegrationTests(unittest.TestCase):
     def test_healthy_kg_retries_derived_allergen_then_saves_only_accepted_recipe(self):
         self.seed_healthy()
         unsafe = deepcopy(SAFE)
-        unsafe["adjusted_ingredients"].append("ทาฮินี 1 ช้อนโต๊ะ (ไม่มีงา)")
+        unsafe["adjusted_ingredients"].append("ทาฮินี (ไม่มีงา) 1 ช้อนโต๊ะ")
         for recipe_name, label in (("Thai Basil Pork", "แพ้งา"), ("Custom Recipe from Fridge", "งา")):
             with self.subTest(flow=recipe_name):
                 self.provider.reset_mock()
                 self.provider.generate_content.side_effect = [
                     SimpleNamespace(text=json.dumps(output, ensure_ascii=False)) for output in (unsafe, SAFE)]
-                response = self.generate(label, extra_ingredients=("ทาฮินี",), recipe_name=recipe_name)
+                response = self.generate(label, extra_ingredients=("ทาฮินี (ไม่มีงา)",), recipe_name=recipe_name)
                 self.assertEqual(response.json()["status"], "success", response.json())
                 self.assertEqual(self.provider.generate_content.call_count, 2)
                 prompt = self.provider.generate_content.call_args.kwargs["contents"]

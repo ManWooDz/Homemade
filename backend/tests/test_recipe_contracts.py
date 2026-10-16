@@ -46,6 +46,13 @@ class RecipeContractTests(unittest.TestCase):
         valid, reason = validate_generated_recipe_shape(deepcopy(VALID_RECIPE))
         self.assertEqual((valid, reason), (True, "OK"))
 
+    def test_oversized_integer_nutrients_fail_without_overflow(self):
+        for key in ("calories", "protein_g", "carbs_g", "fat_g"):
+            with self.subTest(key=key):
+                recipe = deepcopy(VALID_RECIPE)
+                recipe["nutrition"][key] = 10**400
+                self.assertEqual(validate_generated_recipe_shape(recipe), (False, f"Invalid nutrition value: {key}"))
+
     def test_non_dictionary_recipe_is_safely_rejected(self):
         for recipe in (None, [], "recipe"):
             with self.subTest(recipe=recipe):

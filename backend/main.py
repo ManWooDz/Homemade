@@ -44,7 +44,7 @@ from auth import (
 from csrf import verify_same_origin
 from database.db import get_db, SessionLocal
 from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
-from nutrition.calculator import compute_recipe_nutrition
+from nutrition.calculator import compute_recipe_nutrition, compute_quantities_nutrition
 from nutrition.llm_fallback import NutritionLLMEstimator
 from email_sender import send_otp_email, validate_email_config
 import otp
@@ -162,103 +162,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 
 
-BASIC_INGREDIENTS = ["salt", "pepper", "oil", "soy sauce", "fish sauce", "sugar", "water"]
-
-BAD_FLAVOR_PAIRS = [
-    ("milk", "fish sauce"),
-    ("chocolate", "garlic"),
-]
+from recipe_checks import (
+    BASIC_INGREDIENTS, BAD_FLAVOR_PAIRS, check_ingredients, check_flavor,
+    check_logic, check_nutrition, check_core, ingredient_prompt_guidance,
+)
 
 from allergen_kg.floor import ALLERGEN_LABELS, ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens, parse_allergy_preferences
 from allergen_kg.match import find_allergy_violation, format_violation_reason
 from allergen_kg.resolve import allergy_blocks_ready, resolve_allergy_blocks, unavailable_blocks
-
-# -------------------------------
-# 1. Ingredient Check (No hallucination)
-# -------------------------------
-def check_ingredients(recipe, user_ingredients):
-    for item in recipe["adjusted_ingredients"]:
-        if not item.isascii():
-            continue
-        name = item.lower()
-        if not any(ing in name for ing in user_ingredients + BASIC_INGREDIENTS):
-            return False, f"Invalid ingredient found: {item}"
-    return True, "OK"
-
-
-# -------------------------------
-# 2. Flavor Check
-# -------------------------------
-def check_flavor(recipe):
-    ingredients_text = " ".join(recipe["adjusted_ingredients"]).lower()
-    
-    for a, b in BAD_FLAVOR_PAIRS:
-        if a in ingredients_text and b in ingredients_text:
-            return False, f"Bad flavor combination: {a} + {b}"
-    
-    return True, "OK"
-
-
-# -------------------------------
-# 3. Cooking Logic Check
-# -------------------------------
-def check_logic(recipe):
-    instructions = " ".join(recipe["instructions"]).lower()
-    safety_warning = recipe.get("safety_warning", "")
-    if not isinstance(safety_warning, str):
-        safety_warning = ""
-    cooking_text = f"{instructions} {safety_warning.lower()}"
-
-    prohibited_stock_conclusions = (
-        "วัตถุดิบไม่พอ",
-        "วัตถุดิบไม่เพียงพอ",
-        "ต้องซื้อเพิ่ม",
-        "ต้องซื้อวัตถุดิบเพิ่ม",
-        "วัตถุดิบเพียงพอ",
-        "มีวัตถุดิบเพียงพอ",
-        "not enough ingredients",
-        "insufficient ingredients",
-        "have enough ingredients",
-        "enough ingredients",
-        "ingredients are sufficient",
-        "need to buy more",
-        "needs to buy more",
-        "must buy more",
-        "have to buy more",
-        "buy more ingredients",
-    )
-    if any(claim in cooking_text for claim in prohibited_stock_conclusions):
-        return False, "Prohibited stock conclusion"
-
-    has_oil = "oil" in instructions or "น้ำมัน" in instructions
-
-    if "ทอด" in instructions and not has_oil:
-        return False, "Frying without oil"
-
-    if "ผัด" in instructions and not has_oil:
-        return False, "Stir-fry without oil"
-
-    return True, "OK"
-
-
-# -------------------------------
-# 4. Nutrition Check
-# -------------------------------
-def check_nutrition(recipe):
-    valid, reason = validate_generated_recipe_shape(recipe)
-    if not valid:
-        return False, reason
-
-    nutrition = recipe["nutrition"]
-
-    if nutrition["calories"] <= 0 or nutrition["calories"] > 1500:
-        return False, "Unrealistic calories"
-
-    if nutrition["protein_g"] < 0:
-        return False, "Invalid protein value"
-
-    return True, "OK"
-
 
 # -------------------------------
 # 5. Allergy Check
@@ -279,18 +190,6 @@ def check_allergy(recipe, user_prefs, resolved_blocks=None):
     if violation is None:
         return True, "OK"
     return False, format_violation_reason(violation)
-
-
-# -------------------------------
-# 6. Core Ingredient Check
-# -------------------------------
-def check_core(recipe, user_ingredients):
-    name = recipe["recipe_name"].lower()
-
-    if "steak" in name and not any("beef" in ing for ing in user_ingredients):
-        return False, "Missing core ingredient: beef for steak"
-
-    return True, "OK"
 
 
 # -------------------------------
@@ -385,6 +284,7 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         1. วัตถุดิบที่ผู้ใช้มี : {ingredients}
         2. เงื่อนไขและข้อควรระวังของผู้ใช้: {prompt_prefs}
         3. สูตรอาหารตั้งต้น (อ้างอิงโภชนาการจากสูตรนี้): {base_recipe}
+        {ingredient_prompt_guidance(ingredients)}
         รายการวัตถุดิบนี้บอกเฉพาะชนิดที่ผู้ใช้ระบุว่ามี ไม่ได้ระบุปริมาณคงเหลือจริง
         ห้ามสรุปว่าวัตถุดิบเพียงพอ ไม่เพียงพอ หรือต้องซื้อเพิ่มจากรายการนี้
         servings คือจำนวนที่เสิร์ฟของสูตรนี้
@@ -396,8 +296,8 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         1. ความปลอดภัยอาหาร (Food Safety): ห้ามแนะนำให้รับประทานเนื้อสัตว์ดิบ (ยกเว้นวัตถุดิบที่ระบุว่าทานดิบได้) ต้องระบุการทำเนื้อสัตว์ ไก่ หมู หรืออาหารทะเลให้สุกอย่างชัดเจน และห้ามมีขั้นตอนที่เสี่ยงต่อการปนเปื้อนข้าม (Cross-contamination)
         2. ข้อควรระวังการแพ้ (Allergy Risks): ต้องตรวจสอบและปฏิบัติตาม {prompt_prefs} อย่างเคร่งครัด หากมีการแพ้อาหาร ห้ามใส่วัตถุดิบนั้นและวัตถุดิบแฝงเด็ดขาด
         3. ปริมาณและสัดส่วน (Logical Proportions): กำหนดปริมาณวัตถุดิบและเครื่องปรุงให้อยู่ในเกณฑ์มาตรฐานที่มนุษย์ทานได้จริง ห้ามใส่เครื่องปรุงรสจัดเกินไป (เช่น เกลือ 5 ช้อนโต๊ะ หรือน้ำมัน 1 ถ้วย)
-        4. ขั้นตอนสมเหตุสมผล (Logical Workflow): ลำดับขั้นตอนการทำอาหารต้องถูกต้องตามหลักฟิสิกส์การทำอาหาร (เช่น ต้องเจียวกระเทียมกับน้ำมันก่อนใส่น้ำ, ทอดต้องใช้น้ำมัน, รวนเนื้อสัตว์ก่อนใส่ผักที่สุกง่าย)
-        5. ความเข้ากันของรสชาติ (Flavor Pairing): หากวัตถุดิบที่มีจับคู่กันแล้วรสชาติจะแย่มาก (เช่น นม + น้ำปลา) ให้เลือกตัดวัตถุดิบบางอย่างออกอย่างสมเหตุสมผล ดีกว่าฝืนผสมกัน
+        4. ขั้นตอนสมเหตุสมผล (Logical Workflow): ระบุวิธีและลำดับการปรุงให้ชัด การผัด/ทอดแบบใช้น้ำมันต้องประกาศน้ำมันและระบุการใช้ก่อนหรือขณะปรุง วิธีไร้น้ำมันต้องบอกวิธีให้ชัดเจน
+        5. ความเข้ากันของรสชาติ (Flavor Pairing): ใช้กฎของ HomeMade ตามบริบทที่ระบุด้านล่าง ไม่ตัดสินว่าคู่ส่วนผสมผิดทุกเมนูจากชื่อที่ปรากฏร่วมกัน
         6. ห้ามมโนวัตถุดิบ (No Hallucination): ใช้วัตถุดิบเฉพาะที่มีใน {ingredients} และสามารถเสริมด้วยเครื่องปรุงพื้นฐานสามัญประจำบ้าน (เกลือ, พริกไทย, น้ำมัน, น้ำปลา, ซีอิ๊ว, น้ำตาล, น้ำเปล่า) ได้เท่านั้น ห้ามคิดค้นวัตถุดิบขึ้นมาเอง
 
         คำสั่ง:
@@ -453,6 +353,26 @@ async def get_all_recipes(db: Session = Depends(get_db)):
 
         recipes = []
         for recipe in db.query(BaseRecipe).order_by(BaseRecipe.id).all():
+            # Recalculate read-only; stored catalog numbers may be legacy AI estimates.
+            nutrition_fields = {
+                "nutrition": None,
+                "computed_nutrition": None,
+                "nutrition_origin": "base_calculation",
+                "nutrition_calculation_status": "unavailable",
+                "nutrition_partially_estimated": True,
+                "nutrition_calculation_reasons": ["inputs_incomplete"],
+            }
+            try:
+                result = compute_quantities_nutrition(db, recipe.ingredient_quantities, recipe.servings)
+                nutrition_fields.update(
+                    nutrition=result.nutrition,
+                    computed_nutrition=result.nutrition,
+                    nutrition_calculation_status="limited" if result.partially_estimated else "calculated",
+                    nutrition_partially_estimated=result.partially_estimated,
+                    nutrition_calculation_reasons=result.partially_estimated_reasons,
+                )
+            except ValueError:
+                pass
             mapped_ingredients = []
             for ing in recipe.ingredients:
                 img_path = ingredient_map.get(ing.lower().strip())
@@ -477,7 +397,8 @@ async def get_all_recipes(db: Session = Depends(get_db)):
                 "image": image_val,
                 "tags": recipe.tags,
                 "ingredients": mapped_ingredients,
-                "nutrition": recipe.nutrition,
+                "servings": recipe.servings,
+                **nutrition_fields,
                 "instructions": recipe.instructions,
             })
         return {"status": "success", "data": recipes}

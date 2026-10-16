@@ -140,19 +140,27 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
     )
 
 
-def compute_from_quantities(db, quantities: list[dict], servings: int) -> dict:
+def compute_quantities_nutrition(db, quantities: list[dict], servings: int) -> NutritionResult:
     _check_servings(servings)
+    if not isinstance(quantities, list) or not quantities:
+        raise ValueError("explicit ingredient quantities are required")
     totals = {key: 0.0 for key in _MACRO_KEYS}
     unmatched: list[str] = []
     incomplete: list[str] = []
+    reasons: list[str] = []
 
     for entry in quantities:
+        if not isinstance(entry, dict) or not isinstance(entry.get("name"), str) or not entry["name"].strip():
+            raise ValueError("ingredient name is required")
+        if "quantity_g" not in entry:
+            raise ValueError("explicit gram quantity is required")
         name, quantity_g = entry["name"], entry["quantity_g"]
         if not is_nonnegative_finite(quantity_g):
             raise ValueError(f"invalid gram quantity: {name}")
         constant = _zero_nutrition_constant(name)
         if constant is not None:
             _add_contribution(totals, constant, quantity_g)
+            reasons.append("constant_unverified")
             continue
 
         match = match_ingredient(db, name)
@@ -168,6 +176,14 @@ def compute_from_quantities(db, quantities: list[dict], servings: int) -> dict:
             # silently undercount the missing macro(s) as 0.
             incomplete.append(f"{name} (row {match.source_ref} missing or invalid {', '.join(missing)})")
             continue
+        qualification = qualify_match(name, match)
+        if not (qualification.identity_verified and qualification.macros_verified):
+            reasons.append("source_unverified")
+        derivation = match.derivation if isinstance(match.derivation, dict) else {}
+        if "proxy" in derivation:
+            reasons.append("proxy_composition")
+        if "energy_kcal" in derivation or "carbs_g" in derivation:
+            reasons.append("derived_macros")
         _add_contribution(totals, match.macros, quantity_g)
 
     if unmatched or incomplete:
@@ -179,4 +195,12 @@ def compute_from_quantities(db, quantities: list[dict], servings: int) -> dict:
             "silently contributing 0 here would repeat the original hand-typed-nutrition problem."
         )
 
-    return _per_serving_nutrition(totals, servings)
+    return NutritionResult(
+        nutrition=_per_serving_nutrition(totals, servings),
+        partially_estimated=bool(reasons),
+        partially_estimated_reasons=list(dict.fromkeys(reasons)),
+    )
+
+
+def compute_from_quantities(db, quantities: list[dict], servings: int) -> dict:
+    return compute_quantities_nutrition(db, quantities, servings).nutrition

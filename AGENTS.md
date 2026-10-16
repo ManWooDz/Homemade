@@ -2,7 +2,7 @@
 
 ระบบสร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็นที่ grounded และตรวจสอบได้ (React+Vite frontend, FastAPI backend, กำลังย้าย SQLite → PostgreSQL). ทีม 2 คน, capstone 1 ปีการศึกษา.
 
-รายละเอียดเต็ม: [docs/project-proposal.md](docs/project-proposal.md)
+รายละเอียดเต็ม: [docs/project-proposal.md](docs/project-proposal.md) — **ข้อควรระวัง: ไฟล์นี้ Claude generate ขึ้นเองนานมากแล้ว และทีมไม่ได้ใช้จริงทั้งหมด 100% (user แจ้ง 2026-10-04)** ห้ามถือเป็นข้อกำหนดที่ผูกมัด — Gantt, success criteria (ตาราง 5.4) และ scope ในนั้นเป็นแค่ร่างเริ่มต้น ถ้าขัดกับ spec.md หรือ MEMORY.md ให้ยึด spec.md/MEMORY.md และถามผู้ใช้ก่อนอ้างตัวเลข/กำหนดการจากไฟล์นี้
 สถานะปัจจุบัน / งานค้าง: [spec.md](spec.md)
 บทเรียนที่ห้ามพลาดซ้ำ: [MEMORY.md](MEMORY.md)
 

@@ -149,10 +149,10 @@ class CheckAllergyWrapperTests(unittest.TestCase):
             "safety_warning": "ระวังความร้อน",
         }
         blocks = shrimp_with({"beta": TermInfo("kg", ("beta", "alpha"))})
-        result = validate_recipe(full, [], {"allergy": "แพ้กุ้ง"}, resolved_blocks=blocks)
+        result = validate_recipe(full, ["beta"], {"allergy": "แพ้กุ้ง"}, resolved_blocks=blocks)
         self.assertEqual(result["status"], "fail")
         self.assertIn("'beta' → alpha → กุ้ง", result["reason"])
-        self.assertEqual(validate_recipe(full, [], {"allergy": "แพ้กุ้ง"})["status"], "pass")
+        self.assertEqual(validate_recipe(full, ["beta"], {"allergy": "แพ้กุ้ง"})["status"], "pass")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import { Home, Refrigerator, CookingPot, Heart, User } from "lucide-react";
 export default function BottomMenu({ activeTab, setActiveTab }) {
     const { t } = useLocale();
     return (
-        <nav aria-label={t("เมนูหลัก")} className="absolute bottom-0 w-full bg-white border-t border-gray-200 px-6 py-3 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50 [&_button]:min-h-11 [&_button]:min-w-11 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-[#B93E25]">
+        <nav aria-label={t("เมนูหลัก")} className="absolute bottom-0 w-full bg-white border-t border-gray-200 px-3 py-3 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50 [&_button]:min-h-11 [&_button]:min-w-11 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-[#B93E25]">
             <div className="flex justify-between items-center relative">
                 <button
                     onClick={() => setActiveTab("home")}
@@ -12,7 +12,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 cursor-pointer ${activeTab === "home" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <Home className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">{t("HOME")}</span>
+                    <span className="text-caption font-semibold">{t("HOME")}</span>
                 </button>
 
                 <button
@@ -21,7 +21,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 cursor-pointer ${activeTab === "fridge" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <Refrigerator className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">{t("MY FRIDGE")}</span>
+                    <span className="text-caption font-semibold">{t("MY FRIDGE")}</span>
                 </button>
 
                 {/* ปุ่มทำอาหารตรงกลาง (ลอยขึ้นมา) */}
@@ -34,7 +34,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     >
                         <CookingPot className={`w-7 h-7 ${activeTab === "cooking" ? "text-white" : "text-gray-500"}`} />
                     </button>
-                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-600">{t("COOKING")}</span>
+                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-caption font-semibold text-gray-600">{t("COOKING")}</span>
                 </div>
 
                 <button
@@ -43,7 +43,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 ${activeTab === "favorites" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <Heart className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">{t("FAVORITES")}</span>
+                    <span className="text-caption font-semibold">{t("FAVORITES")}</span>
                 </button>
 
                 <button
@@ -52,7 +52,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 ${activeTab === "me" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <User className="w-6 h-6" />
-                    <span className="text-[10px] font-bold">{t("ME")}</span>
+                    <span className="text-caption font-semibold">{t("ME")}</span>
                 </button>
             </div>
         </nav>

@@ -5,6 +5,12 @@ from generators.prompts import build_recipe_prompt
 
 
 class BuildRecipePromptTests(unittest.TestCase):
+    def test_prompt_declares_all_used_ingredients_and_bounded_flavor_methods(self):
+        for include_example in (False, True):
+            prompt = build_recipe_prompt(["minced pork", "chives"], {}, {}, include_example=include_example)
+            for text in ("ทุกวัตถุดิบที่ใช้ในขั้นตอน", "กุยช่าย", "หมูสับ", "เฉพาะผัดไทย/ผัดกะเพรา", "วิธีที่ไม่ใช้น้ำมันต้องระบุให้ชัด" if include_example else "ถ้าใช้วิธีไร้น้ำมันให้ระบุวิธีให้ชัด"):
+                self.assertIn(text, prompt)
+
     def test_prompt_includes_servings_and_per_serving_nutrition_rules(self):
         prompt = build_recipe_prompt(["minced pork"], {}, {"name": "test"})
         self.assertIn("servings คือจำนวนที่เสิร์ฟของสูตรนี้", prompt)

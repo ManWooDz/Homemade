@@ -42,14 +42,14 @@ SAFE = {
 
 def with_ingredient(name):
     r = deepcopy(SAFE)
-    r["adjusted_ingredients"] = [f"{name} 1 ช้อนโต๊ะ", "น้ำมัน 1 ช้อนโต๊ะ"]
+    r["adjusted_ingredients"] = [f"{name} 1 ช้อนโต๊ะ", "น้ำมัน 1 ช้อนโต๊ะ", "หมูสับ 200 กรัม"]
     return r
 
 
 def request(allergy):
     return GenerateRecipeTextRequest(
         recipe={"name": "Custom"},
-        ingredients=[{"id": 1, "name": "หมูสับ"}],
+        ingredients=[{"id": 1, "name": "หมูสับ"}, {"name": "กุ้ง"}, {"name": "beta"}],
         preferences={"allergy": allergy, "taste": "", "equipment": "", "extra": ""},
     )
 
@@ -162,7 +162,7 @@ class RunGenerationTests(unittest.TestCase):
             return outputs.pop(0)
 
         final, log = run_generation_with_validation(
-            fake, ["หมูสับ"], ["หมูสับ"], {"allergy": "แพ้กุ้ง"}, {"name": "x"}, blocks)
+            fake, ["หมูสับ", "กุ้ง"], ["หมูสับ", "กุ้ง"], {"allergy": "แพ้กุ้ง"}, {"name": "x"}, blocks)
         self.assertEqual(final["recipe_name"], "Test Dish")
         self.assertEqual([e["status"] for e in log], ["fail", "pass"])
         self.assertEqual(feedbacks[0], None)
@@ -170,7 +170,7 @@ class RunGenerationTests(unittest.TestCase):
 
     def test_exhaustion_returns_none(self):
         final, log = run_generation_with_validation(
-            lambda *a, **k: with_ingredient("กุ้ง"), ["หมูสับ"], ["หมูสับ"],
+            lambda *a, **k: with_ingredient("กุ้ง"), ["หมูสับ", "กุ้ง"], ["หมูสับ", "กุ้ง"],
             {"allergy": "แพ้กุ้ง"}, {"name": "x"}, {})
         self.assertIsNone(final)
         self.assertEqual(len(log), 3)
@@ -188,7 +188,7 @@ class RunGenerationTests(unittest.TestCase):
         user_prefs = {"allergies": "แพ้กุ้ง"}
         llm_prefs = {"allergies": ""}
         final, log = run_generation_with_validation(
-            fake, ["หมูสับ"], ["หมูสับ"], user_prefs, {"name": "x"}, {}, llm_prefs=llm_prefs)
+            fake, ["หมูสับ", "กุ้ง"], ["หมูสับ", "กุ้ง"], user_prefs, {"name": "x"}, {}, llm_prefs=llm_prefs)
         self.assertIsNone(final)
         self.assertEqual(log[0]["status"], "fail")
         self.assertTrue(log[0]["reason"].startswith("Allergy violation:"), log)
@@ -204,7 +204,7 @@ class RunGenerationTests(unittest.TestCase):
             return deepcopy(SAFE)
 
         user_prefs = {"allergy": ""}
-        run_generation_with_validation(fake, ["หมูสับ"], ["หมูสับ"], user_prefs, {"name": "x"}, {})
+        run_generation_with_validation(fake, ["หมูสับ", "กุ้ง"], ["หมูสับ", "กุ้ง"], user_prefs, {"name": "x"}, {})
         self.assertIs(seen[0], user_prefs)
 
     def test_generator_error_short_circuits(self):
@@ -344,7 +344,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
         # no "allergy" key at all. Before the fix the whole allergy check never fired.
         frontend_request = GenerateRecipeTextRequest(
             recipe={"name": "Custom"},
-            ingredients=[{"id": 1, "name": "หมูสับ"}],
+            ingredients=[{"id": 1, "name": "หมูสับ"}, {"name": "กุ้ง"}, {"name": "beta"}],
             preferences={"taste": "", "allergies": allergies, "equipment": "", "extra": ""},
         )
         db = self.seeded_db()
@@ -400,7 +400,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_allergy_exhaustion_names_the_users_violating_ingredients(self):
         response, _ = await self._exhausted_response(
-            ["กุ้งสด", "หมูสับ", "กะปิ"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
+            ["กุ้งสด", "หมูสับ", "กะปิ"], "แพ้กุ้ง", lambda: with_ingredient("กุ้งสด"))
         self.assertEqual(response, {
             "status": "error",
             "message": "ไม่สามารถสร้างสูตรได้ เพราะมีวัตถุดิบที่ขัดกับอาการแพ้ของคุณ: "
@@ -409,7 +409,7 @@ class EndpointTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_allergy_exhaustion_without_violating_user_ingredient(self):
         response, _ = await self._exhausted_response(
-            ["หมูสับ", "ผักกาด"], "แพ้กุ้ง", lambda: with_ingredient("กุ้ง"))
+            ["หมูสับ", "ผักกาด", "chili paste"], "แพ้กุ้ง", lambda: with_ingredient("น้ำพริกเผา"))
         self.assertEqual(response, {
             "status": "error",
             "message": "ไม่สามารถสร้างสูตรได้ เพราะหาสูตรที่ปลอดภัยกับอาการแพ้ของคุณไม่เจอ "

@@ -23,7 +23,7 @@ PROMPT_BLOCK = """<<<PERSONALIZATION_REFERENCE_DATA>>>
 <<<END_PERSONALIZATION_REFERENCE_DATA>>>"""
 
 VALID_RECIPE = {
-    "recipe_name": "Thai Basil Pork",
+    "recipe_name": "Holy Basil Pork",
     "servings": 2,
     "adjusted_ingredients": [
         "หมูสับ 200 กรัม",
@@ -57,7 +57,7 @@ def request(*, recipe_name="Custom Recipe from Fridge", taste="เผ็ด"):
         recipe={"id": 12, "name": recipe_name, "servings": 2},
         ingredients=[
             {"id": 1, "name": "minced pork", "quantity": 1},
-            {"id": 2, "name": "holy basil", "quantity": 1},
+            {"id": 2, "name": "holy basil leaves", "quantity": 1},
         ],
         preferences={
             "allergies": "",
@@ -148,7 +148,7 @@ class PersonalizationGenerationPromptTests(unittest.TestCase):
         digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         self.assertEqual(
             digest,
-            "ad5b47aec8643b164e224738bf6be644c499f5722bb88d56461e1d8a645960c3",
+            "2b644a72bc6e151c51e949f1d2d110ca1e87bc9e5c96e0ec10576c4f013a7ccb",
         )
 
     def test_context_is_before_feedback_and_hard_rules_and_not_normal_preferences(self):
@@ -346,6 +346,7 @@ class PersonalizationGenerationOrchestrationTests(unittest.IsolatedAsyncioTestCa
 class PersonalizationGenerationHandlerTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.db = MagicMock()
+        self.db.scalar.return_value = None
         self.user = SimpleNamespace(id=7)
         self.context = PersonalizationContext(PROMPT_BLOCK, 2, 1)
 
@@ -373,7 +374,7 @@ class PersonalizationGenerationHandlerTests(unittest.IsolatedAsyncioTestCase):
                 _response, seam, _generator, _writer = await self._generate(body)
                 seam.assert_awaited_once()
                 self.assertEqual(seam.call_args.kwargs["recipe_name"], expected_name)
-                self.assertEqual(seam.call_args.kwargs["ingredient_names"], ["minced pork", "holy basil"])
+                self.assertEqual(seam.call_args.kwargs["ingredient_names"], ["minced pork", "holy basil leaves"])
                 self.assertEqual(seam.call_args.kwargs["taste"], body.preferences["taste"])
 
     async def test_retrieval_session_is_closed_before_recipe_generator(self):
@@ -443,7 +444,7 @@ class PersonalizationGenerationHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Recipe approved", logs)
         for private_text in (
             "PRIVATE-RECIPE-WARNING",
-            "Thai Basil Pork",
+            "Holy Basil Pork",
             VALID_RECIPE["instructions"][0],
             "<<<PERSONALIZATION_REFERENCE_DATA>>>",
             "<<<END_PERSONALIZATION_REFERENCE_DATA>>>",

@@ -27,7 +27,7 @@ from main import app
 from nutrition.calculator import NutritionResult
 
 APPROVED = {
-    "recipe_name": "Thai Basil Pork",
+    "recipe_name": "Holy Basil Pork",
     "servings": 2,
     "adjusted_ingredients": ["หมูสับ 200 กรัม", "น้ำมัน 1 ช้อนโต๊ะ"],
     "diet_tags": ["Thai"],
@@ -210,7 +210,7 @@ _STUB_NUTRITION = NutritionResult(
 # with the "minced pork" request below is proven to pass all six validation
 # steps, so a failure here is about history, not validation.
 GENERATED = {
-    "recipe_name": "Thai Basil Pork",
+    "recipe_name": "Holy Basil Pork",
     "servings": 2,
     "adjusted_ingredients": [
         "หมูสับ 200 กรัม",
@@ -259,7 +259,7 @@ class GenerateWritesHistoryEndToEndTests(HistoryEndpointTestCase):
     def generate(self, client, extra_body=None, headers=None):
         body = {
             "recipe": {"name": "Custom Recipe from Fridge"},
-            "ingredients": [{"id": 1, "name": "minced pork"}],
+            "ingredients": [{"id": 1, "name": "minced pork"}, {"id": 2, "name": "holy basil leaves"}],
             "preferences": {"allergy": "", "taste": "", "equipment": "", "extra": ""},
         }
         body.update(extra_body or {})
@@ -288,7 +288,7 @@ class GenerateWritesHistoryEndToEndTests(HistoryEndpointTestCase):
 
         alice_rows = alice.get("/api/history").json()["data"]
         self.assertEqual([row["id"] for row in alice_rows], [data["history_id"]])
-        self.assertEqual(alice_rows[0]["recipe_name"], "Thai Basil Pork")
+        self.assertEqual(alice_rows[0]["recipe_name"], "Holy Basil Pork")
         self.assertNotIn("history_id", alice_rows[0]["recipe_data"])
         self.assertNotIn("personalization", alice_rows[0]["recipe_data"])
         self.assertNotIn("personalization", alice_rows[0])
