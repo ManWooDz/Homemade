@@ -1,5 +1,10 @@
 // Display copy only; optional third entry preserves the original Thai lookup/payload alias.
 export const COPY = [
+    ["รายละเอียดสูตรอาหาร", "Recipe details"], ["เนื้อหาสูตรอาหาร", "Recipe content"],
+    ["ขยายการ์ดสูตรอาหาร", "Expand recipe card"], ["ย่อการ์ดสูตรอาหาร", "Collapse recipe card"],
+    ["แท็ก", "Tag"],
+    ["เลือกวัตถุดิบที่ต้องการใช้ในสูตร", "Select the ingredients you want to use in this recipe."],
+    ["ดำเนินการต่อ", "Continue"],
     ["ค้นหาประวัติ", "Search history"], ["ชื่อเมนูหรือวัตถุดิบ", "Recipe name or ingredient"],
     ["ล้างคำค้น", "Clear search"], ["กรองตามคะแนน", "Filter by rating"], ["ทุกคะแนน", "All ratings"],
     ["ยังไม่ให้คะแนน", "Not rated yet"], ["{stars} ดาว", "{stars} stars"], ["ให้ {stars} ดาว", "Rate {stars} stars"],

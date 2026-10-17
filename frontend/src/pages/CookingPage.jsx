@@ -1,10 +1,11 @@
 import { useLocale } from "../context/LocaleContext";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChefHat, Heart, Star } from "lucide-react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { motion as Motion, useMotionValue, animate } from "framer-motion";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import RecipeContent from "../components/RecipeContent";
+import RecipeSheet from "../components/RecipeSheet";
 
 export default function CookingPage({
   recipe,
@@ -96,56 +97,12 @@ export default function CookingPage({
     }
   };
 
-  const sheetY = useMotionValue(0);
-  const contentRef = useRef(null);
-  const lastTouchY = useRef(null);
-
-  const expandSheet = () => {
-    animate(sheetY, -200, { type: "spring", stiffness: 300, damping: 30 });
-  };
-
-  const collapseSheet = () => {
-    animate(sheetY, 0, { type: "spring", stiffness: 300, damping: 30 });
-  };
-
-  const isScrollAtBottom = (el) =>
-    el.scrollHeight - el.scrollTop - el.clientHeight <= 1;
-
-  const isScrollAtTop = (el) => el.scrollTop <= 0;
-
-  const handleWheel = (e) => {
-    const el = contentRef.current;
-    if (!el) return;
-    if (isScrollAtBottom(el) && e.deltaY > 0) {
-      expandSheet();
-    } else if (sheetY.get() <= -200 && isScrollAtTop(el) && e.deltaY < 0) {
-      collapseSheet();
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    lastTouchY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e) => {
-    const el = contentRef.current;
-    if (!el || lastTouchY.current === null) return;
-    const currentY = e.touches[0].clientY;
-    const deltaY = lastTouchY.current - currentY; // finger moving up = scrolling down
-    lastTouchY.current = currentY;
-    if (isScrollAtBottom(el) && deltaY > 0) {
-      expandSheet();
-    } else if (sheetY.get() <= -200 && isScrollAtTop(el) && deltaY < 0) {
-      collapseSheet();
-    }
-  };
-
   // Loading Screen
   if (isGenerating) {
     return (
       <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
         <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl items-center justify-center space-y-6">
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0.5, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1.1 }}
             transition={{
@@ -155,7 +112,7 @@ export default function CookingPage({
             }}
           >
             <ChefHat className="w-24 h-24 text-[#EF5A3A] drop-shadow-lg" />
-          </motion.div>
+          </Motion.div>
           <h2 className="text-2xl font-bold text-gray-800 tracking-wide">{t("กำลังคิดค้นเมนู...")}</h2>
           <p className="text-gray-500 text-center px-8">{t("เชฟ AI กำลังนำวัตถุดิบและเงื่อนไขของคุณมาปรุงเป็นสูตรพิเศษ")}</p>
         </div>
@@ -186,7 +143,7 @@ export default function CookingPage({
 
   const renderRatingModal = () =>
     showRatingModal && (
-      <motion.div
+      <Motion.div
         className="absolute left-0 right-0 mx-auto w-full max-w-107.5 bg-white rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] z-50"
         drag="y"
         dragConstraints={{ top: -200, bottom: 0 }}
@@ -309,16 +266,17 @@ export default function CookingPage({
             className="text-gray-400 text-sm font-medium w-full text-center mt-3"
           >{t("ข้าม")}</button>
         </div>
-      </motion.div>
+      </Motion.div>
     );
 
   return (
-    <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+    <div className="cooking-page-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
         {/* Header & Logo Area for Both Flows */}
         <div className="pt-8 px-6 flex items-center justify-center relative z-20 shrink-0 mb-4 bg-white">
           <button
             onClick={onBack}
+            aria-label={t("Back")}
             className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -334,15 +292,7 @@ export default function CookingPage({
           <img src={logo} alt="HomeMade" className="h-18 object-contain" />
         </div>
 
-        {isCustom ? (
-          // Custom Flow layout (no image, normal div)
-          <div className="flex-1 overflow-y-auto px-6 pb-24 scrollbar-hide">
-            <RecipeContent recipe={generatedRecipe} onDone={finishCooking} />
-          </div>
-        ) : (
-          // Normal Flow layout (image + draggable bottom sheet)
-          <>
-            {/* Image Area */}
+        {!isCustom && (
             <div className="pb-32 flex flex-col items-center bg-white relative z-10 pt-2">
               {/* Image (Fallback to base recipe since LLM doesn't generate images easily) */}
               <div className="w-64 h-64 rounded-full overflow-hidden shadow-sm">
@@ -354,29 +304,10 @@ export default function CookingPage({
               </div>
             </div>
 
-            {/* Draggable Bottom Sheet overlay */}
-            <motion.div
-              className="absolute left-0 right-0 mx-auto w-full max-w-[430px] bg-white rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 pb-10"
-              drag="y"
-              dragConstraints={{ top: -200, bottom: 0 }}
-              style={{ top: "45%", height: "90%", y: sheetY }}
-            >
-              <div className="w-full flex justify-center pt-4 pb-2">
-                <div className="w-12 h-1.5 bg-gray-200 rounded-full"></div>
-              </div>
-
-              <div
-                ref={contentRef}
-                onWheel={handleWheel}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                className="px-6 h-full overflow-y-auto pb-50 scrollbar-hide"
-              >
-                <RecipeContent recipe={generatedRecipe} onDone={finishCooking} />
-              </div>
-            </motion.div>
-          </>
         )}
+        <RecipeSheet inline={isCustom}>
+          <RecipeContent recipe={generatedRecipe} onDone={finishCooking} compact />
+        </RecipeSheet>
 
         {/* Bottom Navigation */}
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />

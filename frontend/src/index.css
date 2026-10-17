@@ -1,5 +1,87 @@
 @import "tailwindcss";
 
+/* Recipe sheets share real viewport bounds; only the handle owns a drag gesture. */
+.recipe-sheet {
+  position: absolute;
+  inset: 45% 0 calc(89px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 32px 32px 0 0;
+  box-shadow: 0 -8px 32px rgb(0 0 0 / 8%);
+}
+.recipe-sheet[data-expanded="true"] { top: min(128px, 20%); }
+.recipe-sheet--inline {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px));
+  box-shadow: none;
+}
+.recipe-sheet-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  flex-shrink: 0;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+.recipe-sheet-handle span { width: 48px; height: 4px; border-radius: 9999px; background: #9ca3af; }
+.recipe-sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 0 20px 32px;
+}
+.recipe-sheet--inline .recipe-sheet-scroll { padding-top: 12px; }
+.recipe-reading { color: #111827; overflow-wrap: anywhere; }
+.recipe-reading ::selection { background: #fdece5; color: #111827; }
+.recipe-reading .recipe-title { font-size: 24px; line-height: 1.4; font-weight: 700; margin: 0 0 8px; }
+.recipe-reading h3 { font-size: 18px; line-height: 1.5; font-weight: 700; margin: 28px 0 10px; }
+.recipe-reading > p { font-size: 15px; line-height: 1.75; }
+.recipe-reading .recipe-tags { margin: 24px 0; }
+.recipe-reading .recipe-tags h3 { margin-top: 0; }
+.recipe-reading .recipe-nutrition > div:first-of-type { padding: 12px; background: #f9fafb; border-radius: 16px; font-size: 13px; line-height: 1.65; }
+.recipe-reading .recipe-calorie-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-radius: 16px; }
+.recipe-reading .recipe-calorie-summary > div > p:first-child { color: #b93e25; font-size: 24px; line-height: 1.3; }
+.recipe-reading .recipe-calorie-summary > div > p:last-child { font-size: 12px; margin-top: 4px; }
+.recipe-reading .recipe-calorie-basis { font-size: 12px; color: #4b5563; text-align: right; }
+.recipe-reading .recipe-nutrition > .grid { gap: 8px; }
+.recipe-reading .recipe-nutrition > .grid > div { padding: 14px 6px; border-radius: 16px; }
+.recipe-reading .recipe-nutrition details { margin-top: 12px; }
+.recipe-ingredient-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 12px;
+  background: #eeeef0;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.recipe-ingredient-choice > div { min-width: 0; }
+.recipe-ingredient-choice img { flex-shrink: 0; }
+.recipe-reading .recipe-ingredient-line { padding: 16px; background: #eeeef0; border: 0; border-radius: 16px; box-shadow: none; }
+.recipe-reading .recipe-steps { gap: 28px; }
+.recipe-reading .recipe-steps li { gap: 12px; }
+.recipe-reading .recipe-step-number { background: #ef5a3a; color: #fff; font-size: 20px; font-weight: 700; line-height: 1; }
+.recipe-reading .recipe-steps h4 { color: #111827; font-size: 16px; line-height: 1.5; margin: 0 0 4px; padding-top: 4px; }
+.recipe-reading .recipe-steps p { white-space: pre-line; font-size: 15px; line-height: 1.75; }
+.recipe-reading .recipe-steps p:first-child { padding-top: 3px; }
+.recipe-reading .recipe-primary-action { width: 100%; min-height: 48px; padding: 12px 20px; margin: 32px 0 12px; border-radius: 9999px; background: #b93e25; color: #fff; font-size: 16px; font-weight: 600; box-shadow: none; cursor: pointer; }
+.recipe-reading .recipe-primary-action:hover { background: #9f351f; }
+.recipe-sheet :focus-visible { outline: 2px solid #b93e25; outline-offset: -3px; }
+:is(.recipe-detail-screen, .cooking-page-screen) nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+:is(.recipe-detail-screen, .cooking-page-screen) > div > div:first-child button { min-width: 44px; min-height: 44px; }
+
 .notification-toast { animation: notification-arrive 180ms ease-out; }
 @keyframes notification-arrive { from { opacity: .8; margin-top: -6px; } to { opacity: 1; margin-top: 0; } }
 @media (prefers-reduced-motion: reduce) { .notification-toast { animation: none; } }

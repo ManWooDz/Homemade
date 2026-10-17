@@ -1,13 +1,14 @@
 import RecipeNutrition from "./RecipeNutrition";
+import RecipeInstructions from "./RecipeInstructions";
 import { useLocale } from "../context/LocaleContext";
-import { Flame, AlertTriangle, Clock } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { getTagColor } from "../utils/tagColors";
 
-export default function RecipeContent({ recipe, onDone }) {
+export default function RecipeContent({ recipe, onDone, compact = false }) {
     const { t } = useLocale();
   return (
     <>
-      <h2 className="text-[26px] font-bold text-black mb-2 leading-tight">
+      <h2 className="recipe-title text-[26px] font-bold text-black mb-2 leading-tight">
         {recipe.recipe_name}
       </h2>
       <div className="flex items-center justify-between mb-3">
@@ -22,7 +23,9 @@ export default function RecipeContent({ recipe, onDone }) {
 
       {/* Diet Tags */}
       {recipe.diet_tags && recipe.diet_tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6 mt-3">
+        <section className="recipe-tags mb-6 mt-3">
+          {compact && <h3>{t("Tag")}</h3>}
+          <div className="flex flex-wrap gap-2">
           {recipe.diet_tags.map((tag, idx) => (
             <span
               key={idx}
@@ -31,7 +34,8 @@ export default function RecipeContent({ recipe, onDone }) {
               {tag}
             </span>
           ))}
-        </div>
+          </div>
+        </section>
       )}
 
       {/* Safety Warning */}
@@ -45,7 +49,7 @@ export default function RecipeContent({ recipe, onDone }) {
           </div>
         )}
 
-            <RecipeNutrition recipe={recipe} />
+      <RecipeNutrition recipe={recipe} compact={compact} />
 
       {/* Ingredients */}
       <div className="mb-6">
@@ -55,7 +59,7 @@ export default function RecipeContent({ recipe, onDone }) {
           {recipe.adjusted_ingredients?.map((ing, idx) => (
             <li
               key={idx}
-              className="bg-gray-50 flex items-center gap-3 p-3 rounded-xl border border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+              className="recipe-ingredient-line bg-gray-50 flex items-center gap-3 p-3 rounded-xl border border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
             >
               <div className="w-2 h-2 rounded-full bg-[#EF5A3A]"></div>
               <span className="text-gray-700 text-[15px]">{ing}</span>
@@ -64,32 +68,13 @@ export default function RecipeContent({ recipe, onDone }) {
         </ul>
       </div>
 
-      {/* Instructions */}
-      <div className="mb-6">
-        <h3 className="text-xl font-medium text-black mb-4 flex items-center gap-2">
-          <Flame className="w-5 h-5 text-[#EF5A3A]" />{t("วิธีทำ")}</h3>
-        <div className="flex flex-col gap-4">
-          {recipe.instructions?.map((step, idx) => {
-            const cleanedStep = step.replace(/^\d+\.\s*/, "");
-            return (
-              <div key={idx} className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-orange-100 text-[#EF5A3A] font-bold flex items-center justify-center shrink-0">
-                  {idx + 1}
-                </div>
-                <p className="text-gray-700 leading-relaxed pt-1 flex-1">
-                  {cleanedStep}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <RecipeInstructions instructions={recipe.instructions} compact={compact} />
 
       {/* Done Button (hidden when read-only, e.g. viewing from history) */}
       {onDone && (
         <button
           onClick={onDone}
-          className="bg-[#EF5A3A] text-white px-5 py-4.5 rounded-full text-lg font-bold shadow-md mt-6 w-full mb-8 hover:bg-orange-600 transition"
+          className="recipe-primary-action bg-[#EF5A3A] text-white px-5 py-4.5 rounded-full text-lg font-bold shadow-md mt-6 w-full mb-8 hover:bg-orange-600 transition"
         >{t("เสร็จสิ้น")}</button>
       )}
     </>

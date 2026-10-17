@@ -1,5 +1,25 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Preserve motion physics and measure through supported browser reads (2026-10-18):**
+- what: the recipe-sheet visual refinement replaced existing300/30springs with a180ms CSS transition; the user requested the original animation back. Four red spring/lifecycle tests and actual intermediate/settled browser positions verify restoration. A frame-sampling attempt failed because requestAnimationFrame is unavailable in the browser tool's read-only evaluation scope; concurrent repeated reads returned unchanged values and were not a frame-rate trace.
+- root cause: treated motion physics as interchangeable styling and assumed the browser tool evaluation scope exposes every page global and executes independent commands concurrently.
+- correct: preserve the incumbent animation type/parameters when refining a moving surface unless the user asks otherwise. Reuse the installed animation library, stop interrupted animations, respect reduced motion and verify live intermediate/end geometry with supported DOM reads. Do not label concurrent reads as a frame trace or claim performance from static captures.
+
+**Preserve automatic gestures during visual refinements (2026-10-18):**
+- what: the recipe-card redesign replaced the original edge-driven automatic expansion/collapse with handle-only snapping and made the scrollbar visible. The user requested both original behaviors back; four red regressions captured the missing shared handlers, then passed after restoration.
+- root cause: treated existing interaction behavior as incidental styling instead of part of the refinement's preservation scope.
+- correct: inventory wheel, touch, keyboard and boundary behavior before replacing a scroll container, and preserve each behavior unless the user requests its removal. Test resize-induced scroll clamping separately from user input. For native browser scroll assertions, await the resulting state selector before recording a verdict; a key or wheel event may finish asynchronously.
+
+**Keep preview syntax and viewport evidence tied to the actual browser tab (2026-10-18):**
+- what: the first recipe preview embedded JSX in an HTML module and rendered blank; moving its source to a .jsx module fixed Vite handling. A stale HMR tab required replacement, and a cached viewport capability then left the new tab at1920px despite intended320px checks. Reacquiring the capability and asserting innerWidth/innerHeight produced confirmed320px evidence. Early screenshots during the sheet transition did not represent its settled bounds.
+- root cause: assumed inline HTML modules accept JSX and that viewport bindings/animation frames carry unchanged across tabs.
+- correct: keep JSX previews in .jsx files, export their component for the existing lint rules, and import them from HTML. After replacing a tab, reacquire its viewport capability and assert actual dimensions before naming evidence; read settled geometry before a confirmation capture. Preserve stale/unconfirmed captures without using them as proof. Send large context-launcher output to a file before selecting bounded directives so tool truncation cannot hide instructions.
+
+**Apply the discovery output budget before reading (2026-10-17, nutrition interview):**
+- what: initial whole spec/MEMORY reads and combined historical excerpts exceeded output budgets despite existing lessons; recovered with short glossary/contract/source reads and explicitly bounded read-only agent scopes.
+- root cause: applied per-command token limits after selecting oversized documents and failed to budget the combined tool response.
+- correct: begin with a heading index and selected current sections; cap the total expected response across all batched commands before execution, and narrow any truncated read before treating it as evidence. Do not reread whole historical files to satisfy session startup.
+
 **Await verification completion before dependent Git commands (2026-10-17):**
 - what: an index scanner returned a running exec session, but only its output field was read; commit preparation continued before its message file existed. Git commit failed without creating a commit. An explicit rerun completed with 69 matching staged/worktree paths, no credential-pattern matches and no private paths before retrying delivery.
 - root cause: discarded session_id/exit_code while formatting a tool result, confusing an early yield with completed verification.

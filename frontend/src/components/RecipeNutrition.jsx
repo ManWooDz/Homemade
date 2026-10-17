@@ -17,7 +17,7 @@ const BASE_REASONS = {
     constant_unverified: "วัตถุดิบบางรายการใช้ค่าคงที่ที่ยังไม่ยืนยันแหล่งข้อมูล",
 };
 
-export default function RecipeNutrition({ recipe }) {
+export default function RecipeNutrition({ recipe, compact = false }) {
     const { t, locale } = useLocale();
     const nutrition = recipe.nutrition;
     const computed = recipe.computed_nutrition;
@@ -33,7 +33,7 @@ export default function RecipeNutrition({ recipe }) {
     const basis = (data) => data?.basis === "per_serving" ? t("ต่อ 1 ที่") : t("ไม่ระบุฐานปริมาณ");
 
     return (
-        <section className="mb-6" aria-label={t("Nutrition")}>
+        <section className="recipe-nutrition mb-6" aria-label={t("Nutrition")}>
             <h3 className="text-xl font-bold text-gray-900 mb-3">{t("Nutrition")}</h3>
             <div className="mb-4 rounded-2xl border border-gray-200 p-4 text-sm text-gray-700">
                 <p className="font-semibold text-gray-900">{t(status)}</p>
@@ -46,12 +46,15 @@ export default function RecipeNutrition({ recipe }) {
                     : partial
                         ? "ตัวเลขหลักเป็นค่าประมาณของ AI ผลคำนวณยังไม่ผ่านเงื่อนไขข้อมูลครบถ้วน"
                         : "รายการนี้ไม่มีสถานะยืนยันแหล่งคำนวณ จึงยังยืนยันความครบถ้วนไม่ได้")}</p>
-                <p className="mt-2 font-medium">{basis(nutrition)}</p>
+                {!compact && <p className="mt-2 font-medium">{basis(nutrition)}</p>}
                 {MACROS.some(([key]) => !hasValue(nutrition?.[key])) && <p className="mt-1">{t("เครื่องหมาย — หมายถึงไม่มีข้อมูล ไม่ใช่ศูนย์")}</p>}
             </div>
-            <div className="bg-[#FFF6F2] rounded-3xl p-5 mb-3">
+            <div className="recipe-calorie-summary bg-[#FFF6F2] rounded-3xl p-5 mb-3">
+                <div>
                 <p className="text-3xl font-semibold text-gray-900 tabular-nums break-words">{format(nutrition?.calories, "kcal")}</p>
                 <p className="text-sm text-gray-700 mt-1">{t("แคลอรี่")}</p>
+                </div>
+                {compact && <p className="recipe-calorie-basis">{basis(nutrition)}</p>}
             </div>
             <div className="grid grid-cols-3 gap-2">
                 {MACROS.slice(1).map(([key, label, unit, color]) => (

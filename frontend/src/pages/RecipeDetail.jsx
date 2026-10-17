@@ -1,8 +1,9 @@
 import RecipeNutrition from "../components/RecipeNutrition";
+import RecipeSheet from "../components/RecipeSheet";
+import RecipeInstructions from "../components/RecipeInstructions";
 import { useLocale } from "../context/LocaleContext";
-import { useState, useRef } from "react";
-import { ChevronLeft, Heart, Star, CheckSquare, Clock } from "lucide-react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { useState } from "react";
+import { ChevronLeft, Heart, Star, Clock } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 
 import BottomMenu from "../components/bottomMenu";
@@ -65,59 +66,14 @@ export default function RecipeDetail({
     );
   };
 
-  // Shared with the sheet's drag gesture so the scroll-to-bottom trigger below
-  // can move it without fighting manual drag.
-  const sheetY = useMotionValue(0);
-  const contentRef = useRef(null);
-  const lastTouchY = useRef(null);
-
-  const expandSheet = () => {
-    animate(sheetY, -300, { type: "spring", stiffness: 300, damping: 30 });
-  };
-
-  const collapseSheet = () => {
-    animate(sheetY, 0, { type: "spring", stiffness: 300, damping: 30 });
-  };
-
-  const isScrollAtBottom = (el) =>
-    el.scrollHeight - el.scrollTop - el.clientHeight <= 1;
-
-  const isScrollAtTop = (el) => el.scrollTop <= 0;
-
-  const handleWheel = (e) => {
-    const el = contentRef.current;
-    if (!el) return;
-    if (isScrollAtBottom(el) && e.deltaY > 0) {
-      expandSheet();
-    } else if (sheetY.get() <= -300 && isScrollAtTop(el) && e.deltaY < 0) {
-      collapseSheet();
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    lastTouchY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e) => {
-    const el = contentRef.current;
-    if (!el || lastTouchY.current === null) return;
-    const currentY = e.touches[0].clientY;
-    const deltaY = lastTouchY.current - currentY; // finger moving up = scrolling down
-    lastTouchY.current = currentY;
-    if (isScrollAtBottom(el) && deltaY > 0) {
-      expandSheet();
-    } else if (sheetY.get() <= -300 && isScrollAtTop(el) && deltaY < 0) {
-      collapseSheet();
-    }
-  };
-
   return (
-    <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+    <div className="recipe-detail-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
         {/* Header Actions */}
         <div className="absolute top-8 left-0 right-0 px-6 flex justify-between items-center z-20">
           <button
             onClick={onBack}
+            aria-label={t("Back")}
             className="w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -156,26 +112,8 @@ export default function RecipeDetail({
           </div>
         </div>
 
-        {/* Draggable Bottom Sheet overlay */}
-        <motion.div
-          className="absolute left-0 right-0 mx-auto w-full max-w-[430px] bg-white rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 pb-10"
-          drag="y"
-          dragConstraints={{ top: -300, bottom: 0 }}
-          style={{ top: "45%", height: "90%", y: sheetY }}
-        >
-          {/* Drag Handle Indicator */}
-          <div className="w-full flex justify-center pt-4 pb-2">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full"></div>
-          </div>
-
-          <div
-            ref={contentRef}
-            onWheel={handleWheel}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            className="px-6 h-full overflow-y-auto pb-50 scrollbar-hide"
-          >
-            <h2 className="text-[28px] font-bold text-black mb-2 leading-tight">
+        <RecipeSheet>
+            <h2 className="recipe-title">
               {recipe?.name || t("Dishes Name")}
             </h2>
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-2">
@@ -202,7 +140,9 @@ export default function RecipeDetail({
             )}
 
             {recipe?.tags && recipe.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
+              <section className="recipe-tags">
+                <h3>{t("Tag")}</h3>
+                <div className="flex flex-wrap gap-2">
                 {recipe.tags.map((tag, i) => (
                   <span
                     key={i}
@@ -211,7 +151,8 @@ export default function RecipeDetail({
                     {tag}
                   </span>
                 ))}
-              </div>
+                </div>
+              </section>
             )}
 
             <h3 className="text-xl font-medium text-black mb-2">{t("Description")}</h3>
@@ -219,15 +160,17 @@ export default function RecipeDetail({
               {recipe?.short_description || t("error")}
             </p>
 
-            <RecipeNutrition recipe={recipe} />
+            <RecipeNutrition recipe={recipe} compact />
 
             <h3 className="text-xl font-medium text-black mb-4">{t("Ingredient")}</h3>
+            <p id="recipe-ingredient-help" className="text-sm text-gray-600 leading-relaxed mb-3">
+              {t("เลือกวัตถุดิบที่ต้องการใช้ในสูตร")}
+            </p>
             <div className="flex flex-col gap-3">
               {ingredients.map((ing) => (
-                <div
+                <label
                   key={ing.id}
-                  className="flex items-center justify-between bg-gray-100 p-3 rounded-2xl cursor-pointer"
-                  onClick={() => toggleIngredient(ing.id)}
+                  className="recipe-ingredient-choice"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white rounded-full overflow-hidden p-1 shadow-sm">
@@ -243,40 +186,18 @@ export default function RecipeDetail({
                       </span>
                     </div>
                   </div>
-                  <div className="mr-2">
-                    <div
-                      className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${ing.selected ? "bg-gray-800" : "bg-white border-2 border-gray-300"}`}
-                    >
-                      {ing.selected && (
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="3"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  <input type="checkbox" checked={ing.selected} onChange={() => toggleIngredient(ing.id)} aria-label={ing.name} aria-describedby="recipe-ingredient-help" className="h-5 w-5 shrink-0 accent-[#B93E25]" />
+                </label>
               ))}
-
-              {/* Confirm button */}
+            </div>
+              <RecipeInstructions instructions={recipe?.instructions} compact />
               <button
                 onClick={() =>
                   onConfirm(ingredients.filter((ing) => ing.selected))
                 }
-                className="bg-[#EF5A3A] text-white px-5 py-3 rounded-full text-base font-bold shadow-md mt-4 w-full"
-              >{t("Confirm")}</button>
-            </div>
-          </div>
-        </motion.div>
+                className="recipe-primary-action"
+              >{t("ดำเนินการต่อ")}</button>
+        </RecipeSheet>
 
         {/* === 🔘 Bottom Navigation === */}
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
