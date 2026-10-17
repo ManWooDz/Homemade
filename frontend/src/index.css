@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+.profile-main-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
+.profile-main-notifications { top: 48px; }
+.profile-main-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.profile-main-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
+.profile-main-screen ::selection { background: #fdece5; color: #111827; }
+
+.add-ingredient-actions { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
+.add-ingredient-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.add-ingredient-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
+.add-ingredient-screen ::selection { background: #fdece5; color: #111827; }
+.add-ingredient-screen input { caret-color: #b93e25; }
+
+.ingredient-detail-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
+.ingredient-detail-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.ingredient-detail-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
+.ingredient-detail-screen ::selection { background: #fdece5; color: #111827; }
+.ingredient-detail-screen input { caret-color: #b93e25; }
+.ingredient-detail-screen form button[type="submit"] { background: #b93e25; }
+.ingredient-detail-screen form button[type="submit"]:hover { background: #9f351f; }
+
 /* Recipe sheets share real viewport bounds; only the handle owns a drag gesture. */
 .recipe-sheet {
   position: absolute;

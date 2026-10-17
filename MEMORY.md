@@ -1,5 +1,15 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Local preview reachability and async control verification (2026-10-18):**
+- what: the previous frontend server had stopped. A new sandboxed Vite process reported ready but the desktop browser timed out; restarting that owned process outside the sandbox made the same URL reachable. A language radio check also reported failure before its async account save settled, although the next snapshot confirmed English was selected.
+- root cause: treated process readiness as browser reachability and an immediate control-check result as completion of an asynchronous persisted change.
+- correct: verify the preview from the selected browser. If a ready sandbox server remains unreachable, stop only the server you launched and use the approved local preview execution path. After persisted control actions, await the resulting label/selected state before retrying; do not repeat a change already confirmed by the next snapshot.
+
+**Native date automation is not a committed form value (2026-10-18):**
+- what: AddIngredient QA's date fill displayed an ISO date in the accessibility snapshot, but the controlled input's DOM value and saved synthetic payload stayed empty/null. Repeating fill, native keys and calendar activation did not establish a committed date.
+- root cause: treated an accessibility representation of attempted native input as evidence that the controlled React state had received a complete change; browser-native date subcontrols were not reliably controlled by the available automation.
+- correct: verify date DOM value after blur and the submitted payload before claiming date entry works. If supported actions do not commit a value, stop repeating them, record the verification limit and preserve unchanged handlers rather than modifying application logic to satisfy automation.
+
 **Preserve motion physics and measure through supported browser reads (2026-10-18):**
 - what: the recipe-sheet visual refinement replaced existing300/30springs with a180ms CSS transition; the user requested the original animation back. Four red spring/lifecycle tests and actual intermediate/settled browser positions verify restoration. A frame-sampling attempt failed because requestAnimationFrame is unavailable in the browser tool's read-only evaluation scope; concurrent repeated reads returned unchanged values and were not a frame-rate trace.
 - root cause: treated motion physics as interchangeable styling and assumed the browser tool evaluation scope exposes every page global and executes independent commands concurrently.

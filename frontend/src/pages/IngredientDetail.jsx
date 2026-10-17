@@ -62,29 +62,29 @@ export default function IngredientDetail({
     };
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <div className="ingredient-detail-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
             <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
                 {/* Header Actions */}
-                <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
+                <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
                     <button
                         onClick={onBack}
                         disabled={isSaving}
                         aria-label={t("กลับ")}
-                        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
+                        className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center disabled:opacity-50"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <img
                         src={logo}
                         alt="HomeMade"
-                        className="h-18 object-contain"
+                        className="h-14 object-contain"
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 pb-32">
+                <main className="ingredient-detail-content flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
                     {/* Image Preview */}
-                    <div className="flex justify-center mb-6">
-                        <div className="w-32 h-32 bg-gray-100 rounded-full overflow-hidden shadow-sm border-2 border-gray-200">
+                    <div className="flex items-center gap-5 mb-8">
+                        <div className="w-24 h-24 shrink-0 bg-gray-100 rounded-full overflow-hidden">
                             <img
                                 src={
                                     ingredient.image ||
@@ -98,11 +98,16 @@ export default function IngredientDetail({
                                 }}
                             />
                         </div>
+                        <div className="min-w-0">
+                            <h2 className="text-2xl leading-snug font-bold text-gray-900 wrap-anywhere">
+                                {ingredient.name}
+                            </h2>
+                            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                                <span className="block">{t("Category")}</span>
+                                <span className="font-medium text-gray-900">{t(ingredient.category)}</span>
+                            </p>
+                        </div>
                     </div>
-
-                    <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
-                        {ingredient.name}
-                    </h2>
 
                     {editing ? <IngredientEditor
                         ingredient={ingredient}
@@ -115,57 +120,47 @@ export default function IngredientDetail({
                             setSaved(true);
                             requestAnimationFrame(() => editButton.current?.focus());
                         }}
-                    /> : <div className="flex flex-col gap-4">
-                        <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">{t("Category")}</h3>
-                            <p className="text-base text-gray-800">
-                                {t(ingredient.category)}
-                            </p>
+                    /> : <dl className="divide-y divide-gray-200 border-y border-gray-200">
+                        <div className="flex items-start justify-between gap-4 py-4">
+                            <dt className="text-sm leading-7 text-gray-600">{t("ปริมาณ")}</dt>
+                            <dd className="min-w-0 text-right text-lg leading-7 font-semibold text-gray-900 wrap-anywhere">
+                                {ingredient.quantity_amount != null ? (
+                                    <span>
+                                        {ingredient.quantity_amount}
+                                        {ingredient.quantity_unit
+                                            ? ` ${t(ingredient.quantity_unit)}`
+                                            : ""}
+                                    </span>
+                                ) : (
+                                    <span className="text-sm font-normal text-gray-600">{t("ไม่ได้ระบุ")}</span>
+                                )}
+                            </dd>
                         </div>
-
-                        <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">{t("วันหมดอายุ (โดยประมาณ)")}</h3>
-                            {ingredient.expiry_date ? (
-                                <p className="text-base text-gray-800">
-                                    {ingredient.expiry_date}
-                                    {badge && (
-                                        <span className="ml-2 text-sm font-medium text-red-500">
-                                            ({badge})
-                                        </span>
-                                    )}
-                                </p>
-                            ) : (
-                                <p className="text-base text-gray-400">{t("ไม่ได้ระบุ")}</p>
-                            )}
+                        <div className="flex items-start justify-between gap-4 py-4">
+                            <dt className="text-sm leading-7 text-gray-600">{t("วันหมดอายุ (โดยประมาณ)")}</dt>
+                            <dd className="min-w-0 text-right leading-7 text-gray-900">
+                                {ingredient.expiry_date ? <>
+                                    <time dateTime={ingredient.expiry_date} className="font-medium tabular-nums">{ingredient.expiry_date}</time>
+                                    {badge && <span className="block mt-1 text-sm leading-relaxed font-medium text-red-700">{badge}</span>}
+                                </> : <span className="text-sm text-gray-600">{t("ไม่ได้ระบุ")}</span>}
+                            </dd>
                         </div>
-
-                        <div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">{t("ปริมาณ")}</h3>
-                            {ingredient.quantity_amount != null ? (
-                                <p className="text-base text-gray-800">
-                                    {ingredient.quantity_amount}
-                                    {ingredient.quantity_unit
-                                        ? ` ${t(ingredient.quantity_unit)}`
-                                        : ""}
-                                </p>
-                            ) : (
-                                <p className="text-base text-gray-400">{t("ไม่ได้ระบุ")}</p>
-                            )}
-                        </div>
-
-                        <NutritionBox nutrition={ingredient.nutrition_data} />
-                    </div>}
+                    </dl>}
 
                     {saved && <p role="status" className="mt-4 text-sm text-gray-700">{t("บันทึกวัตถุดิบแล้ว")}</p>}
                     {!editing && <button
                         ref={editButton}
                         onClick={() => { setEditing(true); setSaved(false); setDeleteError(""); }}
                         disabled={isDeleting}
-                        className="w-full mt-6 min-h-11 flex items-center justify-center gap-2 rounded-full bg-[#EF5A3A] text-white font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-gray-900"
+                        className="w-full mt-6 min-h-12 flex items-center justify-center gap-2 rounded-full bg-[#B93E25] text-white font-semibold hover:bg-[#9F351F] transition-colors disabled:opacity-50"
                     ><PenLine className="w-5 h-5" />{t("แก้ไขวัตถุดิบ")}</button>}
 
+                    {!editing && ingredient.nutrition_data && <section className="mt-8" aria-label={t("Nutrition")}>
+                        <NutritionBox nutrition={ingredient.nutrition_data} />
+                    </section>}
+
                     {deleteError && (
-                        <p className="text-sm text-red-500 mt-4 text-center">
+                        <p role="alert" className="text-sm text-red-700 mt-4 text-center">
                             {t(deleteError)}
                         </p>
                     )}
@@ -173,12 +168,12 @@ export default function IngredientDetail({
                     {!editing && <button
                         onClick={handleDelete}
                         disabled={isDeleting}
-                        className="w-full mt-8 flex items-center justify-center gap-2 border-2 border-red-200 text-red-500 py-4 rounded-full text-base font-bold hover:bg-red-50 transition disabled:opacity-50"
+                        className="w-full mt-6 min-h-11 flex items-center justify-center gap-2 rounded-full text-red-700 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
                     >
                         <Trash2 className="w-5 h-5" />
                         {isDeleting ? t("กำลังลบ...") : t("ลบออกจาก My Fridge")}
                     </button>}
-                </div>
+                </main>
 
                 {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={tab => { if (!isSaving) setActiveTab(tab); }} />

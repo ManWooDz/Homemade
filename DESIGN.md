@@ -115,6 +115,12 @@ components:
 
 # Design System: HomeMade
 
+Profile main refinement (2026-10-18): identity is grouped on white with an80px avatar, wrapping name/email and an adjacent outlined Edit control. History and settings use64px flat rows with dividers; per the user's follow-up, logout uses a prominent red fill with white bold text/icon and a soft shadow. Main opts into the compact56px-logo header while subviews retain their original header. A native hidden-scrollbar reader ends above navigation with safe-area clearance. No auth, copy, shared editor, asset or global identity change. Details: .impeccable/surfaces/frontend-src-pages-profile-jsx.md.
+
+AddIngredient refinement (2026-10-18): stock fields now lead before photo selection, with a64px preview beside the existing image-search heading. A persistent action/error footer sits between the native content scroller and bottom navigation. Controls use48px minimum heights,12px corners and the existing dark-orange action/focus colors; selected categories use the existing blush tint. All changes are scoped to this page. Existing copy, barcode/search/upload behavior and shared OFF nutrition remain authoritative. Details: .impeccable/surfaces/frontend-src-pages-addingredient-jsx.md.
+
+IngredientDetail refinement (2026-10-18): the existing mobile shell now groups its96px circular photo with name/category, followed by a divided quantity/estimated-expiry list and the main Edit action. Optional Open Food Facts nutrition stays in its existing neutral panel below; deletion uses a quiet secondary action. The56px logo and bounded scroller improve usable space while retaining navigation clearance. Page-scoped primary buttons reuse #b93e25 for contrast; shared editor/nutrition components, product copy and data semantics are unchanged. No new assets or global identity change. Surface details and verification: .impeccable/surfaces/frontend-src-pages-ingredientdetail-jsx.md.
+
 ## Overview
 
 ### Provenance and Authority

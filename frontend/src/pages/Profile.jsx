@@ -50,23 +50,23 @@ const LANGUAGE_OPTIONS = [
   { code: "en", label: "English", description: "ภาษาอังกฤษ", descriptionLang: "th" },
 ];
 
-function Header({ title, onBack, notificationCount, onNotifications }) {
+function Header({ title, onBack, notificationCount, onNotifications, compact = false }) {
   const { t } = useLocale();
   return (
-    <div className="pt-8 px-6 h-18 flex items-center justify-center relative z-20 mb-6">
+    <div className={compact ? "shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20" : "pt-8 px-6 h-18 flex items-center justify-center relative z-20 mb-6"}>
       <button
         onClick={onBack}
         aria-label={t("กลับ")}
-        className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
+        className={`absolute ${compact ? "left-5" : "left-6 shadow-md"} w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]`}
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
       {title ? (
         <h2 className="text-lg font-bold text-black">{title}</h2>
       ) : (
-        <img src={logo} alt="HomeMade" className="h-18 object-contain" />
+        <img src={logo} alt="HomeMade" className={`${compact ? "h-14" : "h-18"} object-contain`} />
       )}
-      {onNotifications && <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>}
+      {onNotifications && <div className={compact ? "profile-main-notifications absolute right-5" : "absolute right-6 top-1/2 translate-y-4"}><NotificationBell count={notificationCount} onClick={onNotifications} /></div>}
     </div>
   );
 }
@@ -107,15 +107,15 @@ function MenuRow({ icon, label, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full bg-gray-50 hover:bg-gray-100 rounded-2xl px-4 py-3.5 flex items-center gap-3 transition"
+      className="w-full min-h-16 hover:bg-gray-50 px-1 py-4 flex items-center gap-3 transition-colors"
     >
-      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-[#EF5A3A] shrink-0">
+      <div aria-hidden="true" className="w-8 h-8 flex items-center justify-center text-[#B93E25] shrink-0">
         {icon}
       </div>
-      <span className="flex-1 text-left text-[15px] font-medium text-gray-800">
+      <span className="flex-1 min-w-0 text-left text-base font-medium text-gray-900">
         {t(label)}
       </span>
-      <ChevronRight className="w-5 h-5 text-gray-300" />
+      <ChevronRight aria-hidden="true" className="w-5 h-5 text-gray-500 shrink-0" />
     </button>
   );
 }
@@ -648,71 +648,51 @@ export default function Profile({
   }
 
   return (
-    <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+    <div className="profile-main-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-        <Header onBack={onBack} notificationCount={notificationCount} onNotifications={onNotifications} />
+        <Header compact onBack={onBack} notificationCount={notificationCount} onNotifications={onNotifications} />
 
-        <div className="flex-1 overflow-y-auto px-5 pb-32">
-          {/* Profile Card */}
+        <main className="profile-main-content flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
           {notice && <p role="status" className="text-sm text-green-700 mb-4">{t(notice)}</p>}
-          <div className="bg-gray-100 rounded-3xl p-4 flex items-center gap-4 mb-8">
-            <div className="w-20 h-20 rounded-full overflow-hidden shadow-sm shrink-0 bg-white flex items-center justify-center">
-              {avatarUrl ? <img src={avatarUrl} alt={t("รูปโปรไฟล์")} className="w-full h-full object-cover" /> : <UserRound aria-hidden="true" className="w-10 h-10 text-gray-500" />}
-            </div>
-            <div className="flex flex-col flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-black truncate">
-                {user?.display_name || t("ผู้ใช้ Homemade")}
-              </h3>
-              <div className="flex items-center gap-1.5 text-gray-500 text-sm truncate">
-                <Mail className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{user?.email}</span>
+          <section aria-labelledby="profile-display-name" className="pb-6 border-b border-gray-200">
+            <div className="flex items-start gap-4">
+              <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center">
+                {avatarUrl ? <img src={avatarUrl} alt={t("รูปโปรไฟล์")} className="w-full h-full object-cover" /> : <UserRound aria-hidden="true" className="w-10 h-10 text-gray-500" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 id="profile-display-name" className="text-xl leading-snug font-bold text-gray-900 wrap-anywhere">
+                  {user?.display_name || t("ผู้ใช้ Homemade")}
+                </h2>
+                <div className="flex items-start gap-1.5 mt-2 text-gray-600 text-sm leading-relaxed">
+                  <Mail aria-hidden="true" className="w-4 h-4 mt-1 shrink-0" />
+                  <span className="min-w-0 wrap-anywhere">{user?.email}</span>
+                </div>
+                <button type="button" onClick={() => { setNotice(""); setView("edit"); }} className="min-h-11 mt-4 px-4 rounded-full border border-[#B93E25] text-[#B93E25] text-sm font-semibold hover:bg-[#FDECE5] transition-colors">{t("แก้ไขโปรไฟล์")}</button>
               </div>
             </div>
-          </div>
-          {photoError && user?.has_avatar && <button type="button" onClick={() => setPhotoReload(value => value + 1)} className="min-h-11 text-sm text-red-700 mb-3">{t("โหลดรูปไม่สำเร็จ ลองอีกครั้ง")}</button>}
-          <button type="button" onClick={() => { setNotice(""); setView("edit"); }} className="w-full min-h-11 mb-6 rounded-full border border-[#B93E25] text-[#B93E25] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]">{t("แก้ไขโปรไฟล์")}</button>
+            {photoError && user?.has_avatar && <button type="button" onClick={() => setPhotoReload(value => value + 1)} className="min-h-11 mt-3 text-left text-sm text-red-700 underline underline-offset-4">{t("โหลดรูปไม่สำเร็จ ลองอีกครั้ง")}</button>}
+          </section>
 
-          {/* Menu */}
-          <div className="flex flex-col gap-2 mb-6">
-            <MenuRow
-              icon={<History className="w-4.5 h-4.5" />}
-              label={t("Cooking History")}
-              onClick={() => setView("history")}
-            />
+          <div className="border-b border-gray-200">
+            <MenuRow icon={<History className="w-5 h-5" />} label={t("Cooking History")} onClick={() => setView("history")} />
           </div>
 
-          <h3 className="text-sm font-bold text-gray-400 mb-2 px-1">{t("การตั้งค่า")}</h3>
-          <div className="flex flex-col gap-2 mb-8">
-            <MenuRow
-              icon={<Globe className="w-4.5 h-4.5" />}
-              label={t("Language")}
-              onClick={() => setView("language")}
-            />
-            <MenuRow
-              icon={<SlidersHorizontal className="w-4.5 h-4.5" />}
-              label={t("Preferences")}
-              onClick={() => setView("preferences")}
-            />
-            <MenuRow
-              icon={<HelpCircle className="w-4.5 h-4.5" />}
-              label={t("ช่วยเหลือ")}
-              onClick={() => setView("helps")}
-            />
-          </div>
+          <section aria-labelledby="profile-settings-heading" className="mt-6">
+            <h3 id="profile-settings-heading" className="text-sm font-semibold text-gray-600 mb-2">{t("การตั้งค่า")}</h3>
+            <div className="divide-y divide-gray-200 border-b border-gray-200">
+              <MenuRow icon={<Globe className="w-5 h-5" />} label={t("Language")} onClick={() => setView("language")} />
+              <MenuRow icon={<SlidersHorizontal className="w-5 h-5" />} label={t("Preferences")} onClick={() => setView("preferences")} />
+              <MenuRow icon={<HelpCircle className="w-5 h-5" />} label={t("ช่วยเหลือ")} onClick={() => setView("helps")} />
+            </div>
+          </section>
 
-          {/* Logout */}
-          {logoutError && (
-            <p className="text-red-600 text-sm text-center mb-2">{t(logoutError)}</p>
-          )}
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="w-full bg-red-500 text-white py-3.5 rounded-full text-base font-bold shadow-md flex items-center justify-center gap-2 hover:bg-red-600 transition disabled:opacity-60"
-          >
-            <LogOut className="w-5 h-5" />
+          {logoutError && <p role="alert" className="text-red-700 text-sm leading-relaxed mt-5">{t(logoutError)}</p>}
+          <button onClick={handleLogout} disabled={isLoggingOut}
+            className="w-full min-h-12 mt-6 py-3.5 rounded-full bg-red-600 text-white text-base font-bold shadow-md flex items-center justify-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-60">
+            <LogOut aria-hidden="true" className="w-5 h-5" />
             {isLoggingOut ? t("กำลังออกจากระบบ...") : t("ออกจากระบบ")}
           </button>
-        </div>
+        </main>
 
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
