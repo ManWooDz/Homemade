@@ -1,18 +1,14 @@
 import { useLocale } from "../context/LocaleContext";
-import { ChevronLeft, Plus, Refrigerator } from "lucide-react";
+import { ChevronLeft, Plus, Refrigerator, X, ChefHat } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
+import { OptionChips } from "../components/OptionPicker";
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "../context/AuthContext";
 import { expiryBadgeLabel } from "../utils/expiry";
-import {
-  OTHER_OPTION,
-  NO_RESTRICTION,
-  EQUIPMENT_NONE,
-  ALLERGY_OPTIONS,
-  EQUIPMENT_OPTIONS,
-  toggleInList,
-} from "../constants/preferenceOptions";
+import { OTHER_OPTION, TASTE_OPTIONS } from "../constants/preferenceOptions";
+import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/CookingPreferenceFields";
+import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
+import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
 
 export default function CreateRecipe({
   recipe,
@@ -24,76 +20,15 @@ export default function CreateRecipe({
   onGenerate,
 }) {
     const { t, locale } = useLocale();
-  // Taste has no onboarding/Profile equivalent (user picks fresh every
-  // generation, per explicit decision — see spec) so it stays local here,
-  // not moved to the shared constants module.
-  const TASTE_OPTIONS = [
-    "ไม่ระบุ",
-    "เผ็ดน้อย",
-    "เผ็ดปานกลาง",
-    "เผ็ดมาก",
-    "รสจัดจ้าน",
-    "รสหวานนำ",
-    "รสเปรี้ยวนำ",
-    "รสกลมกล่อม ไม่จัดจ้าน",
-    OTHER_OPTION,
-  ];
-
   const [taste, setTaste] = useState("");
   const [tasteOther, setTasteOther] = useState("");
-  const [allergies, setAllergies] = useState([]);
-  const [allergiesOther, setAllergiesOther] = useState("");
   const [allergyError, setAllergyError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitting = useRef(false);
   const allergyInput = useRef(null);
-  const [equipment, setEquipment] = useState([]);
-  const [equipmentOther, setEquipmentOther] = useState("");
   const [extra, setExtra] = useState("");
-
-  const { apiFetch } = useAuth();
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiFetch("/api/user-preferences");
-        if (cancelled || !res.ok) return;
-        const payload = await res.json();
-        if (!payload.data) return;
-        // Only apply if the user hasn't already touched this pill list.
-        // Uses the functional setState form so the emptiness check reads
-        // live state at fetch-resolution time, not the stale `[]` this
-        // effect closure captured at mount — a click that lands while the
-        // GET is still in flight is never silently overwritten.
-        const allergyDefaults = (payload.data.dietary_restrictions || []).filter((item) =>
-          ALLERGY_OPTIONS.includes(item),
-        );
-        if (allergyDefaults.length > 0) {
-          setAllergies((prev) => (prev.length === 0 ? allergyDefaults : prev));
-        }
-
-        const equipmentDefaults = (payload.data.equipment || []).filter((item) =>
-          EQUIPMENT_OPTIONS.includes(item),
-        );
-        if (equipmentDefaults.length > 0) {
-          setEquipment((prev) => (prev.length === 0 ? equipmentDefaults : prev));
-        }
-      } catch {
-        // best-effort default-fill only — never block recipe generation
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const resolveOther = (value, otherText) =>
-    value === OTHER_OPTION ? otherText.trim() || OTHER_OPTION : value;
-
-  const resolveOtherInList = (list, otherText) =>
-    list.map((item) => resolveOther(item, otherText));
+  const preferences = useSavedCookingPreferences();
+  const preferenceIssue = cookingPreferenceError(preferences.value);
 
   // local state for ingredients including those added from fridge
   const [currentIngredients, setCurrentIngredients] = useState([]);
@@ -104,17 +39,12 @@ export default function CreateRecipe({
   }, [selectedIngredients]);
 
   const handleGenerateClick = async () => {
-    if (submitting.current) return;
+    if (submitting.current || preferences.status !== "ready" || preferenceIssue) return;
     submitting.current = true;
     setIsSubmitting(true);
     try {
       const error = await onGenerate(
-        {
-          taste: resolveOther(taste, tasteOther),
-          allergies: resolveOtherInList(allergies, allergiesOther).join(", "),
-          equipment: resolveOtherInList(equipment, equipmentOther).join(", "),
-          extra,
-        },
+        generationPreferences(preferences.value, taste === OTHER_OPTION ? tasteOther.trim() || OTHER_OPTION : taste, extra),
         currentIngredients,
       );
       setAllergyError(error || null);
@@ -142,289 +72,112 @@ export default function CreateRecipe({
   };
 
   return (
-    <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+    <div className="create-recipe-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
-        {/* Header Actions */}
-        <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
-          <button
-            onClick={onBack}
-            className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
-          >
+        <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
+          <button onClick={onBack} aria-label={t("กลับ")}
+            className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <img src={logo} alt="HomeMade" className="h-18 object-contain" />
+          <img src={logo} alt="HomeMade" className="h-14 object-contain" />
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-32">
-          {/* Summary Card */}
-          <div className="bg-gray-100 rounded-3xl p-4 flex items-center gap-4 mb-8">
-            <div className="w-24 h-24 rounded-full overflow-hidden shadow-sm shrink-0 bg-white">
-              <img
-                src={
-                  recipe?.image ||
-                  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-                }
-                alt={recipe?.name || t("Food Menu")}
-                className="w-full h-full object-cover"
-              />
+        <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+          <section className="flex items-start gap-4 pb-6 border-b border-gray-200" aria-labelledby="create-recipe-title">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 bg-gray-50">
+              <img src={recipe?.image || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"}
+                alt={recipe?.name || t("Food Menu")} className="w-full h-full object-cover" />
             </div>
-            <div className="flex flex-col flex-1 pl-2 overflow-hidden">
-              <h3 className="text-lg font-bold text-black mb-1 truncate">
-                {recipe?.name || t("Food Menu's name")}
-              </h3>
-              <p className="text-[12px] text-gray-500 mb-2 line-clamp-2">
-                {recipe?.short_description || t("short-description")}
-              </p>
-              <div className="flex gap-2">
-                {recipe?.tags &&
-                  recipe.tags.slice(0, 2).map((tag, idx) => (
-                    <span
-                      key={idx}
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
-                        idx === 0
-                          ? "bg-green-200 text-green-700"
-                          : "bg-yellow-400 text-gray-900"
-                      }`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+            <div className="flex-1 min-w-0">
+              <h2 id="create-recipe-title" className="text-xl leading-snug font-bold text-gray-900 wrap-anywhere">{recipe?.name || t("Food Menu's name")}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">{recipe?.short_description || t("short-description")}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {recipe?.tags?.slice(0, 2).map((tag, idx) => (
+                  <span key={idx} className={`text-xs leading-relaxed font-medium px-2 py-0.5 rounded-full wrap-anywhere ${idx === 0 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{tag}</span>
+                ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Description Textarea */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-black mb-0">{t("วัตถุดิบที่เลือก")}</h3>
-              <button
-                onClick={() => setShowFridge(!showFridge)}
-                className={`flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-full transition ${showFridge ? "bg-orange-100 text-[#EF5A3A]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              >
-                <Refrigerator className="w-4 h-4" />
+          <section className="py-6 border-b border-gray-200" aria-labelledby="create-ingredients-heading">
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
+              <h3 id="create-ingredients-heading" className="text-lg font-bold text-gray-900">{t("วัตถุดิบที่เลือก")}</h3>
+              <button type="button" onClick={() => setShowFridge(!showFridge)} aria-expanded={showFridge} aria-controls="create-recipe-fridge"
+                className={`min-h-11 flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-full transition-colors ${showFridge ? "bg-[#FDECE5] text-[#9F351F]" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                <Refrigerator aria-hidden="true" className="w-4 h-4 shrink-0" />
                 {showFridge ? t("ปิดตู้เย็น") : t("+ จากตู้เย็น")}
               </button>
             </div>
-            {/* Display Selected Ingredients */}
             {currentIngredients && currentIngredients.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {currentIngredients.map((ing) => (
-                  <div
-                    key={ing.id}
-                    className="bg-orange-50 border border-[#EF5A3A] px-3 py-1.5 rounded-full flex items-center gap-2"
-                  >
-                    <img
-                      src={ing.image}
-                      alt={ing.name}
-                      className="w-5 h-5 rounded-full object-cover"
-                    />
-                    <span className="text-sm font-medium text-[#EF5A3A] capitalize">
-                      {ing.name}
-                    </span>
-                    <button
-                      onClick={() => removeIngredient(ing.id)}
-                      className="w-4 h-4 rounded-full bg-red-100 text-red-500 flex items-center justify-center ml-1"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
+              <div className="flex flex-wrap gap-2">
+                {currentIngredients.map(ing => (
+                  <div key={ing.id} className="max-w-full min-h-11 bg-[#FDECE5] border border-[#B93E25] pl-3 rounded-full flex items-center gap-2">
+                    <img src={ing.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                    <span className="block min-w-0 text-sm font-medium text-[#9F351F] wrap-anywhere first-letter:uppercase">{ing.name}</span>
+                    <button type="button" onClick={() => removeIngredient(ing.id)} aria-label={t("นำ {name} ออกจากสูตร", { name: ing.name })}
+                      className="group w-11 h-11 shrink-0 rounded-full text-[#9F351F] flex items-center justify-center">
+                      <span className="w-7 h-7 rounded-full flex items-center justify-center transition-colors group-hover:bg-[#B93E25] group-hover:text-white group-active:bg-[#9F351F] group-active:text-white">
+                        <X aria-hidden="true" className="w-4 h-4" />
+                      </span>
                     </button>
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Fridge Items Selection UI */}
             {showFridge && (
-              <div className="bg-gray-50 border border-gray-200 rounded-3xl p-4 mb-6 shadow-inner">
-                <h4 className="text-sm font-bold text-gray-700 mb-3">{t("วัตถุดิบใน My Fridge")}</h4>
+              <div id="create-recipe-fridge" className="bg-gray-50 rounded-2xl p-4 mt-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">{t("วัตถุดิบใน My Fridge")}</h4>
                 {userIngredients && userIngredients.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {userIngredients.map((ing) => {
-                      const isSelected = currentIngredients.some(
-                        (c) => c.name === ing.name,
-                      );
-                      return (
-                        <button
-                          key={ing.id}
-                          onClick={() => !isSelected && addFromFridge(ing)}
-                          className={`px-3 py-1.5 rounded-full flex items-center gap-2 text-sm transition ${isSelected ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60" : "bg-white border border-gray-300 shadow-sm text-gray-700 hover:border-orange-400 hover:text-orange-500"}`}
-                          disabled={isSelected}
-                        >
-                          <img
-                            src={ing.image}
-                            alt={ing.name}
-                            className="w-5 h-5 rounded-full object-cover"
-                            onError={(e) =>
-                              (e.target.src =
-                                "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150")
-                            }
-                          />
-                          {ing.name}
-                          {expiryBadgeLabel(ing.expiry_date, locale) && (
-                            <span className="text-[10px] font-medium text-red-500">
-                              ({expiryBadgeLabel(ing.expiry_date, locale)})
-                            </span>
-                          )}
-                          {!isSelected && (
-                            <Plus className="w-3 h-3 ml-1 text-gray-400" />
-                          )}
-                        </button>
-                      );
+                    {userIngredients.map(ing => {
+                      const isSelected = currentIngredients.some(c => c.name === ing.name);
+                      return <button key={ing.id} type="button" onClick={() => !isSelected && addFromFridge(ing)} disabled={isSelected}
+                        className={`max-w-full min-h-11 px-3 py-2 rounded-xl flex items-center gap-2 text-left text-sm transition-colors ${isSelected ? "bg-gray-200 text-gray-600 cursor-not-allowed" : "bg-white border border-gray-300 text-gray-700 hover:border-[#B93E25] hover:text-[#B93E25]"}`}>
+                        <img src={ing.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0"
+                          onError={e => (e.target.src = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150")} />
+                        <span className="block min-w-0 wrap-anywhere first-letter:uppercase">{ing.name}
+                          {expiryBadgeLabel(ing.expiry_date, locale) && <span className="block text-xs font-medium text-red-700">{expiryBadgeLabel(ing.expiry_date, locale)}</span>}
+                        </span>
+                        {!isSelected && <Plus aria-hidden="true" className="w-4 h-4 shrink-0" />}
+                      </button>;
                     })}
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-2">{t("ไม่มีวัตถุดิบในตู้เย็น (คุณสามารถกดเพิ่มได้ที่แถบ My Fridge ด้านล่าง)")}</p>
-                )}
+                ) : <p className="text-sm leading-relaxed text-gray-600">{t("ไม่มีวัตถุดิบในตู้เย็น (คุณสามารถกดเพิ่มได้ที่แถบ My Fridge ด้านล่าง)")}</p>}
               </div>
             )}
+          </section>
 
-            <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("รสชาติ")}</h3>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {TASTE_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setTaste(option)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                    taste === option
-                      ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                      : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-                  }`}
-                >
-                  {t(option)}
-                </button>
-              ))}
-            </div>
-            {taste === OTHER_OPTION && (
-              <input
-                type="text"
-                value={tasteOther}
-                onChange={(e) => setTasteOther(e.target.value)}
-                placeholder={t("ระบุรสชาติที่ต้องการ")}
-                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
-              />
-            )}
-            {taste !== OTHER_OPTION && <div className="mb-2" />}
+          <div className="create-recipe-preferences space-y-8 pt-6">
+            <fieldset className="min-w-0">
+              <legend className="text-lg font-semibold text-gray-900">{t("รสชาติ")}</legend>
+              <p className="mt-1 mb-3 text-sm text-gray-600">{t("เลือกได้ 1 รสชาติ หรือไม่ระบุ")}</p>
+              <OptionChips options={TASTE_OPTIONS} selected={taste} onToggle={setTaste} />
+              {taste === OTHER_OPTION && <input type="text" value={tasteOther} onChange={e => setTasteOther(e.target.value)}
+                aria-label={t("ระบุรสชาติที่ต้องการ")} placeholder={t("ระบุรสชาติที่ต้องการ")}
+                className="mt-4 w-full min-h-12 border border-gray-400 rounded-xl px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />}
+            </fieldset>
 
-            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อาการแพ้อาหาร")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
-            </h3>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {ALLERGY_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    setAllergies(toggleInList(allergies, option, NO_RESTRICTION));
-                    setAllergyError(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                    allergies.includes(option)
-                      ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                      : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-                  }`}
-                >
-                  {t(option)}
-                </button>
-              ))}
+            <CookingPreferenceFields value={preferences.value} onChange={preferences.edit}
+              allergyError={allergyError} allergyInput={allergyInput} onAllergyEdit={() => setAllergyError(null)} />
+
+            <div>
+              <label htmlFor="create-recipe-extra" className="block text-lg font-bold text-gray-900 mb-3">{t("ความต้องการอื่นๆ (ถ้ามี)")}</label>
+              <textarea id="create-recipe-extra" rows={4} placeholder={t("เช่น สิ่งที่ต้องระวัง")} value={extra} onChange={e => setExtra(e.target.value)}
+                className="w-full min-w-0 border border-gray-300 bg-white rounded-2xl p-4 text-gray-900 placeholder:text-gray-500 text-base resize-y" />
             </div>
-            {allergies.includes(OTHER_OPTION) && (
-              <input
-                type="text"
-                ref={allergyInput}
-                value={allergiesOther}
-                aria-label={t("ระบุอาการแพ้อาหาร")}
-                aria-invalid={Boolean(allergyError)}
-                aria-describedby={allergyError ? "allergy-error" : undefined}
-                maxLength={1000}
-                onChange={(e) => {
-                  setAllergiesOther(e.target.value);
-                  setAllergyError(null);
-                }}
-                placeholder={t("ระบุอาการแพ้อาหาร")}
-                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
-              />
-            )}
-            {allergyError && (
-              <p id="allergy-error" role="alert" className="text-sm text-red-700 mb-4 break-words">
-                {t(allergyError)}
-              </p>
-            )}
-            {!allergies.includes(OTHER_OPTION) && <div className="mb-2" />}
-            <h3 className="text-lg font-bold text-black mt-2 mb-2 flex items-baseline gap-2">{t("อุปกรณ์ที่มี")}<span className="text-xs font-normal text-gray-400">{t("เลือกได้มากกว่า 1 ข้อ")}</span>
-            </h3>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {EQUIPMENT_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() =>
-                    setEquipment(toggleInList(equipment, option, EQUIPMENT_NONE))
-                  }
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                    equipment.includes(option)
-                      ? "bg-[#EF5A3A] border-[#EF5A3A] text-white shadow-sm"
-                      : "bg-white border-gray-400 text-gray-700 hover:border-[#EF5A3A] hover:text-[#EF5A3A]"
-                  }`}
-                >
-                  {t(option)}
-                </button>
-              ))}
-            </div>
-            {equipment.includes(OTHER_OPTION) && (
-              <input
-                type="text"
-                value={equipmentOther}
-                onChange={(e) => setEquipmentOther(e.target.value)}
-                placeholder={t("ระบุอุปกรณ์ที่มี")}
-                className="w-full border border-gray-400 bg-white rounded-full px-5 py-2.5 text-black placeholder-gray-500 text-sm outline-none shadow-sm transition-shadow mb-4 focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40"
-              />
-            )}
-            <h3 className="text-lg font-bold text-black mt-2 mb-2">{t("ความต้องการอื่นๆ (ถ้ามี)")}</h3>
-            <textarea
-              className="w-full h-40 border border-gray-400 bg-white rounded-3xl p-5 text-black placeholder-gray-500 text-base outline-none resize-none shadow-sm transition-shadow focus:border-[#EF5A3A] focus:ring-2 focus:ring-[#EF5A3A]/40 focus:shadow-[0_0_12px_rgba(239,90,58,0.5)]"
-              placeholder={t("เช่น สิ่งที่ต้องระวัง")}
-              value={extra}
-              onChange={(e) => setExtra(e.target.value)}
-            ></textarea>
           </div>
+        </main>
 
-          {/* Action Button */}
-          <button
-            onClick={handleGenerateClick}
-            disabled={isSubmitting}
-            aria-busy={isSubmitting}
-            className="w-full bg-[#EF5A3A] text-white py-4.5 rounded-full text-lg font-medium shadow-md flex items-center justify-center gap-2 hover:bg-orange-600 disabled:opacity-50 transition"
-          >
-            {/* Custom minimal pan icon to match the specific reference button icon... SVG simplified from Lucide pot for precision might be rough, we'll try something similar or just a clean SVG */}
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 4v2m-6 4v2m12-2v2M4 14a8 8 0 0016 0H4zm0 0h16v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-1z"
-              />
-            </svg>
+        <div className="create-recipe-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
+          <PreferenceLoadStatus status={preferences.status} retry={preferences.retry} />
+          {preferences.status === "ready" && preferenceIssue && <p role="status" className="mb-3 text-sm text-gray-700">{t(preferenceIssue)}</p>}
+          {allergyError && <p id="allergy-error" role="alert" className="text-sm leading-relaxed text-red-700 mb-3 break-words">{t(allergyError)}</p>}
+          <button type="button" onClick={handleGenerateClick} disabled={isSubmitting || preferences.status !== "ready" || Boolean(preferenceIssue)} aria-busy={isSubmitting}
+            className="w-full min-h-12 px-4 py-3 bg-[#B93E25] text-white rounded-full text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#9F351F] disabled:opacity-50 transition-colors">
+            <ChefHat aria-hidden="true" className="w-5 h-5 shrink-0" />
             {isSubmitting ? t("กำลังตรวจสอบอาการแพ้…") : t("สร้างเมนูอาหารกันเลย")}
           </button>
         </div>
-
-        {/* === 🔘 Bottom Navigation === */}
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
     </div>

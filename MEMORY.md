@@ -1,5 +1,30 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Use DOM locator names when CSS changes displayed casing (2026-10-20):**
+- what: the accessibility view displayed Egg, but an exact Playwright button locator using Egg found no match; the DOM snapshot exposed the original lowercase egg and the corrected locator completed the synthetic flow.
+- root cause: assumed CSS first-letter transformation changes the locator's accessible-name matching in the same way as the native accessibility view.
+- correct: inspect the DOM snapshot for locator names after display-only text transformations; use its original casing or a case-insensitive name match, and keep rendered-text verification separate from source/payload verification.
+
+**Run frontend checks from the frontend workspace (2026-10-20, preference layout):**
+- what: npx --no-install eslint was launched from the repository root and produced no verification result before it was stopped. Running the existing frontend-local ESLint binary from frontend then passed;58 existing tests and build also passed.
+- root cause: bundled source editing and package-tool execution in one root-directory command instead of choosing the package's working directory.
+- correct: run frontend checks with workdir set to frontend and invoke its existing node_modules binaries or package scripts. Preserve the interrupted launch as unverified; never treat empty output from a running process as a pass or install packages to repair a working-directory mistake.
+
+**Scope codemods to their owning subview/import (2026-10-20, preferences):**
+- what: an unscoped replacement inserted a preference-only disabled fieldset into Profile History, causing a JSX parse failure; a later import patch briefly placed OTHER_OPTION in lucide-react's import. Both were corrected before final verification. A new browser tab also retained its982px default after an earlier1920px override, so the desktop evidence was relabelled to its measured size rather than claimed as1920px.
+- root cause: matched repeated syntax without its enclosing owner, and assumed a viewport setting would carry to a newly created tab.
+- correct: anchor edits to the specific subview and qualified import, inspect the resulting import/block and parse/build before browser QA. Reacquire viewport control after creating a tab and assert actual dimensions before naming screenshots; keep failed attempts distinct from final fresh-tab evidence.
+
+**Bound each inspection before executing it (2026-10-20, preference interview):**
+- what: whole spec/MEMORY reads and broad matching exceeded output budgets; a later Get-Content -Raw piped to Select-String matched an entire source file. A shell-glob AuthContext search also failed before exact-path discovery. These were inspection failures, not application defects.
+- root cause: bounded tool output after selecting oversized inputs; treated a raw multiline string as line-oriented input and assumed shell wildcard expansion for rg paths.
+- correct: discover exact paths with rg --files; read current document sections with bounded line ranges and use rg -n -m with narrow patterns. Budget the combined response before batching; re-read only the necessary truncated section and never treat truncated inspection as complete evidence.
+
+**Dispose development preview roots across HMR (2026-10-18):**
+- what: editing CreateRecipe's synthetic preview entry while it was open invoked createRoot again, producing duplicate-root/removeChild errors in that old tab. Fresh navigation worked; the confirmation tab had no errors after cleanup was added.
+- root cause: the standalone QA entry created a React root at module scope without disposing it when Vite replaced the module.
+- correct: retain the preview root and register HMR disposal to unmount it. After repairing a preview entry, confirm from a fresh tab and distinguish historical fixture warnings from application runtime errors.
+
 **Local preview reachability and async control verification (2026-10-18):**
 - what: the previous frontend server had stopped. A new sandboxed Vite process reported ready but the desktop browser timed out; restarting that owned process outside the sandbox made the same URL reachable. A language radio check also reported failure before its async account save settled, although the next snapshot confirmed English was selected.
 - root cause: treated process readiness as browser reachability and an immediate control-check result as completion of an asynchronous persisted change.

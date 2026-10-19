@@ -7,6 +7,17 @@ related_targets: ["frontend/src/components/ProfileEditor.jsx", "frontend/src/com
 
 # Profile main
 
+## Preference editor refinement (2026-10-20)
+
+Mode: Operate. The user separately authorized refinement of view=preferences; this expands the earlier main-only brief for this subview. Keep the430px shell, Thai font, orange/white identity, choice values and all persistence handlers. Scope new CSS to the preference editor's unique classes.
+
+- Reading path remains age, cuisine, allergies, dietary choices, equipment, frequency and goals. Left-aligned44px choices use12px horizontal padding,14px control labels and blush/dark-orange selected states; custom inputs remain16px. Use16px semibold section headings,24px spacing and thin dividers without individual cards. Profile's decorative cuisine/frequency/goal emoji are omitted; shared callers keep their current presentation.
+- Keep a labelled48px age input in a compact row. Reuse the translated autosave helper and move existing loading/saving/incomplete/error/retry states below the header so they remain findable while the form scrolls. Preserve complete-record save ordering and retries.
+- Use h-dvh/min-h-0 with a bounded native hidden-scrollbar reader and89px plus safe-area navigation clearance. Preserve Profile main, other subviews and other pages.
+- Verification:58 existing targeted tests, scoped lint/build pass; detector JSON[]. Desktop1280x900 keeps430px shell; Thai390x844 and English320x568 have no horizontal overflow, clear group rhythm,44px controls,16px custom inputs and reachable last goal. The single correction batch adjusted native-fieldset legend spacing and kept the selected border during hover. Synthetic load/save failure retry, classification, custom blur and goal selection pass; final console errors[]. No new presentation tests or full-suite/live backend/account/physical-device run. Evidence: tmp/profile-preferences-20261020/.
+
+## Earlier main refinement
+
 Mode: Operate. This refinement covers the main Profile landing view. Keep the existing HomeMade orange/white, self-hosted Thai font and centered430px shell. Language, history, help, preferences and editor retain their existing presentation and behavior.
 
 - Task path: identity (avatar, display name, email, Edit), history, settings (language/preferences/help), then logout. The name/email wrap rather than truncate. No new user claims, account statistics, assets or copy.

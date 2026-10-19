@@ -13,6 +13,7 @@ const params = new URLSearchParams(location.search);
 const locale = params.get('locale') === 'en' ? 'en' : 'th';
 window.fetch = async (input) => {
     if (input === '/api/auth/me') return Response.json({status:'success',data:{id:1,locale,has_avatar:false}});
+    if (input === '/api/user-preferences') return Response.json({status:'success',data:null});
     throw new Error('Unexpected request blocked by Custom Cooking QA');
 };
 const ingredients = params.has('empty') ? [] : [

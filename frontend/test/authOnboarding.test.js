@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { OTHER_OPTION, toggleInList, NO_RESTRICTION } from "../src/constants/preferenceOptions.js";
+import { emptyCookingPreferences, serializeCookingPreferences, cookingPreferenceError } from "../src/utils/cookingPreferences.js";
 
 const parse = createRequire(import.meta.url)("@babel/parser").parse;
 const source = readFileSync(new URL("../src/pages/auth/Onboarding.jsx", import.meta.url), "utf8");
@@ -14,7 +15,8 @@ function setup(apiFetch, overrides = {}) {
     const calls = [], errors = [], loading = [], steps = [];
     const context = {
         step: 6, pickerValue: { age: "25" }, cuisinePreferences: ["อาหารไทย"],
-        dietaryRestrictions: ["แพ้งา", OTHER_OPTION], restrictionOther: "ข้อจำกัดทดสอบ",
+        preferences: { ...emptyCookingPreferences(), allergies: ["แพ้งา", OTHER_OPTION], allergyOther: ["ข้อจำกัดทดสอบ"], dietary: ["ไม่มีข้อจำกัดในการกิน"] },
+        serializeCookingPreferences, cookingPreferenceError,
         equipment: [OTHER_OPTION], equipmentOther: "อุปกรณ์ทดสอบ", cookingFrequency: "ทำอาหารทุกวัน — 7 ครั้งขึ้นไป/สัปดาห์",
         cookingGoals: ["ประหยัดเวลา"], savePending: { current: false },
         OTHER_OPTION, SELECT_ONE_ERROR: "กรุณาเลือกอย่างน้อย 1 ตัวเลือก",
@@ -39,7 +41,7 @@ test("failed saves retain the final step and can be retried with the original co
     assert.equal(requests[0].url, "/api/user-preferences");
     assert.equal(requests[0].options.method, "PUT");
     assert.deepEqual(JSON.parse(requests[0].options.body), {
-        age: 25, cuisine_preferences: ["อาหารไทย"], dietary_restrictions: ["แพ้งา", "ข้อจำกัดทดสอบ"],
+        age: 25, cuisine_preferences: ["อาหารไทย"], dietary_restrictions: ["แพ้งา", "ไม่มีข้อจำกัดในการกิน", 'homemade:preference:v1:{"kind":"allergy","text":"ข้อจำกัดทดสอบ"}'],
         equipment: ["อุปกรณ์ทดสอบ"], cooking_frequency: state.context.cookingFrequency, cooking_goals: ["ประหยัดเวลา"],
     });
     assert.equal(requests[0].options.body, requests[1].options.body);
@@ -61,8 +63,8 @@ test("network failure stays recoverable and concurrent next calls save once", as
 
 test("required selections and Other details block advancement before any save", async () => {
     for (const overrides of [
-        { step: 2, cuisinePreferences: [] }, { step: 3, dietaryRestrictions: [] },
-        { step: 3, restrictionOther: " " }, { step: 4, equipment: [] },
+        { step: 2, cuisinePreferences: [] }, { step: 3, preferences: emptyCookingPreferences() },
+        { step: 3, preferences: { ...emptyCookingPreferences(), allergies: [OTHER_OPTION], allergyOther: [" "], dietary: ["ฮาลาล"] } }, { step: 4, equipment: [] },
         { step: 4, equipmentOther: " " }, { step: 5, cookingFrequency: "" }, { cookingGoals: [] },
     ]) {
         const state = setup(() => assert.fail("Unexpected save"), overrides);

@@ -1,6 +1,9 @@
 export const OTHER_OPTION = "อื่น ๆ";
 export const NO_RESTRICTION = "ไม่มีข้อจำกัด";
 export const EQUIPMENT_NONE = "ไม่มีอุปกรณ์พิเศษ";
+export const ALLERGY_NONE = "ไม่มีอาการแพ้";
+export const DIETARY_NONE = "ไม่มีข้อจำกัดในการกิน";
+export const TASTE_OPTIONS = ["ไม่ระบุ", "ไม่เผ็ด", "เผ็ดน้อย", "เผ็ดปานกลาง", "เผ็ดมาก", "รสจัดจ้าน", "รสหวานนำ", "รสเปรี้ยวนำ", "รสกลมกล่อม ไม่จัดจ้าน", OTHER_OPTION];
 
 export const CUISINE_OPTIONS = [
   "อาหารไทย",
@@ -24,19 +27,14 @@ export const CUISINE_EMOJI = {
   "อาหารทำง่าย ๆ": "🍳",
 };
 
-// Each item tagged isAllergy so CreateRecipe/Profile's narrower
-// "อาการแพ้อาหาร" picker — a field meant for true allergens only, distinct
-// from the broader dietary_restrictions list — can filter out diet-type
-// entries like Vegan/Halal without a separate label-mapping table. (Note:
-// the labels reach the backend as preferences.allergies, which feeds both the
-// LLM prompt and the rule-based allergy check — detect_flagged_allergens in
-// backend/allergen_kg/floor.py reads the "allergies" key and matches these
-// labels against ALLERGEN_MAP triggers, including the tenth key, sesame.)
+// Saved restrictions share one array; generation must keep dietary guidance out of allergies.
 const RESTRICTION_ITEMS = [
-  { label: "แพ้ถั่ว", emoji: "🥜", isAllergy: true },
+  { label: "แพ้ถั่วลิสง", emoji: "🥜", isAllergy: true },
+  { label: "แพ้ถั่วเปลือกแข็ง", emoji: "🌰", isAllergy: true },
   { label: "แพ้นม / ผลิตภัณฑ์จากนม", emoji: "🥛", isAllergy: true },
   { label: "แพ้ไข่", emoji: "🥚", isAllergy: true },
-  { label: "แพ้อาหารทะเล", emoji: "🦐", isAllergy: true },
+  { label: "แพ้กุ้ง", emoji: "🦐", isAllergy: true },
+  { label: "แพ้ปู/หอย", emoji: "🦀", isAllergy: true },
   { label: "แพ้แป้งสาลี / Gluten", emoji: "🌾", isAllergy: true },
   { label: "แพ้ปลา", emoji: "🐟", isAllergy: true },
   { label: "แพ้ถั่วเหลือง", emoji: "🫘", isAllergy: true },
@@ -53,10 +51,12 @@ export const RESTRICTION_OPTIONS = [
 ];
 
 export const ALLERGY_OPTIONS = [
-  NO_RESTRICTION,
+  ALLERGY_NONE,
   ...RESTRICTION_ITEMS.filter((item) => item.isAllergy).map((item) => item.label),
   OTHER_OPTION,
 ];
+
+export const DIETARY_OPTIONS = [DIETARY_NONE, ...RESTRICTION_ITEMS.filter(item => !item.isAllergy).map(item => item.label), OTHER_OPTION];
 
 export const RESTRICTION_EMOJI = {
   [NO_RESTRICTION]: "✅",

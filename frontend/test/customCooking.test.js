@@ -16,6 +16,8 @@ const bundle = await build({
     plugins: [{
         name: "test-locale",
         setup(build) {
+            build.onResolve({ filter: /\/context\/AuthContext$/ }, () => ({ path: "auth", namespace: "test-auth" }));
+            build.onLoad({ filter: /.*/, namespace: "test-auth" }, () => ({ contents: 'export function useAuth(){return {apiFetch:async()=>({ok:true,json:async()=>({data:null})})}}' }));
             build.onResolve({ filter: /\/context\/LocaleContext$/ }, () => ({ path: "locale", namespace: "test" }));
             build.onLoad({ filter: /.*/, namespace: "test" }, () => ({
                 contents: 'import { translate } from "./translations.js"; let locale="th"; export function setLocale(value){locale=value} export function useLocale(){return {locale,t:(text,values)=>translate(text,locale,values)}}',
@@ -38,7 +40,7 @@ for (const locale of ["th", "en"]) {
                     { id: 2, name: "Chicken & basil", image: "/fixture.png" },
                 ], activeTab: "cooking",
             }));
-            assert.equal((html.match(/<fieldset/g) || []).length, 3);
+            assert.equal((html.match(/<fieldset/g) || []).length, 4);
             assert.ok(html.includes('aria-pressed="false"'));
             assert.match(html, /<button[^>]*disabled=""[^>]*aria-busy="false"/);
             assert.ok(html.includes('for="cooking-extra"'));

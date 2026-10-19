@@ -2,6 +2,8 @@ import { useLocale } from "../../context/LocaleContext";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import CookingPreferenceFields from "../../components/CookingPreferenceFields";
+import { emptyCookingPreferences, serializeCookingPreferences, cookingPreferenceError } from "../../utils/cookingPreferences.js";
 import Picker from "react-mobile-picker";
 import HeaderLogo from "../../components/HeaderLogo";
 import BackButton from "../../components/BackButton";
@@ -9,12 +11,9 @@ import { ChevronRight } from "lucide-react";
 import { OptionChips, OptionList } from "../../components/OptionPicker";
 import {
   OTHER_OPTION,
-  NO_RESTRICTION,
   EQUIPMENT_NONE,
   CUISINE_OPTIONS,
   CUISINE_EMOJI,
-  RESTRICTION_OPTIONS,
-  RESTRICTION_EMOJI,
   EQUIPMENT_OPTIONS,
   EQUIPMENT_EMOJI,
   FREQUENCY_OPTIONS,
@@ -72,14 +71,12 @@ export default function Onboarding() {
   const [pickerValue, setPickerValue] = useState({ age: "25" });
 
   const [cuisinePreferences, setCuisinePreferences] = useState([]);
-  const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
-  const [restrictionOther, setRestrictionOther] = useState("");
+  const [preferences, setPreferences] = useState(emptyCookingPreferences);
   const [equipment, setEquipment] = useState([]);
   const [equipmentOther, setEquipmentOther] = useState("");
   const [cookingFrequency, setCookingFrequency] = useState("");
   const [cookingGoals, setCookingGoals] = useState([]);
   const [stepError, setStepError] = useState("");
-  const [restrictionShakeKey, setRestrictionShakeKey] = useState(0);
   const [equipmentShakeKey, setEquipmentShakeKey] = useState(0);
 
   useEffect(() => {
@@ -110,15 +107,12 @@ export default function Onboarding() {
       return;
     }
     if (step === 3) {
-      if (dietaryRestrictions.length === 0) {
+      if (preferences.allergies.length === 0 && preferences.dietary.length === 0) {
         setStepError(SELECT_ONE_ERROR);
         return;
       }
-      if (dietaryRestrictions.includes(OTHER_OPTION) && !restrictionOther.trim()) {
-        setStepError("กรุณาระบุข้อจำกัดของคุณ");
-        setRestrictionShakeKey((k) => k + 1);
-        return;
-      }
+      const error = cookingPreferenceError(preferences);
+      if (error) { setStepError(error); return; }
     }
     if (step === 4) {
       if (equipment.length === 0) {
@@ -146,9 +140,7 @@ export default function Onboarding() {
       const payload = {
         age: Number(pickerValue.age),
         cuisine_preferences: cuisinePreferences,
-        dietary_restrictions: dietaryRestrictions.includes(OTHER_OPTION)
-          ? [...dietaryRestrictions.filter((r) => r !== OTHER_OPTION), restrictionOther || OTHER_OPTION]
-          : dietaryRestrictions,
+        dietary_restrictions: serializeCookingPreferences(preferences).dietary_restrictions,
         equipment: equipment.includes(OTHER_OPTION)
           ? [...equipment.filter((e) => e !== OTHER_OPTION), equipmentOther || OTHER_OPTION]
           : equipment,
@@ -292,40 +284,8 @@ export default function Onboarding() {
           )}
 
           {step === 3 && (
-            <StepShell title={t("อาการแพ้ หรือข้อจำกัดของคุณ")} hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
-              <OptionChips
-                options={RESTRICTION_OPTIONS}
-                selected={dietaryRestrictions}
-                multiple
-                emojiMap={RESTRICTION_EMOJI}
-                onToggle={(option) =>
-                  setDietaryRestrictions((prev) => {
-                    const next = toggleInList(prev, option, NO_RESTRICTION);
-                    if (next.length > 0 && (!next.includes(OTHER_OPTION) || restrictionOther.trim())) {
-                      setStepError("");
-                    }
-                    return next;
-                  })
-                }
-              />
-              {dietaryRestrictions.includes(OTHER_OPTION) && (
-                <input
-                  aria-label={t("ระบุข้อจำกัดของคุณ")}
-                  aria-invalid={!restrictionOther.trim() && Boolean(stepError)}
-                  aria-describedby={stepError ? "quiz-error" : undefined}
-                  key={`restriction-other-${restrictionShakeKey}`}
-                  type="text"
-                  value={restrictionOther}
-                  onChange={(e) => {
-                    setRestrictionOther(e.target.value);
-                    if (e.target.value.trim()) setStepError("");
-                  }}
-                  placeholder={t("ระบุข้อจำกัดของคุณ")}
-                  className={`w-full max-w-[358px] h-11 px-4 mt-4 bg-background-primary rounded-full border border-stroke-text-field text-body-large text-text-black placeholder:text-text-neutral focus:outline-none focus:border-stroke-brands ${
-                    !restrictionOther.trim() && stepError ? "animate-shake border-red-400" : ""
-                  }`}
-                />
-              )}
+            <StepShell title={t("อาหารที่แพ้และข้อจำกัดในการกิน")} hint="เลือกได้มากกว่า 1 ข้อ" error={stepError}>
+              <CookingPreferenceFields restrictionsOnly value={preferences} onChange={next => { setPreferences(next); setStepError(""); }} />
             </StepShell>
           )}
 

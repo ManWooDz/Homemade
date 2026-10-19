@@ -67,8 +67,10 @@ test("both forms preserve editable state, announce errors and prevent double sub
         assert.match(source, /await onGenerate\(/);
         assert.match(source, /if \(submitting.current/);
         assert.match(source, /disabled=\{[^}]*isSubmitting/);
-        assert.match(source, /aria-invalid=\{Boolean\(allergyError\)\}/);
-        assert.match(source, /aria-describedby=\{allergyError \? "allergy-error"/);
+        assert.match(source, /allergyError=\{allergyError\} allergyInput=\{allergyInput\}/);
+        const fields = readFileSync(new URL("../src/components/CookingPreferenceFields.jsx", import.meta.url), "utf8");
+        assert.match(fields, /aria-invalid=\{group.key === "allergies" && Boolean\(allergyError\)\}/);
+        assert.match(fields, /aria-describedby=\{group.key === "allergies" && allergyError \? "allergy-error"/);
         assert.match(source, /id="allergy-error" role="alert"/);
         assert.match(source, /allergyInput.current\?\.focus\(\)/);
         assert.doesNotMatch(source, /dangerouslySetInnerHTML/);

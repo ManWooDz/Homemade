@@ -140,6 +140,30 @@ _Avoid_: Success confirmation, delivery confirmation
 
 ## Account Profile
 
+**Declared Food Allergy**:
+A food or allergen group that the account holder says must be avoided because of an allergy. It is distinct from a dietary preference such as eating vegan or halal food.
+_Avoid_: Any dietary preference, confirmed medical diagnosis
+
+**Dietary Preference**:
+An account holder's chosen eating practice, such as vegan, vegetarian or halal. It does not itself declare a food allergy.
+_Avoid_: Food allergy, validated dietary compliance
+
+**Saved Cooking Preferences**:
+The account holder's usual cooking choices recorded during onboarding or in their profile, including declared food allergies, dietary preferences and available equipment. They provide initial choices for a new recipe request.
+_Avoid_: Choices for one meal, automatic changes from recipe requests
+
+**Recipe Request Preferences**:
+The cooking choices for one request to create a recipe, initially filled from saved cooking preferences where applicable and editable for that request. Changing them does not change the account holder's saved cooking preferences.
+_Avoid_: Profile update, permanent preference change
+
+**Unclassified Custom Restriction**:
+A previously saved custom restriction whose meaning has not been identified by the account holder as a food allergy or a dietary preference. It must be classified before being used to request a recipe.
+_Avoid_: Assumed allergy, assumed dietary preference, discarded unknown text
+
+**No Declared Food Allergies**:
+The account holder's explicit choice that they have no food allergies to declare. This choice can coexist with dietary preferences such as vegan or halal eating.
+_Avoid_: No dietary restrictions, unanswered allergy question
+
 **Application Language**:
 The account holder's chosen Thai or English language for Homemade's interface, including controls and application messages. It does not change the original language of recipes, catalog content or text entered by the user.
 _Avoid_: Recipe language, automatic recipe translation

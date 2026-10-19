@@ -5,6 +5,10 @@ import { Check, ChefHat, ChevronLeft, Refrigerator } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import { OptionChips } from "../components/OptionPicker";
+import { OTHER_OPTION, TASTE_OPTIONS } from "../constants/preferenceOptions";
+import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/CookingPreferenceFields";
+import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
+import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
 import { expiryBadgeLabel } from "../utils/expiry";
 
 export default function CustomCookingPage({
@@ -16,55 +20,15 @@ export default function CustomCookingPage({
     notificationCount, onNotifications,
 }) {
     const { t, locale } = useLocale();
-    const OTHER_OPTION = "อื่นๆ";
-
-    const TASTE_OPTIONS = [
-        "ไม่ระบุ",
-        "เผ็ดน้อย",
-        "เผ็ดปานกลาง",
-        "เผ็ดมาก",
-        "รสจัดจ้าน",
-        "รสหวานนำ",
-        "รสเปรี้ยวนำ",
-        "รสกลมกล่อม ไม่จัดจ้าน",
-        OTHER_OPTION,
-    ];
-    const ALLERGY_NONE = "ไม่มี";
-    const ALLERGY_OPTIONS = [
-        ALLERGY_NONE,
-        "กุ้ง/อาหารทะเล",
-        "ถั่ว",
-        "นม/ผลิตภัณฑ์จากนม",
-        "ไข่",
-        "แป้งสาลี/กลูเตน",
-        "ถั่วเหลือง",
-        "งา",
-        OTHER_OPTION,
-    ];
-    const EQUIPMENT_NONE = "ไม่มีอุปกรณ์พิเศษ";
-    const EQUIPMENT_OPTIONS = [
-        EQUIPMENT_NONE,
-        "ไมโครเวฟ",
-        "หม้อทอดไร้น้ำมัน",
-        "เตาอบ",
-        "หม้อหุงข้าว",
-        "กระทะ/เตาแก๊สทั่วไป",
-        "หม้อตุ๋น/สโลว์คุก",
-        "เครื่องปั่น",
-        OTHER_OPTION,
-    ];
-
     const [taste, setTaste] = useState("");
     const [tasteOther, setTasteOther] = useState("");
-    const [allergies, setAllergies] = useState([]);
-    const [allergiesOther, setAllergiesOther] = useState("");
     const [allergyError, setAllergyError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const submitting = useRef(false);
     const allergyInput = useRef(null);
-    const [equipment, setEquipment] = useState([]);
-    const [equipmentOther, setEquipmentOther] = useState("");
     const [extra, setExtra] = useState("");
+  const preferences = useSavedCookingPreferences();
+  const preferenceIssue = cookingPreferenceError(preferences.value);
     const [selectedIngredients, setSelectedIngredients] = useState([]);
 
     const toggleIngredient = (id) => {
@@ -73,28 +37,8 @@ export default function CustomCookingPage({
         );
     };
 
-    // multi-select toggle where selecting `noneValue` clears every other
-    // selection, and selecting anything else clears `noneValue`
-    const toggleInList = (list, setList, option, noneValue) => {
-        if (option === noneValue) {
-            setList(list.includes(noneValue) ? [] : [noneValue]);
-            return;
-        }
-        if (list.includes(option)) {
-            setList(list.filter((item) => item !== option));
-        } else {
-            setList([...list.filter((item) => item !== noneValue), option]);
-        }
-    };
-
-    const resolveOther = (value, otherText) =>
-        value === OTHER_OPTION ? otherText.trim() || OTHER_OPTION : value;
-
-    const resolveOtherInList = (list, otherText) =>
-        list.map((item) => resolveOther(item, otherText));
-
     const handleGenerateClick = async () => {
-        if (submitting.current || selectedIngredients.length === 0) return;
+        if (submitting.current || selectedIngredients.length === 0 || preferences.status !== "ready" || preferenceIssue) return;
         submitting.current = true;
         setIsSubmitting(true);
         const selectedObjs = userIngredients.filter((ing) =>
@@ -102,12 +46,7 @@ export default function CustomCookingPage({
         );
         try {
             const error = await onGenerate(
-                {
-                    taste: resolveOther(taste, tasteOther),
-                    allergies: resolveOtherInList(allergies, allergiesOther).join(", "),
-                    equipment: resolveOtherInList(equipment, equipmentOther).join(", "),
-                    extra,
-                },
+                generationPreferences(preferences.value, taste === OTHER_OPTION ? tasteOther.trim() || OTHER_OPTION : taste, extra),
                 selectedObjs,
             );
             setAllergyError(error || null);
@@ -172,43 +111,17 @@ export default function CustomCookingPage({
                     <div className="space-y-8 border-t border-gray-200 pt-8">
                         <fieldset className="min-w-0">
                             <legend className="text-lg font-semibold text-gray-900">{t("รสชาติ")}</legend>
-                            <p className="mt-1 mb-4 text-sm text-gray-600">{t("เลือกได้ 1 รสชาติ หรือไม่ระบุ")}</p>
+                            <p className="mt-1 mb-3 text-sm text-gray-600">{t("เลือกได้ 1 รสชาติ หรือไม่ระบุ")}</p>
                             <OptionChips options={TASTE_OPTIONS} selected={taste} onToggle={setTaste} />
                             {taste === OTHER_OPTION && (
                                 <input type="text" value={tasteOther} onChange={(event) => setTasteOther(event.target.value)}
                                     aria-label={t("ระบุรสชาติที่ต้องการ")} placeholder={t("ระบุรสชาติที่ต้องการ")}
-                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
+                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-xl px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
                             )}
                         </fieldset>
 
-                        <fieldset className="min-w-0">
-                            <legend className="text-lg font-semibold text-gray-900">{t("อาการแพ้อาหาร")}</legend>
-                            <p className="mt-1 mb-4 text-sm text-gray-600">{t("ระบุอาหารที่แพ้ เลือกได้มากกว่า 1 ข้อ")}</p>
-                            <OptionChips options={ALLERGY_OPTIONS} selected={allergies} multiple onToggle={(option) => {
-                                toggleInList(allergies, setAllergies, option, ALLERGY_NONE);
-                                setAllergyError(null);
-                            }} />
-                            {allergies.includes(OTHER_OPTION) && (
-                                <input type="text" ref={allergyInput} value={allergiesOther}
-                                    aria-label={t("ระบุอาการแพ้อาหาร")} aria-invalid={Boolean(allergyError)}
-                                    aria-describedby={allergyError ? "allergy-error" : undefined} maxLength={1000}
-                                    onChange={(event) => { setAllergiesOther(event.target.value); setAllergyError(null); }}
-                                    placeholder={t("ระบุอาการแพ้อาหาร")}
-                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
-                            )}
-                            {allergyError && <p id="allergy-error" role="alert" className="mt-3 text-sm text-red-700 break-words">{t(allergyError)}</p>}
-                        </fieldset>
-
-                        <fieldset className="min-w-0">
-                            <legend className="text-lg font-semibold text-gray-900">{t("อุปกรณ์ที่มี")}</legend>
-                            <p className="mt-1 mb-4 text-sm text-gray-600">{t("เลือกอุปกรณ์ที่ใช้ได้มากกว่า 1 อย่าง")}</p>
-                            <OptionChips options={EQUIPMENT_OPTIONS} selected={equipment} multiple onToggle={(option) => toggleInList(equipment, setEquipment, option, EQUIPMENT_NONE)} />
-                            {equipment.includes(OTHER_OPTION) && (
-                                <input type="text" value={equipmentOther} onChange={(event) => setEquipmentOther(event.target.value)}
-                                    aria-label={t("ระบุอุปกรณ์ที่มี")} placeholder={t("ระบุอุปกรณ์ที่มี")}
-                                    className="mt-4 w-full min-h-12 border border-gray-400 rounded-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-500" />
-                            )}
-                        </fieldset>
+                        <CookingPreferenceFields value={preferences.value} onChange={preferences.edit}
+              allergyError={allergyError} allergyInput={allergyInput} onAllergyEdit={() => setAllergyError(null)} />
 
                         <div>
                             <label htmlFor="cooking-extra" className="block text-lg font-semibold text-gray-900">{t("ความต้องการอื่นๆ (ถ้ามี)")}</label>
@@ -221,9 +134,12 @@ export default function CustomCookingPage({
 
                 <div className="shrink-0 mb-24 border-t border-gray-200 bg-white px-6 pt-3 pb-4">
                     <p role="status" className="mb-2 text-xs text-gray-600 tabular-nums">
-                        {selectedIngredients.length > 0 ? t("เลือกแล้ว {count} รายการ", { count: selectedIngredients.length }) : t("เลือกอย่างน้อย 1 อย่าง")}
+                        {selectedIngredients.length > 0 ? t("เลือกวัตถุดิบแล้ว {count} รายการ", { count: selectedIngredients.length }) : t("เลือกวัตถุดิบอย่างน้อย {count} อย่าง", { count: 1 })}
                     </p>
-                    <button type="button" onClick={handleGenerateClick} disabled={selectedIngredients.length === 0 || isSubmitting}
+          <PreferenceLoadStatus status={preferences.status} retry={preferences.retry} />
+          {preferences.status === "ready" && preferenceIssue && <p role="status" className="mb-3 text-sm text-gray-700">{t(preferenceIssue)}</p>}
+          {allergyError && <p id="allergy-error" role="alert" className="mb-3 text-sm text-red-700 break-words">{t(allergyError)}</p>}
+                    <button type="button" onClick={handleGenerateClick} disabled={selectedIngredients.length === 0 || isSubmitting || preferences.status !== "ready" || Boolean(preferenceIssue)}
                         aria-busy={isSubmitting}
                         className="w-full min-h-12 px-4 py-3 bg-[#B93E25] text-white rounded-full text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#9D341F] disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors">
                         <ChefHat aria-hidden="true" className="w-5 h-5 shrink-0" />

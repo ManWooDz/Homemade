@@ -1,10 +1,40 @@
 @import "tailwindcss";
 
+.create-recipe-actions { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
+.create-recipe-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.create-recipe-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
+.create-recipe-screen ::selection { background: #fdece5; color: #111827; }
+.create-recipe-screen :is(input, textarea) { caret-color: #b93e25; }
+.create-recipe-preferences button[aria-pressed="true"] { background: #b93e25; border-color: #b93e25; }
+
 .profile-main-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
 .profile-main-notifications { top: 48px; }
 .profile-main-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .profile-main-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .profile-main-screen ::selection { background: #fdece5; color: #111827; }
+
+.profile-preferences-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
+.profile-preferences-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.profile-preferences-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
+.profile-preferences-screen ::selection { background: #fdece5; color: #111827; }
+.profile-preferences-screen :is(input, textarea) { caret-color: #b93e25; }
+.profile-preference-section { margin: 0; padding: 24px 0; border-bottom: 1px solid #e5e7eb; }
+.profile-preference-groups > div > fieldset { padding: 0 0 24px; border-bottom: 1px solid #e5e7eb; }
+.profile-preference-age { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 8px; }
+.profile-preferences-screen #profile-preference-age { width: 96px; border-radius: 12px; padding: 10px 12px; border-color: #d1d5db; box-shadow: none; }
+.profile-preference-groups > div { display: block; }
+.profile-preference-groups > div > fieldset { margin-block: 24px 0; }
+.profile-preference-groups > div > fieldset.rounded-2xl { padding: 16px; margin-bottom: 24px; }
+.profile-preference-groups legend { font-size: 16px; font-weight: 600; line-height: 1.5; }
+.profile-preference-form :is(.flex-wrap, .flex-col) { max-width: none; gap: 8px; }
+.profile-preference-form .flex-wrap { justify-content: flex-start; align-items: stretch; }
+.profile-preference-form button[aria-pressed] { min-height: 44px; padding: 10px 12px; border: 1px solid #d1d5db; background: #fff; color: #374151; font-size: 14px; font-weight: 500; line-height: 1.5; }
+.profile-preference-form button[aria-pressed="false"]:hover { background: #f9fafb; border-color: #9ca3af; }
+.profile-preference-form button[aria-pressed="true"] { background: #fdece5; border-color: #b93e25; color: #9f351f; font-weight: 600; }
+.profile-preference-form button[aria-pressed="true"]:hover { background: #fbe0d5; }
+.profile-preference-form button[aria-pressed="true"] > span { font-weight: 600; }
+.profile-preference-section .flex-col > button { border-radius: 12px; }
+.profile-preference-section:last-child { border-bottom: 0; padding-bottom: 8px; }
 
 .add-ingredient-actions { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
 .add-ingredient-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
@@ -221,7 +251,6 @@
   --color-button-primary: #b93e25;
   caret-color: #b93e25;
 }
-.custom-cooking-screen fieldset > div { max-width: none; justify-content: flex-start; }
 .custom-cooking-screen :is(button, input, textarea):focus-visible {
   outline: 2px solid #b93e25;
   outline-offset: 3px;
