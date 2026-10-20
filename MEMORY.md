@@ -1,5 +1,16 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Compare trusted and LAN origins before changing phone-test auth settings (2026-10-21):**
+- what happened: iPhone login/register returned403 after LAN testing began; empty-body probes confirm localhost422 versus Wi-Fi-origin403 `Origin not trusted`, and backend/.env lacks an explicit allowlist. Initial sandbox probes failed with socket-permission errors, so those were not API verdicts.
+- root cause: Vite forwards requests while the backend's existing CSRF allowlist defaults to localhost/127.0.0.1; binding Vite to LAN does not authorize that LAN origin. Oversized combined instruction reads also repeated truncation during diagnosis.
+- correct behavior: confirm the actual phone URL, compare exact Origin values with credential-free invalid bodies, and add only that scheme/host/port while retaining existing allowed origins after explicit backend approval. Restart and re-probe; never disable CSRF, change DB data, expose DB/API unnecessarily or report socket failures as403responses. Bound each inspection excerpt before dispatch.
+
+**Bound typography inspection and use the browser mirror's available values (2026-10-21):**
+- recurrence (2026-10-21 phone/backend guidance): another combined README/spec/source read truncated, and a guessed database/connect_db.py path failed before main.py identified database/db.py. Discover exact imports first and cap the combined excerpt before dispatch; keep successful corrected source checks distinct from those failed probes.
+- what happened: initial whole spec/MEMORY and combined excerpts repeated output truncation; guessed Home/HomePage paths failed before confirming Home lives in App.jsx, and a broad tmp search touched denied archive directory names without reading their contents. The first typography browser batch failed because parseFloat is unavailable in the read-only mirror; corrected numeric coercion then completed. No application defect or backend write resulted.
+- root cause: output limits were applied after oversized input selection, prior recorded discovery lessons were not followed, and the browser mirror was treated as a full JavaScript page environment.
+- correct behavior: read bounded current spec sections first; discover exact frontend paths before opening files, keep QA discovery to known top-level paths, and save large launcher output before selecting directives. Derive sizes from exposed computed-style strings using supported string operations/numeric coercion; wait for a visible heading before measuring asynchronous auth pages. Treat truncated reads, absent paths and failed/pre-mount probes as incomplete evidence.
+
 **Search prompt digest fixtures before changing generation guidance (2026-10-20):**
 - what: initial checker/handler regressions passed, but full1023test run found one failure in the personalization test's frozen full-prompt digest after an intentionally added quantity sentence. The necessary related fixture became a fourth backend path and was announced before editing.
 - root cause: initial caller/test inspection did not discover the prompt SHA256 assertion in the personalization suite.

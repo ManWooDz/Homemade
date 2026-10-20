@@ -196,7 +196,7 @@ export default function Favorites({
                                                 .map((tag, idx) => (
                                                     <span
                                                         key={idx}
-                                                        className={`text-[10px] font-medium px-2 py-0.5 rounded-full w-max ${getTagColor(tag)}`}
+                                                        className={`text-xs font-medium px-2 py-0.5 rounded-full w-max max-w-full break-words ${getTagColor(tag)}`}
                                                     >
                                                         {tag}
                                                     </span>
@@ -230,7 +230,7 @@ export default function Favorites({
                                         className="bg-white border border-gray-100 rounded-3xl p-3 shadow-sm relative cursor-pointer"
                                         onClick={() => onOpenHistoryItem?.(item)}
                                     >
-                                        <span className="absolute top-4 left-4 z-10 bg-white/90 text-[#EF5A3A] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                        <span className="absolute top-4 left-4 z-10 bg-white/90 text-[#EF5A3A] text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                                             <Sparkles className="w-3 h-3" /> AI
                                         </span>
                                         <button

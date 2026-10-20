@@ -26,7 +26,7 @@ typography:
     fontFamily: '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif'
     fontSize: "1.5rem"
     fontWeight: 700
-    lineHeight: 1.333
+    lineHeight: 1.5
     letterSpacing: "normal"
   title:
     fontFamily: '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif'
@@ -48,19 +48,19 @@ typography:
     letterSpacing: "normal"
   body-medium:
     fontFamily: '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif'
-    fontSize: "0.875rem"
+    fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.65
     letterSpacing: "normal"
   label:
     fontFamily: '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif'
-    fontSize: "0.875rem"
+    fontSize: "1rem"
     fontWeight: 600
     lineHeight: 1.65
     letterSpacing: "normal"
   caption:
     fontFamily: '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif'
-    fontSize: "0.75rem"
+    fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
@@ -114,6 +114,8 @@ components:
 ---
 
 # Design System: HomeMade
+
+Typography refinement (2026-10-21): preserve self-hosted Noto Sans Thai and the mobile shell. Default body, form labels, actions, supporting prose and legacy `text-sm`/`text-body-medium` now share16px with1.65 leading; recipe prose uses1.75. Metadata/tags/helpers use14px. Navigation has its own13px role, retaining12px below360px so five English destinations remain separated. Page/recipe titles use24px, section titles20px, with existing18px compact group/header and16px form-group variants retained. Remove arbitrary10/11/12/15/26px reading sizes; allow enlarged tags and ingredient-picker labels to wrap. Auth's legacy `text-h2` alias is24px. This supersedes the earlier compact body/label/caption sizes only; no font asset, palette, interaction, header geometry or API change.
 
 CreateRecipe selected ingredients (2026-10-20): display only the first ingredient letter uppercase in both selected chips and the adjacent fridge list; retain original data and remaining capitalization. Distinguish the44px remove control with a centered28px dark-orange/white hover circle and darker active state, preserving its accessible name and44px focus outline. Details: .impeccable/surfaces/frontend-src-pages-createrecipe-jsx.md.
 
@@ -201,13 +203,14 @@ Normal variable weights 400–900 are self-hosted as Thai, Latin and Latin-exten
 
 ### Hierarchy
 - **Display** (900, 34px, 1.0): Rare promotional emphasis inside imagery; may be italic when the existing banner treatment calls for it.
-- **Headline** (700, 24px, 1.333): Main page and recipe titles.
-- **Title** (`typography.title`): The semantic h2 role for section headings and important factual groups; existing uses choose semibold or bold weight.
+- **Headline** (700, 24px, 1.5): Main page and recipe titles; compact identity and creation summaries retain20px, and narrow title headers retain18px.
+- **Title** (`typography.title`, `text-xl`):20px section headings and important factual groups; existing uses choose semibold or bold weight. The legacy `text-h2` utility is used for auth page headings and maps to24px.
 - **Body** (`typography.body`): Default page text and controls inheriting body spacing.
 - **Body large** (`typography.body-large`): Semantic reading text, auth inputs and choice options with extra Thai line spacing.
-- **Body medium** (`typography.body-medium`): Semantic supporting text and compact options.
-- **Label** (`typography.label`): The semibold body-medium role for form actions and labels.
-- **Caption** (`typography.caption`): Semantic helper text and navigation captions. Bottom-navigation captions override the regular role with semibold weight (600).
+- **Body medium** (`typography.body-medium`): Legacy alias for16px body text, matching ordinary `text-sm` and `text-base` across routes.
+- **Label** (`typography.label`): The semibold16px role for form actions and labels.
+- **Caption** (`typography.caption`, `text-xs`):14px metadata, tags and short helper text.
+- **Navigation** (`text-navigation`):13px semibold captions;12px below360px to retain spacing between all five destinations in both languages.
 
 **The Plain-Language Type Rule.** Use one Noto Sans Thai family with the established Thai-capable fallbacks, and create hierarchy with size, weight and line spacing; do not introduce ornamental display faces.
 
@@ -243,7 +246,7 @@ The component language is **soft and confident**: friendly curvature and comfort
 
 ### Buttons
 - **Shape:** Full capsule for text actions; circular capsule for directional or icon-only actions.
-- **Primary:** HomeMade Orange with white text, 44px height, 14px semibold label, and 20px horizontal padding. Full-width form actions use the same height and treatment.
+- **Primary:** HomeMade Orange with white text, 44px minimum height, 16px semibold label, and 20px horizontal padding. Full-width form actions use the same treatment.
 - **Hover / Focus:** Slight opacity or darker-orange shift over a 150ms standard transition. Keyboard focus must remain visible; form controls use an orange border and restrained orange ring.
 - **Secondary / Ghost:** White or subtle-neutral surface with a gray or orange border. Destructive actions use red only for the destructive context.
 
@@ -264,7 +267,7 @@ The component language is **soft and confident**: friendly curvature and comfort
 - **Error / Disabled:** Errors use concise red text near the field. Disabled actions reduce opacity without changing their structural size.
 
 ### Navigation
-- **Style:** White bottom navigation with a thin neutral top border, 24px top corners, and a restrained upward shadow. Labels use the caption role at semibold weight (600); inactive items are muted slate and active items use the brand accent.
+- **Style:** White bottom navigation with a thin neutral top border, 24px top corners, and a restrained upward shadow. Labels use the separate navigation role at semibold weight (600); inactive items are muted slate and active items use the brand accent.
 - **Primary action:** Cooking is the raised central circular action, visually separated from the four standard destinations.
 
 ### Nutrition Summary

@@ -12,7 +12,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 cursor-pointer ${activeTab === "home" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <Home className="w-6 h-6" />
-                    <span className="text-caption font-semibold">{t("HOME")}</span>
+                    <span className="text-navigation font-semibold">{t("HOME")}</span>
                 </button>
 
                 <button
@@ -21,7 +21,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 cursor-pointer ${activeTab === "fridge" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <Refrigerator className="w-6 h-6" />
-                    <span className="text-caption font-semibold">{t("MY FRIDGE")}</span>
+                    <span className="text-navigation font-semibold">{t("MY FRIDGE")}</span>
                 </button>
 
                 {/* ปุ่มทำอาหารตรงกลาง (ลอยขึ้นมา) */}
@@ -34,7 +34,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     >
                         <CookingPot className={`w-7 h-7 ${activeTab === "cooking" ? "text-white" : "text-gray-500"}`} />
                     </button>
-                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-caption font-semibold text-gray-600">{t("COOKING")}</span>
+                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-navigation font-semibold text-gray-600">{t("COOKING")}</span>
                 </div>
 
                 <button
@@ -43,7 +43,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 ${activeTab === "favorites" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <Heart className="w-6 h-6" />
-                    <span className="text-caption font-semibold">{t("FAVORITES")}</span>
+                    <span className="text-navigation font-semibold">{t("FAVORITES")}</span>
                 </button>
 
                 <button
@@ -52,7 +52,7 @@ export default function BottomMenu({ activeTab, setActiveTab }) {
                     className={`flex flex-col items-center gap-1 ${activeTab === "me" ? "text-[#B93E25]" : "text-gray-600"}`}
                 >
                     <User className="w-6 h-6" />
-                    <span className="text-caption font-semibold">{t("ME")}</span>
+                    <span className="text-navigation font-semibold">{t("ME")}</span>
                 </button>
             </div>
         </nav>

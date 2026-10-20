@@ -181,7 +181,7 @@ export default function RecipeDetail({
                       />
                     </div>
                     <div className="flex flex-col justify-center">
-                      <span className="font-medium text-black text-[15px] capitalize">
+                      <span className="font-medium text-black text-base capitalize">
                         {ing.name}
                       </span>
                     </div>

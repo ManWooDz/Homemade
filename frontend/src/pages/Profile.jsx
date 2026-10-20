@@ -350,7 +350,7 @@ export default function Profile({
                           {item.diet_tags.slice(0, 2).map((tag, idx) => (
                             <span
                               key={idx}
-                              className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getTagColor(tag)}`}
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full max-w-full break-words ${getTagColor(tag)}`}
                             >
                               {tag}
                             </span>
@@ -370,7 +370,7 @@ export default function Profile({
                             />
                           ))}
                           {item.tag && (
-                            <span className="text-[11px] text-gray-400 ml-1">
+                            <span className="text-xs text-gray-600 ml-1">
                               {t(item.tag)}
                             </span>
                           )}

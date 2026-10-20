@@ -1085,7 +1085,7 @@ function App() {
                                             .map((tag, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full w-max ${getTagColor(tag)}`}
+                                                    className={`text-xs font-medium px-2 py-0.5 rounded-full w-max max-w-full break-words ${getTagColor(tag)}`}
                                                 >
                                                     {tag}
                                                 </span>
@@ -1185,7 +1185,7 @@ function App() {
                                                                         <X className="w-3 h-3" />
                                                                     </span>
                                                                 </div>
-                                                                <span className="text-[11px] text-gray-700 capitalize text-center truncate w-full">
+                                                                <span className="text-xs text-gray-700 capitalize text-center break-words w-full">
                                                                     {ing.name}
                                                                 </span>
                                                             </button>
@@ -1230,7 +1230,7 @@ function App() {
                                                             />
                                                         </div>
                                                         <span
-                                                            className={`text-[11px] capitalize text-center truncate w-full ${
+                                                            className={`text-xs capitalize text-center break-words w-full ${
                                                                 isSelected
                                                                     ? "text-gray-400"
                                                                     : "text-gray-700"
@@ -1350,7 +1350,7 @@ function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {
                         onClick={() => onToggle(option)}
                         className="flex items-center justify-between bg-gray-100 p-3 rounded-2xl cursor-pointer"
                     >
-                        <span className="font-medium text-black text-[15px]">
+                        <span className="font-medium text-black text-base">
                             {emojiMap?.[option] && (
                                 <span className="mr-2">{emojiMap[option]}</span>
                             )}

@@ -253,7 +253,7 @@ export default function UserIngredients({
                                             />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-gray-800 text-lg leading-tight">
+                                            <span className="font-semibold text-gray-800 text-lg leading-normal">
                                                 {ing.name}
                                             </span>
                                             {expiryBadgeLabel(ing.expiry_date, locale) && (

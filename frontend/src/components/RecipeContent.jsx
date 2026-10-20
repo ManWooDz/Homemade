@@ -8,7 +8,7 @@ export default function RecipeContent({ recipe, onDone, compact = false }) {
     const { t } = useLocale();
   return (
     <>
-      <h2 className="recipe-title text-[26px] font-bold text-black mb-2 leading-tight">
+      <h2 className="recipe-title text-2xl font-bold text-black mb-2 leading-normal">
         {recipe.recipe_name}
       </h2>
       <div className="flex items-center justify-between mb-3">
@@ -29,7 +29,7 @@ export default function RecipeContent({ recipe, onDone, compact = false }) {
           {recipe.diet_tags.map((tag, idx) => (
             <span
               key={idx}
-              className={`${getTagColor(tag)} px-3 py-1 rounded-full text-[12px] font-medium`}
+              className={`${getTagColor(tag)} px-3 py-1 rounded-full text-xs font-medium max-w-full break-words`}
             >
               {tag}
             </span>
@@ -62,7 +62,7 @@ export default function RecipeContent({ recipe, onDone, compact = false }) {
               className="recipe-ingredient-line bg-gray-50 flex items-center gap-3 p-3 rounded-xl border border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
             >
               <div className="w-2 h-2 rounded-full bg-[#EF5A3A]"></div>
-              <span className="text-gray-700 text-[15px]">{ing}</span>
+              <span className="text-gray-700 text-base">{ing}</span>
             </li>
           ))}
         </ul>
