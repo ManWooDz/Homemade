@@ -25,7 +25,7 @@ export default function Loading() {
     }, [minDurationElapsed, authLoading, isAuthenticated, navigate]);
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <div className="h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
             <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
                 <div className="w-full flex-1 flex flex-col justify-center items-center bg-background-primary overflow-hidden">
                     <img

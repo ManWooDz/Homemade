@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -251,24 +252,24 @@ export default function Profile({
 
   if (view === "edit") {
     return (
-      <div className="h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+      <PageShell scrollKey={view}>
+
           <Header onBack={goMain} />
-          <main className="flex-1 overflow-y-auto pb-32">
+          <main className="flex-1 pb-8">
             <ProfileEditor avatarUrl={avatarUrl} onCancel={goMain} onSaved={() => { setPhotoReload(value => value + 1); setNotice("บันทึกโปรไฟล์แล้ว"); goMain(); }} />
           </main>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
   if (view === "history") {
     return (
-      <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+      <PageShell scrollKey={view}>
+
           <Header title={t("Cooking History")} onBack={goMain} />
-          <div className="flex-1 overflow-y-auto px-5 pb-32">
+          <div className="flex-1 px-5 pb-8">
             <label htmlFor="history-search" className="block text-sm font-medium text-gray-700 mb-2">{t("ค้นหาประวัติ")}</label>
             <div className="relative mb-4">
               <Search aria-hidden="true" className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
@@ -386,17 +387,17 @@ export default function Profile({
             )}
           </div>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
   if (view === "language") {
     return (
-      <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+      <PageShell scrollKey={view}>
+
           <Header title={t("Language")} onBack={goMain} />
-          <main className="flex-1 overflow-y-auto px-6 pb-32">
+          <main className="flex-1 px-6 pb-8">
             <fieldset aria-busy={languageSaving} aria-describedby="language-help" className="min-w-0">
               <legend className="text-xl font-semibold text-gray-900">{t("เลือกภาษาของแอป")}</legend>
               <p id="language-help" className="mt-2 mb-6 text-sm text-gray-600 leading-relaxed">{t("เลือกแล้วบันทึกให้อัตโนมัติ")}</p>
@@ -441,15 +442,15 @@ export default function Profile({
             {languageError && <p role="alert" className="mt-3 text-sm text-red-700">{t(languageError)}</p>}
           </main>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
   if (view === "preferences") {
     return (
-      <div className="profile-preferences-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+      <PageShell className="profile-preferences-screen" scrollKey={view}>
+
           <Header title={t("Preferences")} onBack={goMain} compact />
           <div className="profile-preferences-feedback shrink-0 px-6 pb-4">
             {(prefsLoaded || !prefsError) && <p role="status" className="text-sm text-gray-600">{t(!prefsLoaded ? "กำลังโหลดค่าจากโปรไฟล์…" : prefsSaving ? "กำลังบันทึกค่าการทำอาหาร…" : "เลือกแล้วบันทึกให้อัตโนมัติ")}</p>}
@@ -462,7 +463,7 @@ export default function Profile({
               }}>{t(prefsLoaded ? "ลองบันทึกใหม่" : "ลองโหลดใหม่")}</button>
             </div>}
           </div>
-          <main className="profile-preferences-content flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 pb-8">
+          <main className="profile-preferences-content flex-1 min-h-0 scrollbar-hide px-6 pb-8">
             <fieldset disabled={!prefsLoaded} className="profile-preference-form min-w-0 disabled:opacity-60">
             <section className="profile-preference-section profile-preference-age">
             <label htmlFor="profile-preference-age" className="block text-base font-semibold text-gray-900">{t("อายุ")}</label>
@@ -536,17 +537,17 @@ export default function Profile({
             </fieldset>
           </main>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
   if (view === "helps") {
     return (
-      <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+      <PageShell scrollKey={view}>
+
           <Header title={t("ช่วยเหลือ")} onBack={goMain} />
-          <main className="flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-32">
+          <main className="flex-1 min-h-0 px-6 pt-2 pb-8">
             <section aria-labelledby="help-how-to" className="mb-8">
               <BookOpen aria-hidden="true" className="w-8 h-8 text-[#B93E25] mb-4" />
               <h1 id="help-how-to" className="text-2xl font-bold text-gray-900 leading-snug mb-3">{t("วิธีใช้งาน")}</h1>
@@ -568,17 +569,17 @@ export default function Profile({
             </section>
           </main>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
   return (
-    <div className="profile-main-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+    <PageShell className="profile-main-screen" scrollKey={view}>
+
         <Header compact onBack={onBack} notificationCount={notificationCount} onNotifications={onNotifications} />
 
-        <main className="profile-main-content flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+        <main className="profile-main-content flex-1 min-h-0 scrollbar-hide px-5 pb-6">
           {notice && <p role="status" className="text-sm text-green-700 mb-4">{t(notice)}</p>}
           <section aria-labelledby="profile-display-name" className="pb-6 border-b border-gray-200">
             <div className="flex items-start gap-4">
@@ -621,7 +622,7 @@ export default function Profile({
         </main>
 
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-      </div>
-    </div>
+
+    </PageShell>
   );
 }

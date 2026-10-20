@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { useState } from "react";
 import { ChevronLeft, ChefHat, Heart, Star } from "lucide-react";
@@ -100,8 +101,8 @@ export default function CookingPage({
   // Loading Screen
   if (isGenerating) {
     return (
-      <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl items-center justify-center space-y-6">
+      <PageShell contained key="loading" frameClassName="items-center justify-center space-y-6">
+
           <Motion.div
             initial={{ opacity: 0.5, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1.1 }}
@@ -115,16 +116,16 @@ export default function CookingPage({
           </Motion.div>
           <h2 className="text-2xl font-bold text-gray-800 tracking-wide">{t("กำลังคิดค้นเมนู...")}</h2>
           <p className="text-gray-500 text-center px-8">{t("เชฟ AI กำลังนำวัตถุดิบและเงื่อนไขของคุณมาปรุงเป็นสูตรพิเศษ")}</p>
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
   // Fallback if no recipe generated successfully yet
   if (!generatedRecipe) {
     return (
-      <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-        <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl items-center justify-center space-y-4">
+      <PageShell contained key="error" frameClassName="items-center justify-center space-y-4">
+
           <p className="text-gray-500">{t("เกิดข้อผิดพลาดในการสร้างสูตรอาหาร")}</p>
           {typeof generateError === "string" && generateError && (
             <p className="text-sm text-gray-600 text-center px-8 max-w-full break-words">
@@ -136,8 +137,8 @@ export default function CookingPage({
             className="bg-[#EF5A3A] text-white px-6 py-2 rounded-full font-medium shadow-sm"
           >{t("กลับไปแก้ไข")}</button>
           <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </div>
+
+      </PageShell>
     );
   }
 
@@ -270,8 +271,8 @@ export default function CookingPage({
     );
 
   return (
-    <div className="cooking-page-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+    <PageShell className="cooking-page-screen" contained key="recipe">
+
         {/* Header & Logo Area for Both Flows */}
         <div className="pt-8 px-6 flex items-center justify-center relative z-20 shrink-0 mb-4 bg-white">
           <button
@@ -313,7 +314,7 @@ export default function CookingPage({
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
 
         {renderRatingModal()}
-      </div>
-    </div>
+
+    </PageShell>
   );
 }

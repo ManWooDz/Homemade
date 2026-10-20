@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import RecipeNutrition from "../components/RecipeNutrition";
 import RecipeSheet from "../components/RecipeSheet";
 import RecipeInstructions from "../components/RecipeInstructions";
@@ -67,8 +68,8 @@ export default function RecipeDetail({
   };
 
   return (
-    <div className="recipe-detail-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+    <PageShell className="recipe-detail-screen" contained>
+
         {/* Header Actions */}
         <div className="absolute top-8 left-0 right-0 px-6 flex justify-between items-center z-20">
           <button
@@ -201,7 +202,7 @@ export default function RecipeDetail({
 
         {/* === 🔘 Bottom Navigation === */}
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-      </div>
-    </div>
+
+    </PageShell>
   );
 }

@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import NotificationBell from "../components/NotificationBell";
 import { useState, useRef } from "react";
@@ -58,8 +59,8 @@ export default function CustomCookingPage({
     };
 
     return (
-        <div className="custom-cooking-screen h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+        <PageShell className="custom-cooking-screen">
+
                 <header className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button type="button" onClick={onBack} aria-label={t("กลับ")}
                         className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md">
@@ -69,7 +70,7 @@ export default function CustomCookingPage({
                     <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
                 </header>
 
-                <main className="flex-1 min-h-0 overflow-y-auto px-6 pb-8">
+                <main className="flex-1 min-h-0 px-6 pb-8">
                     <div className="mb-8">
                         <h1 className="text-2xl font-bold text-gray-900 leading-snug">{t("Custom Cooking")}</h1>
                         <p className="mt-2 text-sm text-gray-600 leading-relaxed">{t("เลือกวัตถุดิบ แล้วปรับสูตรให้เข้ากับคุณ")}</p>
@@ -132,7 +133,7 @@ export default function CustomCookingPage({
                     </div>
                 </main>
 
-                <div className="shrink-0 mb-24 border-t border-gray-200 bg-white px-6 pt-3 pb-4">
+                <div className="page-actions shrink-0 border-t border-gray-200 bg-white px-6 pt-3 pb-4">
                     <p role="status" className="mb-2 text-xs text-gray-600 tabular-nums">
                         {selectedIngredients.length > 0 ? t("เลือกวัตถุดิบแล้ว {count} รายการ", { count: selectedIngredients.length }) : t("เลือกวัตถุดิบอย่างน้อย {count} อย่าง", { count: 1 })}
                     </p>
@@ -147,7 +148,7 @@ export default function CustomCookingPage({
                     </button>
                 </div>
                 <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-            </div>
-        </div>
+
+        </PageShell>
     );
 }

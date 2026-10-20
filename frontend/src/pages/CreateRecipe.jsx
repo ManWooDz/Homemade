@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { ChevronLeft, Plus, Refrigerator, X, ChefHat } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
@@ -72,8 +73,8 @@ export default function CreateRecipe({
   };
 
   return (
-    <div className="create-recipe-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+    <PageShell className="create-recipe-screen">
+
         <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
           <button onClick={onBack} aria-label={t("กลับ")}
             className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center">
@@ -82,7 +83,7 @@ export default function CreateRecipe({
           <img src={logo} alt="HomeMade" className="h-14 object-contain" />
         </div>
 
-        <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+        <main className="flex-1 min-h-0 scrollbar-hide px-5 pb-6">
           <section className="flex items-start gap-4 pb-6 border-b border-gray-200" aria-labelledby="create-recipe-title">
             <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 bg-gray-50">
               <img src={recipe?.image || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"}
@@ -168,7 +169,7 @@ export default function CreateRecipe({
           </div>
         </main>
 
-        <div className="create-recipe-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
+        <div className="page-actions create-recipe-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
           <PreferenceLoadStatus status={preferences.status} retry={preferences.retry} />
           {preferences.status === "ready" && preferenceIssue && <p role="status" className="mb-3 text-sm text-gray-700">{t(preferenceIssue)}</p>}
           {allergyError && <p id="allergy-error" role="alert" className="text-sm leading-relaxed text-red-700 mb-3 break-words">{t(allergyError)}</p>}
@@ -179,7 +180,7 @@ export default function CreateRecipe({
           </button>
         </div>
         <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-      </div>
-    </div>
+
+    </PageShell>
   );
 }

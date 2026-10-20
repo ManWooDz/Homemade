@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Viewport QA — document and sheet scrolling</title>
+<style>
+  body { margin: 16px; font: 16px sans-serif; }
+  iframe { width: 320px; height: 650px; border: 1px solid; }
+</style>
+<!-- Development-only; this checks scroll ownership, not native Safari toolbar animation. -->
+<p>Home scrolls the document; Recipe keeps its sheet scroller. All API calls use synthetic fixtures.</p>
+<button id="check">Check footer bounds</button>
+<output id="result"></output>
+<div>
+  <iframe title="Home" src="./homeCategories.preview.html?stocked"></iframe>
+  <iframe title="Recipe" src="./recipeCards.preview.html"></iframe>
+</div>
+<script type="module">
+  const frames = [...document.querySelectorAll('iframe')];
+  document.querySelector('#check').onclick = () => {
+    const measurements = frames.map(frame => {
+      const doc = frame.contentDocument;
+      const nav = doc.querySelector('nav');
+      const bottom = nav?.getBoundingClientRect().bottom;
+      const contained = !!doc.querySelector('.page-frame--contained');
+      const nested = [...doc.querySelectorAll('main,div')].filter(el => ['auto','scroll'].includes(frame.contentWindow.getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 1);
+      return { page: frame.title, bottom, visibleHeight: frame.clientHeight, contained,
+        pass: !!nav && Math.abs(bottom - frame.clientHeight) < 1 && (contained
+          ? doc.body.style.position === 'fixed' && doc.documentElement.scrollHeight <= frame.clientHeight
+          : doc.documentElement.scrollHeight > frame.clientHeight && nested.length === 0) };
+    });
+    document.querySelector('#result').textContent = JSON.stringify(measurements);
+    console.assert(measurements.every(row => row.pass), 'Footer bounds or scroll ownership failed', measurements);
+  };
+</script>
+</html>

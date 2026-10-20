@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useRef, useState } from "react";
 import { ChevronLeft, Star } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
@@ -14,6 +15,7 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
   const savingRef = useRef(false);
   const discardDialogRef = useRef(null);
   const pendingLeaveRef = useRef(null);
@@ -24,6 +26,7 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
     if (savingRef.current) return;
     if (dirty) {
       pendingLeaveRef.current = action;
+      setConfirmingLeave(true);
       discardDialogRef.current.showModal();
       return;
     }
@@ -71,8 +74,8 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
   }
 
   return (
-    <div className="h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-[#B93E25]">
+    <PageShell lockScroll={confirmingLeave} frameClassName="[&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-[#B93E25]">
+
         <div className="pt-8 px-6 flex items-center justify-center relative z-20 shrink-0 mb-4 bg-white">
           <button
             onClick={() => leave(onBack)}
@@ -85,7 +88,7 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
           <img src={logo} alt="HomeMade" className="h-18 object-contain" />
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-24 scrollbar-hide">
+        <div className="flex-1 px-6 pb-8 scrollbar-hide">
           <section aria-label={t("คะแนนของฉัน")} className="mb-6 border-b border-gray-200 pb-5">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">{t("คะแนนของฉัน")}</h2>
             {item.stars > 0 ? <>
@@ -150,6 +153,7 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
           <BottomMenu activeTab={activeTab} setActiveTab={tab => leave(() => setActiveTab(tab))} />
         </div>
         <dialog ref={discardDialogRef} aria-labelledby="discard-rating-title"
+          onClose={() => setConfirmingLeave(false)}
           onCancel={() => { pendingLeaveRef.current = null; }}
           className="m-auto w-[calc(100%_-_2rem)] max-w-sm rounded-2xl bg-white p-5 text-gray-900 backdrop:bg-black/40">
           <h2 id="discard-rating-title" className="text-lg font-semibold mb-4">{t("ทิ้งการแก้ไขคะแนนที่ยังไม่ได้บันทึก?")}</h2>
@@ -160,7 +164,7 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
               className="min-h-12 flex-1 rounded-full bg-[#B93E25] px-4 font-semibold text-white">{t("ทิ้งการแก้ไข")}</button>
           </div>
         </dialog>
-      </div>
-    </div>
+
+    </PageShell>
   );
 }

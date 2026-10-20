@@ -4,7 +4,7 @@ import { Home, Refrigerator, CookingPot, Heart, User } from "lucide-react";
 export default function BottomMenu({ activeTab, setActiveTab }) {
     const { t } = useLocale();
     return (
-        <nav aria-label={t("เมนูหลัก")} className="absolute bottom-0 w-full bg-white border-t border-gray-200 px-3 py-3 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50 [&_button]:min-h-11 [&_button]:min-w-11 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-[#B93E25]">
+        <nav aria-label={t("เมนูหลัก")} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 bg-white border-t border-gray-200 px-3 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50 [&_button]:min-h-11 [&_button]:min-w-11 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-[#B93E25]">
             <div className="flex justify-between items-center relative">
                 <button
                     onClick={() => setActiveTab("home")}

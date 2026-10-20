@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, Loader2 } from "lucide-react";
@@ -64,8 +65,8 @@ export default function BarcodeScanPage({
     };
 
     return (
-        <div className="h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+        <PageShell>
+
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
                         type="button"
@@ -85,7 +86,7 @@ export default function BarcodeScanPage({
                     />
                 </div>
 
-                <main className="flex-1 min-h-0 overflow-y-auto px-5 pb-36">
+                <main className="flex-1 min-h-0 px-5 pb-8">
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("สแกนบาร์โค้ด")}</h1>
                     <p className="text-sm text-gray-600 mb-6">{t("ค้นหาสินค้าเพื่อเพิ่มวัตถุดิบเข้าตู้เย็น")}</p>
 
@@ -144,7 +145,7 @@ export default function BarcodeScanPage({
                     lookup.current?.abort();
                     setActiveTab(tab);
                 }} />
-            </div>
-        </div>
+
+        </PageShell>
     );
 }

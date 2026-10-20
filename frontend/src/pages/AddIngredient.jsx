@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Search, Upload, Loader2 } from "lucide-react";
@@ -177,8 +178,8 @@ export default function AddIngredient({
     };
 
     return (
-        <div className="add-ingredient-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+        <PageShell className="add-ingredient-screen">
+
                 {/* Header Actions */}
                 <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
                     <button
@@ -195,7 +196,7 @@ export default function AddIngredient({
                     />
                 </div>
 
-                <main className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+                <main className="flex-1 min-h-0 scrollbar-hide px-5 pb-6">
                     <div className="mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">{t("Add Ingredient")}</h2>
                     </div>
@@ -382,7 +383,7 @@ export default function AddIngredient({
 
                 </main>
 
-                <div className="add-ingredient-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
+                <div className="page-actions add-ingredient-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
                     {saveError && (
                         <p role="alert" className="text-sm text-red-700 mb-3 leading-relaxed">
                             {t(saveError)}
@@ -400,7 +401,7 @@ export default function AddIngredient({
 
                 {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-            </div>
-        </div>
+
+        </PageShell>
     );
 }

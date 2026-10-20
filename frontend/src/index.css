@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
-.create-recipe-actions { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
-.create-recipe-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+/* Pages scroll with the document; only sheets own an inner vertical scroller. */
+.page-frame { min-height: 100dvh; padding-bottom: var(--page-bottom-clearance, 89px); }
+.page-frame--contained { height: 100dvh; min-height: 0; padding-bottom: 0; overflow: hidden; }
+.page-actions { position: fixed; bottom: var(--bottom-menu-height, 89px); left: 50%; translate: -50% 0; width: 100%; max-width: 430px; z-index: 40; }
+.page-floating-action { position: fixed; bottom: calc(var(--bottom-menu-height, 89px) + 24px); right: max(24px, calc((100vw - 430px) / 2 + 24px)); }
+.page-overlay { position: fixed; left: 50%; translate: -50% 0; width: 100%; max-width: 430px; }
+.page-overlay .overflow-y-auto { overscroll-behavior-y: contain; }
+:root:has(.page-frame) { overflow-x: clip; scrollbar-width: none; }
+:root:has(.page-frame)::-webkit-scrollbar { display: none; }
 .create-recipe-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .create-recipe-screen ::selection { background: #fdece5; color: #111827; }
 .create-recipe-screen :is(input, textarea) { caret-color: #b93e25; }
 .create-recipe-preferences button[aria-pressed="true"] { background: #b93e25; border-color: #b93e25; }
 
-.profile-main-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
 .profile-main-notifications { top: 48px; }
-.profile-main-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .profile-main-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .profile-main-screen ::selection { background: #fdece5; color: #111827; }
 
-.profile-preferences-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
-.profile-preferences-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .profile-preferences-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .profile-preferences-screen ::selection { background: #fdece5; color: #111827; }
 .profile-preferences-screen :is(input, textarea) { caret-color: #b93e25; }
@@ -36,14 +39,10 @@
 .profile-preference-section .flex-col > button { border-radius: 12px; }
 .profile-preference-section:last-child { border-bottom: 0; padding-bottom: 8px; }
 
-.add-ingredient-actions { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
-.add-ingredient-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .add-ingredient-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .add-ingredient-screen ::selection { background: #fdece5; color: #111827; }
 .add-ingredient-screen input { caret-color: #b93e25; }
 
-.ingredient-detail-content { margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px)); }
-.ingredient-detail-screen nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .ingredient-detail-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .ingredient-detail-screen ::selection { background: #fdece5; color: #111827; }
 .ingredient-detail-screen input { caret-color: #b93e25; }
@@ -53,7 +52,7 @@
 /* Recipe sheets share real viewport bounds; only the handle owns a drag gesture. */
 .recipe-sheet {
   position: absolute;
-  inset: 45% 0 calc(89px + env(safe-area-inset-bottom, 0px));
+  inset: 45% 0 var(--bottom-menu-height, 89px);
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -68,7 +67,7 @@
   position: relative;
   inset: auto;
   flex: 1;
-  margin-bottom: calc(89px + env(safe-area-inset-bottom, 0px));
+  margin-bottom: var(--bottom-menu-height, 89px);
   box-shadow: none;
 }
 .recipe-sheet-handle {
@@ -129,7 +128,6 @@
 .recipe-reading .recipe-primary-action { width: 100%; min-height: 48px; padding: 12px 20px; margin: 32px 0 12px; border-radius: 9999px; background: #b93e25; color: #fff; font-size: 16px; font-weight: 600; box-shadow: none; cursor: pointer; }
 .recipe-reading .recipe-primary-action:hover { background: #9f351f; }
 .recipe-sheet :focus-visible { outline: 2px solid #b93e25; outline-offset: -3px; }
-:is(.recipe-detail-screen, .cooking-page-screen) nav { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 :is(.recipe-detail-screen, .cooking-page-screen) > div > div:first-child button { min-width: 44px; min-height: 44px; }
 
 .notification-toast { animation: notification-arrive 180ms ease-out; }

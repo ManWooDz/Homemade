@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import NotificationBell from "../components/NotificationBell";
 import { useState, useLayoutEffect, useRef } from "react";
@@ -106,18 +107,17 @@ export default function UserIngredients({
     const [pendingSort, setPendingSort] = useState(DEFAULT_SORT);
     const [sheetTop, setSheetTop] = useState(0);
     const searchBarRef = useRef(null);
-    const contentRef = useRef(null);
 
     useLayoutEffect(() => {
         if (showSortSheet && searchBarRef.current) {
             setSheetTop(
-                searchBarRef.current.offsetTop + searchBarRef.current.offsetHeight,
+                searchBarRef.current.getBoundingClientRect().bottom,
             );
         }
     }, [showSortSheet]);
 
     const openSortSheet = () => {
-        if (contentRef.current) contentRef.current.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: "instant" });
         setPendingSort(sortBy);
         setShowSortSheet(true);
     };
@@ -144,8 +144,8 @@ export default function UserIngredients({
         selectedCategory;
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+        <PageShell lockScroll={showAddMenu || showSortSheet}>
+
                 {/* Header Actions */}
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
@@ -163,8 +163,7 @@ export default function UserIngredients({
                 </div>
 
                 <div
-                    ref={contentRef}
-                    className="flex-1 overflow-y-auto pb-32"
+                    className="flex-1 pb-8"
                 >
                     <div className="px-5 mb-4 flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-gray-900">{t("My Fridge")}</h2>
@@ -191,6 +190,7 @@ export default function UserIngredients({
                         </div>
                         <button
                             onClick={openSortSheet}
+                            aria-label={t("Sort By")}
                             className="bg-[#EF5A3A] p-2.5 rounded-full text-white shadow-sm hover:bg-orange-600 transition shrink-0"
                         >
                             <SlidersHorizontal className="w-4 h-4" />
@@ -273,7 +273,8 @@ export default function UserIngredients({
                 {/* Floating Action Button */}
                 <button
                     onClick={() => setShowAddMenu(true)}
-                    className="absolute bottom-28 right-6 w-14 h-14 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40"
+                    aria-label={t("Add Ingredient")}
+                    className="page-floating-action w-14 h-14 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40"
                     style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
                 >
                     <Plus className="w-7 h-7" />
@@ -283,10 +284,10 @@ export default function UserIngredients({
                 {showAddMenu && (
                     <>
                         <div
-                            className="absolute inset-0 bg-black/30 z-40"
+                            className="fixed inset-0 bg-black/30 z-40"
                             onClick={() => setShowAddMenu(false)}
                         ></div>
-                        <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 p-5 pb-28 flex flex-col gap-3">
+                        <div className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 p-5 pb-28 flex flex-col gap-3">
                             <p className="text-sm font-bold text-gray-700 mb-1">{t("Add Ingredient")}</p>
                             <button
                                 onClick={() => {
@@ -316,11 +317,11 @@ export default function UserIngredients({
                 {showSortSheet && (
                     <>
                         <div
-                            className="absolute inset-0 bg-black/30 z-40"
+                            className="fixed inset-0 bg-black/30 z-40"
                             onClick={() => setShowSortSheet(false)}
                         ></div>
                         <div
-                            className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 flex flex-col"
+                            className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 flex flex-col"
                             style={{ top: sheetTop }}
                         >
                             <p className="text-xs text-gray-400 font-medium px-5 pt-4 mb-2">{t("Sort By")}</p>
@@ -374,7 +375,7 @@ export default function UserIngredients({
 
                 {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-            </div>
-        </div>
+
+        </PageShell>
     );
 }

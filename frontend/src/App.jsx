@@ -1,3 +1,4 @@
+import PageShell from "./components/PageShell";
 import { useLocale } from "./context/LocaleContext";
 import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from "react";
 import {
@@ -83,7 +84,6 @@ function App() {
     const [selectedCuisine, setSelectedCuisine] = useState([]);
     const [selectedOccasion, setSelectedOccasion] = useState([]);
     const searchBarRef = useRef(null);
-    const contentRef = useRef(null);
     // One app-wide set of base-recipe ids whose favorite request is in flight
     // (Home card, Favorites base tab and RecipeDetail all share toggleFavorite).
     const favoritePendingRef = useRef(new Set());
@@ -510,7 +510,7 @@ function App() {
     useLayoutEffect(() => {
         if (showFilterPanel && searchBarRef.current) {
             setFilterPanelTop(
-                searchBarRef.current.offsetTop + searchBarRef.current.offsetHeight,
+                searchBarRef.current.getBoundingClientRect().bottom,
             );
         }
     }, [showFilterPanel]);
@@ -524,7 +524,7 @@ function App() {
     };
 
     const openFilterPanel = () => {
-        if (contentRef.current) contentRef.current.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: "instant" });
         setShowFilterPanel(true);
     };
 
@@ -966,13 +966,12 @@ function App() {
 
     return (
         // พื้นหลังสีเทา เพื่อให้ตัวแอปสีขาวโดดเด่นขึ้นมา (เวลาเปิดบนคอม)
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
+        <PageShell lockScroll={showFilterPanel}>
             {/* 📱 กล่องแอปพลิเคชัน (จำกัดความกว้างเป็นทรงมือถือ) */}
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+
                 {/* === เนื้อหาหลักของแอป (Content) === */}
                 <div
-                    ref={contentRef}
-                    className="flex-1 overflow-y-auto pb-24 px-5 pt-8 scrollbar-hide"
+                    className="flex-1 pb-8 px-5 pt-8 scrollbar-hide"
                 >
                     {/* Logo */}
                     <div className="flex justify-center mb-6 relative">
@@ -998,6 +997,7 @@ function App() {
                         </div>
                         <button
                             onClick={openFilterPanel}
+                            aria-label={t("Explore recipe by")}
                             className="bg-[#EF5A3A] p-3 rounded-full text-white shadow-sm hover:bg-orange-600 transition relative"
                         >
                             <SlidersHorizontal className="w-5 h-5" />
@@ -1103,11 +1103,11 @@ function App() {
                 {showFilterPanel && (
                     <>
                         <div
-                            className="absolute inset-0 bg-black/30 z-30"
+                            className="fixed inset-0 bg-black/30 z-30"
                             onClick={() => setShowFilterPanel(false)}
                         ></div>
                         <div
-                            className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 flex flex-col"
+                            className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 flex flex-col"
                             style={{ top: filterPanelTop }}
                         >
                             <p className="text-xs text-gray-400 font-medium px-5 pt-4">{t("Explore recipe by")}</p>
@@ -1326,8 +1326,8 @@ function App() {
                     activeTab={activeTab}
                     setActiveTab={handleTabChange}
                 />
-            </div>
-        </div>
+
+        </PageShell>
     );
     };
     const notice = toastQueue[0];

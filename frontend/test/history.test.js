@@ -205,14 +205,16 @@ test("cancel/back/tab leaving asks only for dirty edits and blocks leaving durin
     for (const [dirty, saving, expectedActions, expectedPrompts] of [
         [true, false, 0, 1], [false, false, 1, 0], [true, true, 0, 0],
     ]) {
-        let actions = 0, prompts = 0;
+        let actions = 0, prompts = 0, scrollLocked = false;
         const leave = handler(detailSource, "leave", {
             dirty, savingRef: { current: saving }, pendingLeaveRef: { current: null },
             discardDialogRef: { current: { showModal: () => { prompts++; } } },
+            setConfirmingLeave: value => { scrollLocked = value; },
         });
         leave(() => { actions++; });
         assert.equal(actions, expectedActions);
         assert.equal(prompts, expectedPrompts);
+        assert.equal(scrollLocked, expectedPrompts > 0);
     }
 });
 test("discard confirmation runs the requested navigation once and closes the dialog", () => {

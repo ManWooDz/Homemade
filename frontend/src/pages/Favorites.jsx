@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import NotificationBell from "../components/NotificationBell";
 import { useState } from "react";
@@ -69,8 +70,8 @@ export default function Favorites({
     const HISTORY_PLACEHOLDER = "http://localhost:8000/images/No-image-available.png";
 
     return (
-        <div className="h-screen bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+        <PageShell>
+
                 {/* Header Actions */}
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
@@ -87,7 +88,7 @@ export default function Favorites({
                     <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pb-32">
+                <div className="flex-1 pb-8">
                     <div className="px-5 mb-4 flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-gray-900">{t("Favorites")}</h2>
                         <span className="text-sm font-medium text-gray-500">
@@ -276,7 +277,7 @@ export default function Favorites({
 
                 {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
-            </div>
-        </div>
+
+        </PageShell>
     );
 }

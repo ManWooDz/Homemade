@@ -1,3 +1,4 @@
+import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { useState, useRef } from "react";
 import { ChevronLeft, Trash2, PenLine } from "lucide-react";
@@ -62,8 +63,8 @@ export default function IngredientDetail({
     };
 
     return (
-        <div className="ingredient-detail-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
-            <div className="w-full max-w-107.5 bg-white h-full relative overflow-hidden flex flex-col shadow-2xl">
+        <PageShell className="ingredient-detail-screen">
+
                 {/* Header Actions */}
                 <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
                     <button
@@ -81,7 +82,7 @@ export default function IngredientDetail({
                     />
                 </div>
 
-                <main className="ingredient-detail-content flex-1 min-h-0 overflow-y-auto scrollbar-hide px-5 pb-6">
+                <main className="ingredient-detail-content flex-1 min-h-0 scrollbar-hide px-5 pb-6">
                     {/* Image Preview */}
                     <div className="flex items-center gap-5 mb-8">
                         <div className="w-24 h-24 shrink-0 bg-gray-100 rounded-full overflow-hidden">
@@ -177,7 +178,7 @@ export default function IngredientDetail({
 
                 {/* === Bottom Navigation === */}
                 <BottomMenu activeTab={activeTab} setActiveTab={tab => { if (!isSaving) setActiveTab(tab); }} />
-            </div>
-        </div>
+
+        </PageShell>
     );
 }

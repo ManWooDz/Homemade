@@ -218,6 +218,8 @@ Normal variable weights 400–900 are self-hosted as Thai, Latin and Latin-exten
 
 HomeMade is an Operate-mode interface built as a centered mobile workspace. The app shell fills the viewport, stays at or below 430px wide, and sits on a quiet gray surround on larger screens. It does not fan out into a desktop dashboard.
 
+Authenticated lists and forms use document scrolling through PageShell with a `100dvh` minimum height. BottomMenu stays fixed to the viewport within the430px frame and owns safe-area padding; measured navigation/action heights reserve content clearance. Headers scroll with the page. Recipe sheets keep bounded `100dvh` frames and their existing gestures; sheets/popups lock the background and restore its position when closed. Auth/onboarding retain their existing layouts. Native Safari toolbar and keyboard behavior still require hardware verification.
+
 Page content normally uses 20–24px horizontal padding; auth and focused form screens may use 24–32px. The recurring rhythm is 8px for tight relationships, 12–16px within components, 20–24px between sections, and 32px for major separation. Headers keep the logo or title centered, while primary navigation stays anchored to the bottom with enough content padding to avoid overlap.
 
 Recipe and favorite cards use a two-column grid with a 16px gap. Nutrition macros use a three-column grid with a 12px gap. Filters and chips may scroll horizontally rather than compressing labels or adding desktop-only density.
