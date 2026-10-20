@@ -65,8 +65,100 @@ class IngredientTests(unittest.TestCase):
     def test_thai_sara_am_normalization(self):
         self.assertTrue(check_ingredients(recipe(adjusted_ingredients=["นํ้าเปล่าเล็กน้อย 1 ถ้วย"]), [])[0])
 
+    def test_ranges_preserve_every_reviewed_catalog_identity(self):
+        for canonical, aliases in CATALOG_ALIASES.items():
+            for name in (canonical, *aliases):
+                with self.subTest(canonical=canonical, name=name):
+                    candidate = recipe(adjusted_ingredients=[name + " 5-7 กรัม"])
+                    self.assertEqual(check_ingredients(candidate, [canonical]), (True, "OK"))
+                    self.assertEqual(unknown_ingredients(candidate, [canonical]), [])
+
+    def test_ranges_for_counts_seasonings_and_selected_non_catalog_names(self):
+        for name, selected, amount in [
+            ("พริกขี้หนู", "bird's eye chilies", "5-7 เม็ด"),
+            ("หมูสับ", "minced pork", "100 - 150 กรัม"),
+            ("น้ำปลา", "fish sauce", "1-2 ช้อนชา"),
+            ("truffle", "truffle", "5-7 g"),
+            ("เห็ดที่ผู้ใช้ระบุ", "เห็ดที่ผู้ใช้ระบุ", "5-5 กรัม"),
+        ]:
+            with self.subTest(name=name, amount=amount):
+                candidate = recipe(adjusted_ingredients=[name + " " + amount],
+                                   instructions=["Boil " + name + "."], recipe_name=name)
+                self.assertEqual(check_ingredients(candidate, [selected]), (True, "OK"))
+                self.assertEqual(check_logic(candidate), (True, "OK"))
+                self.assertEqual(check_core(candidate, [selected]), (True, "OK"))
+
+    def test_invalid_range_values_are_quantity_errors_not_unknown_foods(self):
+        for amount in ["0-7", "-1-7", "5-0", "5--7", "7-5", "nan-7", "5-inf", "1/0-2", "1-2/0", "9" * 400 + "-7"]:
+            for name in ["พริกขี้หนู", "truffle"]:
+                with self.subTest(amount=amount, name=name):
+                    candidate = recipe(adjusted_ingredients=[name + " " + amount + " g"])
+                    self.assertEqual(unknown_ingredients(candidate, [name]), [])
+                    self.assertTrue(check_ingredients(candidate, [name])[1].startswith("Invalid ingredient quantity:"))
+
+    def test_malformed_or_unselected_ranges_do_not_gain_admission(self):
+        for line in ["พริกขี้หนู 5-7-9 เม็ด", "พริกขี้หนู 5-unknown เม็ด", "กุ้ง 5-7 กรัม"]:
+            self.assertFalse(check_ingredients(recipe(adjusted_ingredients=[line]), ["bird's eye chilies"])[0], line)
+
+    def test_generic_egg_is_not_a_reverse_admission_alias_for_chicken_egg(self):
+        for selected, declared in [
+            ("egg", "ไข่ไก่"), ("ไข่ไก่", "egg"), ("ไข่ไก่", "ไข่เป็ด"),
+            ("egg", "soft-boiled egg"), ("pork", "minced pork"),
+            ("minced pork", "pork"), ("beef", "beef steak"),
+            ("bell pepper", "yellow bell pepper"), ("milk", "cow milk"),
+            ("holy basil leaves", "thai basil"),
+        ]:
+            self.assertFalse(check_ingredients(recipe(adjusted_ingredients=[declared + " 1 ฟอง"]), [selected])[0])
+
 
 class CookingTests(unittest.TestCase):
+    def test_reviewed_directional_step_and_title_references(self):
+        references = {
+            "minced pork": ("pork", "หมู", "เนื้อหมู"),
+            "pork belly (chashu)": ("pork", "หมู", "ชาชู"),
+            "beef steak": ("beef", "เนื้อวัว"),
+            "soft-boiled egg": ("egg", "ไข่"),
+            "ไข่ไก่": ("egg", "ไข่"),
+            "holy basil leaves": ("basil",),
+            "yellow bell pepper": ("bell pepper", "พริกหวาน"),
+            "black pepper": ("pepper", "พริกไทย"),
+            "palm sugar": ("sugar", "น้ำตาล"),
+            "olive oil": ("oil", "น้ำมัน"),
+            "vegetable oil": ("oil", "น้ำมัน"),
+            "cow milk": ("milk", "นม"),
+            "pork": ("หมู", "เนื้อหมู"), "chicken": ("ไก่",), "beef": ("เนื้อวัว",),
+        }
+        for declared, short_names in references.items():
+            for short in short_names:
+                with self.subTest(declared=declared, short=short):
+                    candidate = recipe(adjusted_ingredients=[declared + " 10 g"],
+                                       instructions=["Boil " + short + "."], recipe_name=short)
+                    self.assertEqual(check_logic(candidate), (True, "OK"))
+                    self.assertEqual(check_core(candidate, [declared]), (True, "OK"))
+
+    def test_chicken_egg_must_be_declared_and_generic_egg_must_be_unambiguous(self):
+        missing = recipe(instructions=["ต้มไข่ให้สุก"])
+        self.assertIn("Undeclared ingredient", check_logic(missing)[1])
+        for declared, short in [
+            (["ไข่ไก่ 1 ฟอง", "ไข่ต้มยางมะตูม 1 ฟอง"], "ไข่"),
+            (["หมูสับ 100 กรัม", "หมูสามชั้นชาชู 100 กรัม"], "หมู"),
+        ]:
+            candidate = recipe(adjusted_ingredients=declared, instructions=["ต้ม" + short], recipe_name=short)
+            self.assertIn("Ambiguous ingredient", check_logic(candidate)[1])
+            self.assertIn("Ambiguous named ingredient", check_core(candidate, [])[1])
+
+    def test_similar_foods_do_not_become_directional_substitutes(self):
+        for declared, used in [
+            ("ไข่ไก่", "ไข่เป็ด"), ("egg", "ไข่ไก่"), ("egg", "eggplant"),
+            ("ไข่ไก่", "egg noodles"), ("holy basil leaves", "thai basil"),
+            ("holy basil leaves", "โหระพา"), ("cow milk", "soy milk"),
+            ("cow milk", "นมอัลมอนด์"), ("minced pork", "หมูสามชั้น"),
+            ("bell pepper", "yellow bell pepper"),
+        ]:
+            with self.subTest(declared=declared, used=used):
+                candidate = recipe(adjusted_ingredients=[declared + " 10 g"], instructions=["Boil " + used + "."])
+                self.assertFalse(check_logic(candidate)[0])
+
     def test_longer_different_foods_do_not_match_short_declared_names(self):
         for items, instruction in [
             (["หมูสับ 100 g", "น้ำเปล่า 100 ml"], "เติมน้ำส้มสายชูแล้วต้มหมูสับให้สุก"),
@@ -182,6 +274,7 @@ class CoreNutritionTests(unittest.TestCase):
         for text in ["หมูสับ", "กุยช่าย", "น้ำพริกเผา", "ทุกวัตถุดิบที่ใช้ในขั้นตอน", "adjusted_ingredients", "ตามชอบ", "เฉพาะผัดไทย/ผัดกะเพรา"]:
             self.assertIn(text, prompt)
         self.assertNotIn("มะกอกคาลามาตา", prompt)
+        self.assertIn("ปริมาณเดียว", prompt)
 
 
 if __name__ == "__main__":

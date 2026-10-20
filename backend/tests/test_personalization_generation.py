@@ -148,6 +148,13 @@ class PersonalizationGenerationPromptTests(unittest.TestCase):
         digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         self.assertEqual(
             digest,
+            "a7b4709052ee443296fc0edfdd7909efa42c64127627de26f9700af3f710d6c7",
+        )
+        # Only the approved quantity guidance changes the prior prompt bytes.
+        guidance = "หากระบุปริมาณได้ ให้ใช้ปริมาณเดียวแทนช่วง เช่น 6 เม็ด แทน 5-7 เม็ด เพื่อคำนวณโภชนาการได้ชัดเจน\n"
+        self.assertEqual(prompt.count(guidance), 1)
+        self.assertEqual(
+            hashlib.sha256(prompt.replace(guidance, "").encode("utf-8")).hexdigest(),
             "2b644a72bc6e151c51e949f1d2d110ca1e87bc9e5c96e0ec10576c4f013a7ccb",
         )
 

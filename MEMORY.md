@@ -1,5 +1,25 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Search prompt digest fixtures before changing generation guidance (2026-10-20):**
+- what: initial checker/handler regressions passed, but full1023test run found one failure in the personalization test's frozen full-prompt digest after an intentionally added quantity sentence. The necessary related fixture became a fourth backend path and was announced before editing.
+- root cause: initial caller/test inspection did not discover the prompt SHA256 assertion in the personalization suite.
+- correct: search generation/personalization tests for digest/hash/byte snapshots before changing shared prompt text. Preserve byte-level assertions, update only the reviewed expectation, and verify removing the exact intended addition restores the previous digest before rerunning targeted/full regression.
+
+**Validate directional title ambiguity and keep range quantities out of numeric nutrition (2026-10-20):**
+- what: approved regression expansion found title references could pass with multiple declared targets, and confirmed scalar-only parsing rejected valid ranges across the catalog. Red checker32tests failed158subcases; red handler27tests failed3new cases. The sandbox handler attempt stalled without output; the bounded host run provided the actual red evidence. Green targeted32+27checks,18related prompt tests and original repro pass; final full1023run/1021pass/2skipped/guard0. Retained30SQLite cleanup/reset ERROR messages separately; their cause was not diagnosed by this fix.
+- root cause: Core checked only target existence while Logic also checked uniqueness; quantity syntax and ingredient identity shared a scalar-only parser. Sandbox execution could not complete the handler run; no new application cause is inferred from that stall.
+- correct: require one target for generic step/title references; preserve admission identities separately from directional names. Validate range endpoints without replacing them by an invented exact nutrition quantity. Use real-calculator synthetic integration assertions to verify partial status, and retain the original offline guards on bounded host reruns when sandbox tests stall.
+
+**Separate quantity syntax and directional references from ingredient admission (2026-10-20 diagnosis):**
+- what: synthetic recipes declaring ไข่ไก่ but using ไข่ in a step fail as undeclared; selected พริกขี้หนู 5-7 เม็ด fails as an unknown ingredient. Existing24checker tests pass despite both cases. Backend fix remains unapproved/unapplied.
+- root cause: missing directional chicken-egg short reference and scalar-only quantity-tail parsing; the reviewed identity table intentionally forbids automatically equating generic egg with chicken egg.
+- correct: reproduce both cases before changing code; preserve reviewed ingredient identities, add directional references only after approval, and separate recognized ingredient identity from quantity validation. Never turn a numeric range into an invented nutrition quantity. Obtain the required backend approval before editing source/tests.
+
+**Bound diagnosis reads before dispatch (2026-10-20):**
+- what: initial whole-spec and combined source/history reads repeated truncation; broad docs discovery touched denied held-out directory names without reading contents, and guessed optional source paths/globs were absent.
+- root cause: set output limits after selecting oversized inputs and reused guessed paths instead of exact-path discovery.
+- correct: read spec current-state sections first, discover exact source paths with narrow rg --files scopes, exclude held-out/private archives and venv from discovery, and cap each requested excerpt before batching. Treat truncated output and absent-path probes as incomplete inspection, never verification.
+
 **Use DOM locator names when CSS changes displayed casing (2026-10-20):**
 - what: the accessibility view displayed Egg, but an exact Playwright button locator using Egg found no match; the DOM snapshot exposed the original lowercase egg and the corrected locator completed the synthetic flow.
 - root cause: assumed CSS first-letter transformation changes the locator's accessible-name matching in the same way as the native accessibility view.
@@ -1024,3 +1044,9 @@
 - what: Docker template inspection failed on the live container's absent HostConfig.Tmpfs key after inspecting the test successfully. PDF rendering succeeded but pdftotext was unavailable; the fallback extraction then failed printing private-use Thai glyphs to a cp874 console before successful UTF-8 rerun. No PDF/container/DB source mutation occurred.
 - root cause: assumed optional Docker fields and a sibling Poppler executable from other detected capabilities; did not apply the existing safe-console rule to the new extraction script.
 - correct: inspect optional Docker fields separately or null-safely and verify each executable before use. Configure UTF-8/backslashreplace before printing PDF extraction, retain raw PDF bytes despite parser recovery warnings, compare partial extracts without overwriting, and cross-check complete rendered pages. Check transport/command/parsing status separately; never relabel failed probes as passes or install/normalize/delete without authority.
+
+
+**Bound large instruction-file reads (2026-10-20):**
+- what happened: combined full spec/MEMORY output exceeded the tool output budget during OmniRoute guidance.
+- root cause: requested both large project records without a per-file output bound.
+- correct behavior: read bounded current spec sections and relevant MEMORY matches separately; never treat truncated output as a complete read.

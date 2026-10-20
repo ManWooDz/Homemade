@@ -189,6 +189,60 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.mock_save_history.assert_not_called()
         self.mock_compute_nutrition.assert_not_called()
 
+    @staticmethod
+    def basil_egg_case():
+        names = ["minced pork", "holy basil leaves", "garlic", "bird's eye chilies",
+                 "oyster sauce", "soy sauce", "fish sauce", "sugar", "vegetable oil", "ไข่ไก่"]
+        request = GenerateRecipeTextRequest(
+            recipe={"name": "Stir-Fried Basil with pork"},
+            ingredients=[{"name": name} for name in names],
+            preferences={"taste": "เผ็ดปานกลาง", "allergies": "ไม่มีอาการแพ้", "equipment": "เตาไฟฟ้า", "extra": ""},
+        )
+        candidate = deepcopy(VALID_RECIPE)
+        candidate["recipe_name"] = "ผัดกะเพราหมูและไข่"
+        candidate["adjusted_ingredients"].extend(["ไข่ไก่ 1 ฟอง", "พริกขี้หนู 5-7 เม็ด"])
+        candidate["instructions"].extend(["ต้มไข่ให้สุก", "ใส่พริกขี้หนูแล้วผัดหมูและใบกะเพรา"])
+        return request, candidate
+
+    async def test_basil_chicken_egg_range_passes_and_real_nutrition_abstains(self):
+        request, candidate = self.basil_egg_case()
+        self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
+        with patch("main.call_agentic_llm", return_value=candidate) as generator, \
+             patch("nutrition.calculator.match_ingredient", return_value=synthetic_match(alias="หมูสับ")) as lookup, \
+             patch("builtins.print") as print_log:
+            response = await call_handler(request)
+        self.assertEqual(response["status"], "success")
+        generator.assert_called_once()
+        data = response["data"]
+        self.assertIn("พริกขี้หนู 5-7 เม็ด", data["adjusted_ingredients"])
+        self.assertIs(data["nutrition_partially_estimated"], True)
+        self.assertEqual(data["nutrition"], candidate["nutrition"])
+        self.assertIn("computed_nutrition", data)
+        self.assertNotIn("พริกขี้หนู", [call.args[1] for call in lookup.call_args_list])
+        self.assertTrue(any("quantity not determined: พริกขี้หนู 5-7 เม็ด" in str(call) for call in print_log.call_args_list))
+        self.mock_save_history.assert_called_once()
+
+    async def test_missing_egg_feedback_can_be_corrected_without_exhaustion(self):
+        request, corrected = self.basil_egg_case()
+        missing = deepcopy(corrected)
+        missing["adjusted_ingredients"].remove("ไข่ไก่ 1 ฟอง")
+        with patch("main.call_agentic_llm", side_effect=[missing, corrected]) as generator:
+            response = await call_handler(request)
+        self.assertEqual(response["status"], "success")
+        self.assertEqual(generator.call_count, 2)
+        self.assertIn("Undeclared ingredient", generator.call_args.kwargs["feedback"])
+
+    async def test_missing_egg_still_exhausts_without_saving_or_calculating(self):
+        request, missing = self.basil_egg_case()
+        missing["adjusted_ingredients"].remove("ไข่ไก่ 1 ฟอง")
+        with patch("main.call_agentic_llm", return_value=missing) as generator:
+            response = await call_handler(request)
+        self.assertEqual(response["status"], "error")
+        self.assertEqual(generator.call_count, 3)
+        self.assertIn("Undeclared ingredient", generator.call_args.kwargs["feedback"])
+        self.mock_save_history.assert_not_called()
+        self.mock_compute_nutrition.assert_not_called()
+
     async def test_handler_retries_missing_or_wrong_nutrient_value(self):
         invalid_recipes = []
 

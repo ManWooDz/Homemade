@@ -86,6 +86,7 @@ _SHORT_NAMES = {
     "pork belly (chashu)": ("pork", "หมู", "ชาชู"),
     "beef steak": ("beef", "เนื้อวัว"),
     "soft-boiled egg": ("egg", "ไข่"),
+    "ไข่ไก่": ("egg", "ไข่"),
     "holy basil leaves": ("basil",),
     "yellow bell pepper": ("bell pepper", "พริกหวาน"),
     "black pepper": ("pepper", "พริกไทย"),
@@ -100,10 +101,11 @@ _DISTINCT_NAMES = ("eggplant", "ไข่ไก่", "ไข่เป็ด", "�
                    "soy milk", "oat milk", "almond milk", "กะทิ", "น้ำมันงา", "น้ำมันมะพร้าว",
                    "น้ำส้มสายชู", "egg noodles", "rice", "cooked rice", "ข้าว", "ข้าวสวย", "ข้าวสาร")
 _AMOUNT = r"[+\-−]?(?:\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)?|nan|inf(?:inity)?)"
-_QUANTITY = re.compile(rf"(?P<amount>{_AMOUNT})\s*(?:[a-zก-๙.]+)?", re.I)
+_AMOUNT_OR_RANGE = rf"{_AMOUNT}(?:\s*-\s*{_AMOUNT})?"
+_QUANTITY = re.compile(rf"(?P<amount>{_AMOUNT})(?:\s*-\s*(?P<upper>{_AMOUNT}))?\s*(?:[a-zก-๙.]+)?", re.I)
 _VAGUE = r"(?:เล็กน้อย|ตามชอบ|พอประมาณ|ตามต้องการ|to taste|as needed)"
 _VAGUE_TAIL = re.compile(rf"(?:\({_VAGUE}\)|{_VAGUE})(?:\s+{_AMOUNT}\s*[a-zก-๙.]+)?", re.I)
-_UNLISTED_LINE = re.compile(rf"(.+?)\s+({_AMOUNT})\s*([a-zก-๙.]+)$", re.I)
+_UNLISTED_LINE = re.compile(rf"(.+?)\s+({_AMOUNT_OR_RANGE})\s*([a-zก-๙.]+)$", re.I)
 _CLAUSE_BREAK = re.compile(r"[.!?;\n]|แต่|แล้ว|จากนั้น|\b(?:but|then)\b")
 _THAI_ACTION = r"ใส่|เติม|ใช้|ผสม|คลุก|ผัด|ทอด|ต้ม|โรย|เสิร์ฟ|ตั้ง|อุ่น|เจียว|คั่ว|ย่าง|อบ|หมัก|ทา"
 _EN_ACTION = r"add|use|mix|combine|blend|coat|heat|fr(?:y|ying|ied)|stir[- ]fr(?:y|ying|ied)|cook|boil|serve|season|marinate|saute|sauté"
@@ -143,13 +145,20 @@ def _quantity_ok(tail):
     if match is None:
         return None
     try:
-        token = match["amount"].replace("−", "-")
-        if "/" in token:
-            numerator, denominator = token.split("/")
-            value = float(numerator) / float(denominator)
-        else:
-            value = float(token)
-        return math.isfinite(value) and value > 0
+        values = []
+        for token in (match["amount"], match["upper"]):
+            if token is None:
+                continue
+            token = token.replace("−", "-")
+            if "/" in token:
+                numerator, denominator = token.split("/")
+                value = float(numerator) / float(denominator)
+            else:
+                value = float(token)
+            if not math.isfinite(value) or value <= 0:
+                return False
+            values.append(value)
+        return values[0] <= values[-1]
     except (ValueError, OverflowError, ZeroDivisionError):
         return False
 
@@ -321,8 +330,11 @@ def check_core(recipe, user_ingredients):
         previous_end = end
         if absent:
             continue
-        if not _targets(key, declared):
+        targets = _targets(key, declared)
+        if not targets:
             return False, f"Missing named ingredient: {text}; use it in the recipe or rename the dish"
+        if len(targets) != 1:
+            return False, f"Ambiguous named ingredient: {text}; use its declared full name"
     return True, "OK"
 
 
@@ -338,6 +350,7 @@ def ingredient_prompt_guidance(ingredients):
         "ทุกวัตถุดิบที่ใช้ในขั้นตอน รวมเครื่องปรุงพื้นฐาน ต้องอยู่ใน adjusted_ingredients ด้วย ห้ามลืมประกาศ\n"
         "ใช้ชื่อที่ระบุข้างต้น ถ้าไม่มีคู่ชื่อไทยให้คงชื่อต้นฉบับ ห้ามเดาวัตถุดิบต่างชนิดหรือส่วน\n"
         "ปริมาณที่ระบุเป็นตัวเลขต้องมากกว่าศูนย์ เครื่องปรุงเขียนตามชอบได้ ห้ามแต่งกรัมแทน\n"
+        "หากระบุปริมาณได้ ให้ใช้ปริมาณเดียวแทนช่วง เช่น 6 เม็ด แทน 5-7 เม็ด เพื่อคำนวณโภชนาการได้ชัดเจน\n"
         "ชื่อเมนูต้องตรงกับวัตถุดิบที่ใช้จริง เปลี่ยนของหลักและชื่อได้\n"
         "กฎ Flavor ของ HomeMade เฉพาะผัดไทย/ผัดกะเพรา: ไม่ผัดนมวัวกับน้ำปลา หรือช็อกโกแลตกับกระเทียมรวมในส่วนเดียวกัน "
         "ไม่ใช่ข้อห้ามคู่ส่วนผสมสำหรับทุกเมนู\n"
