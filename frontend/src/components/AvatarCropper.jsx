@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Cropper from "react-easy-crop";
+import { Minus, Plus } from "lucide-react";
 import { useLocale } from "../context/LocaleContext";
 import { cropAvatar } from "../utils/profileValidation";
 
@@ -33,22 +34,32 @@ export default function AvatarCropper({ source, onConfirm, onCancel }) {
         }
     };
     return (
-        <section className="px-5 pb-8 flex flex-col gap-5">
-            <h1 ref={heading} tabIndex={-1} className="text-xl font-bold text-gray-900 outline-none">{t("ครอปรูปโปรไฟล์")}</h1>
-            <p id="crop-help" className="text-sm text-gray-600">{t("ลากรูปเพื่อจัดตำแหน่ง ใช้ปุ่มลูกศรเลื่อนรูปได้")}</p>
-            <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-gray-900">
+        <section aria-labelledby="avatar-crop-heading" className="avatar-cropper px-6 pb-8">
+            <h1 id="avatar-crop-heading" ref={heading} tabIndex={-1} className="text-2xl font-bold leading-normal text-gray-900 outline-none">{t("ครอปรูปโปรไฟล์")}</h1>
+            <p id="crop-help" className="mt-2 text-caption text-gray-600">{t("ลากรูปเพื่อจัดตำแหน่ง ใช้ปุ่มลูกศรเลื่อนรูปได้")}</p>
+            <div className="avatar-crop-stage relative mt-5 w-full overflow-hidden rounded-2xl bg-gray-900">
                 <Cropper image={source} crop={crop} zoom={zoom} aspect={1} cropShape="round" showGrid={false} zoomWithScroll={false}
                     onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, pixels) => setArea(pixels)}
                     setImageRef={ref => { image.current = ref.current; }}
                     mediaProps={{ onError: () => { setImageFailed(true); setError(t("เลือกรูป JPG, PNG หรือ WebP ที่เปิดอ่านได้")); } }}
-                    cropperProps={{ "aria-label": t("รูปโปรไฟล์"), "aria-describedby": "crop-help" }} keyboardStep={10} />
+                    cropperProps={{ "aria-label": t("รูปโปรไฟล์"), "aria-describedby": "crop-help", "aria-disabled": busy, tabIndex: busy ? -1 : 0 }} keyboardStep={10}
+                    style={{ cropAreaStyle: { border: "2px solid white" }, containerStyle: { pointerEvents: busy ? "none" : "auto" } }} />
             </div>
-            <label htmlFor="avatar-zoom" className="text-sm font-semibold text-gray-900">{t("ซูม")} {Math.round(zoom * 100)}%</label>
-            <input id="avatar-zoom" type="range" min="1" max="3" step="0.05" value={zoom} onChange={event => setZoom(Number(event.target.value))} disabled={busy} className="w-full min-h-11 accent-[#B93E25] focus-visible:outline-2 focus-visible:outline-[#B93E25]" />
-            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-            <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={onCancel} disabled={busy} className="min-h-11 px-4 rounded-full border border-gray-400 text-gray-700 focus-visible:outline-2 focus-visible:outline-[#B93E25]">{t("ยกเลิก")}</button>
-                <button type="button" onClick={confirm} disabled={busy || !area || imageFailed} className="min-h-11 px-4 rounded-full bg-[#B93E25] text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]">{t(busy ? "กำลังเตรียมรูป..." : "ยืนยันครอป")}</button>
+            <div className="mt-5">
+                <div className="flex items-baseline justify-between gap-3">
+                    <label htmlFor="avatar-zoom" className="text-base font-semibold text-gray-900">{t("ซูม")}</label>
+                    <span aria-hidden="true" className="font-semibold tabular-nums text-[#b93e25]">{Math.round(zoom * 100)}%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Minus aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-500" />
+                    <input id="avatar-zoom" type="range" min="1" max="3" step="0.05" value={zoom} aria-valuetext={`${Math.round(zoom * 100)}%`} onChange={event => setZoom(Number(event.target.value))} disabled={busy || imageFailed} className="min-h-11 min-w-0 flex-1 accent-[#b93e25]" />
+                    <Plus aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-500" />
+                </div>
+            </div>
+            {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-base text-red-800">{error}</p>}
+            <div className="mt-6 grid grid-cols-2 gap-3">
+                <button type="button" onClick={onCancel} disabled={busy} className="min-h-12 rounded-full border border-gray-400 px-4 font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50">{t("ยกเลิก")}</button>
+                <button type="button" onClick={confirm} disabled={busy || !area || imageFailed} aria-busy={busy} className="min-h-12 rounded-full bg-[#b93e25] px-4 font-semibold text-white hover:bg-[#9f351f] disabled:opacity-50">{t(busy ? "กำลังเตรียมรูป..." : "ยืนยันครอป")}</button>
             </div>
         </section>
     );

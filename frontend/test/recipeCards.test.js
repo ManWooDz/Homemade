@@ -19,6 +19,22 @@ const result = await build({
 const compiled = { exports: {} };
 new Function("require", "module", "exports", result.outputFiles[0].text)(require, compiled, compiled.exports);
 const { Detail, Cooking, Instructions, setLocale } = compiled.exports;
+for (const [locale, title, note] of [
+  ["th", "กำลังสร้างสูตรอาหาร...", "เริ่มต้นจากวัตถุดิบที่คุณเลือก"],
+  ["en", "Creating your recipe...", "Starting with your chosen ingredients"],
+]) {
+  test(`generation screen takes precedence over stale recipe/error and exposes one stable status (${locale})`, () => {
+    setLocale(locale);
+    const html = renderToStaticMarkup(createElement(Cooking, {
+      isGenerating: true, generatedRecipe: { recipe_name: "Stale recipe" }, generateError: "Old error",
+    }));
+    assert.ok(html.includes(title));
+    assert.ok(html.includes(note));
+    assert.equal((html.match(/role="status"/g) || []).length, 1);
+    assert.match(html, /<main aria-labelledby="recipe-generating-title"/);
+    assert.doesNotMatch(html, /Stale recipe|Old error|aria-valuenow|role="progressbar"|<nav/);
+  });
+}
 const recipe = { id: 1, name: "Vegetable Bowl", recipe_name: "Vegetable Bowl", ingredients: [{ name: "Kale" }], adjusted_ingredients: ["Kale 200 g"],
   servings: 2, tags: ["Vegan"], diet_tags: ["Vegan"], instructions: ["1. Prepare\nWash the kale.", "2. Cook until tender."],
   nutrition: { basis: "per_serving", calories: 320, carbs_g: 42, protein_g: 12, fat_g: 8 }, nutrition_partially_estimated: true, safety_warning: "Keep the allergy warning." };

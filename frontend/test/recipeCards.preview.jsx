@@ -41,7 +41,7 @@ export default function Preview(){
   const [receipt,setReceipt]=useState('');
   const [favorite,setFavorite]=useState(false);
   const [mode,setMode]=useState(params.get('view')||'detail');
-  const common={recipe:base,onBack:()=>setReceipt('back'),activeTab:'cooking',setActiveTab:tab=>setReceipt('nav:'+tab)};
+  const common={recipe:base,onBack:()=>setReceipt('back'),activeTab:'cooking',isGenerating:mode==='loading',setActiveTab:tab=>setReceipt('nav:'+tab)};
   return <><output className="sr-only">{receipt}</output>{mode==='detail'?<RecipeDetail {...common} isFavorite={favorite} onToggleFavorite={()=>setFavorite(v=>!v)} onConfirm={selected=>{setReceipt('selected:'+selected.map(i=>i.name).join(','));setMode('cooking')}}/>:<CookingPage {...common} generatedRecipe={generated} isCustom={mode==='custom'} historyItem={{id:1,is_favorite:favorite}} onToggleFavorite={()=>setFavorite(v=>!v)} onRateRecipe={async()=>{setReceipt('rated');return true}}/>}</>;
 }
 createRoot(document.getElementById('root')).render(<AuthProvider><LocaleProvider><Preview/></LocaleProvider></AuthProvider>);

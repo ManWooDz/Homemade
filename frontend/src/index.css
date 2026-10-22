@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+.recipe-generating ::selection { background: #fdece5; color: #111827; }
+.recipe-generating-illustration { display: grid; place-items: center; width: 144px; height: 144px; border-radius: 50%; background: #fdece5; color: #b93e25; }
+.recipe-generating-swap { animation: recipe-note-appear 450ms cubic-bezier(0.16, 1, 0.3, 1); }
+.recipe-generating-dots span { width: 6px; height: 6px; border-radius: 50%; background: #b93e25; animation: recipe-wait 1.8s ease-in-out infinite; }
+.recipe-generating-dots span:nth-child(2) { animation-delay: 200ms; }
+.recipe-generating-dots span:nth-child(3) { animation-delay: 400ms; }
+@keyframes recipe-note-appear { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes recipe-wait { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+@media (max-height: 680px) {
+  .recipe-generating header { padding-top: 16px; }
+  .recipe-generating header img { width: 56px; height: 56px; }
+  .recipe-generating main { padding-block: 16px; }
+  .recipe-generating main > div { padding-block: 0; }
+  .recipe-generating-illustration { width: 96px; height: 96px; }
+  .recipe-generating-illustration svg { width: 48px; height: 48px; }
+  .recipe-generating-status { margin-top: 24px; }
+  .recipe-generating-dots { margin-top: 16px; }
+  .recipe-generating-note { margin-top: 20px; padding-top: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recipe-generating-swap, .recipe-generating-dots span { animation: none; }
+}
+
 /* Pages scroll with the document; only sheets own an inner vertical scroller. */
 .page-frame { min-height: 100dvh; padding-bottom: var(--page-bottom-clearance, 89px); }
 .page-frame--contained { height: 100dvh; min-height: 0; padding-bottom: 0; overflow: hidden; }
@@ -17,6 +40,12 @@
 .profile-main-notifications { top: 48px; }
 .profile-main-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .profile-main-screen ::selection { background: #fdece5; color: #111827; }
+
+:is(.profile-editor, .avatar-cropper) :is(button, input):focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
+:is(.profile-editor, .avatar-cropper) ::selection { background: #fdece5; color: #111827; }
+.profile-editor input { caret-color: #b93e25; }
+.avatar-crop-stage { height: clamp(180px, calc(100dvh - 540px), 300px); }
+.avatar-crop-stage .reactEasyCrop_CropArea:focus-visible { outline: 2px solid #ef5a3a; outline-offset: -6px; }
 
 .profile-preferences-screen :focus-visible { outline: 2px solid #b93e25; outline-offset: 3px; }
 .profile-preferences-screen ::selection { background: #fdece5; color: #111827; }

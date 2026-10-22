@@ -1,12 +1,13 @@
 import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { useState } from "react";
-import { ChevronLeft, ChefHat, Heart, Star } from "lucide-react";
+import { ChevronLeft, Heart, Star } from "lucide-react";
 import { motion as Motion, useMotionValue, animate } from "framer-motion";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import RecipeContent from "../components/RecipeContent";
 import RecipeSheet from "../components/RecipeSheet";
+import RecipeGenerating from "../components/RecipeGenerating";
 
 export default function CookingPage({
   recipe,
@@ -100,25 +101,7 @@ export default function CookingPage({
 
   // Loading Screen
   if (isGenerating) {
-    return (
-      <PageShell contained key="loading" frameClassName="items-center justify-center space-y-6">
-
-          <Motion.div
-            initial={{ opacity: 0.5, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1.1 }}
-            transition={{
-              repeat: Infinity,
-              duration: 1,
-              repeatType: "reverse",
-            }}
-          >
-            <ChefHat className="w-24 h-24 text-[#EF5A3A] drop-shadow-lg" />
-          </Motion.div>
-          <h2 className="text-2xl font-bold text-gray-800 tracking-wide">{t("กำลังคิดค้นเมนู...")}</h2>
-          <p className="text-gray-500 text-center px-8">{t("เชฟ AI กำลังนำวัตถุดิบและเงื่อนไขของคุณมาปรุงเป็นสูตรพิเศษ")}</p>
-
-      </PageShell>
-    );
+    return <RecipeGenerating />;
   }
 
   // Fallback if no recipe generated successfully yet

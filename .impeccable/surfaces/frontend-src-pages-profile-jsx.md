@@ -2,10 +2,21 @@
 version: 1
 slug: "frontend-src-pages-profile-jsx"
 primary_target: "frontend/src/pages/Profile.jsx"
-related_targets: ["frontend/src/components/ProfileEditor.jsx", "frontend/src/components/NotificationBell.jsx"]
+related_targets: ["frontend/src/components/ProfileEditor.jsx", "frontend/src/components/AvatarCropper.jsx", "frontend/src/components/NotificationBell.jsx"]
 ---
 
 # Profile main
+
+## Edit profile and avatar crop refinement (2026-10-23)
+
+Mode: Operate. User explicitly includes the Edit subview and crop flow. Preserve the430px shell, existing logo/Back/navigation geometry, Thai font, white/orange palette, account handlers and all validation/export rules. Earlier exclusions of editor presentation are superseded for this scope only.
+
+- Use24px page titles, a labelled picture section,112px circular blush fallback, an outlined44px picture picker and quieter default-picture action. Keep file constraints and name guidance at14px, the name label/input at16px,48px input/actions and24px section rhythm. Keep actions in the document flow with existing navigation clearance. English actions may wrap into separate centered rows at320px.
+- Focus the page heading on entry/return from crop, so opening the editor does not automatically focus the name input and summon the mobile keyboard. Invalid names still focus the input. Keep the real file input hidden behind its visible labelled action.
+- Crop retains the existing1:1 round preview,1–3zoom,10px arrow-key movement and512px white-backed JPEG export. Size the relative stage with clamp(180px,100dvh minus540px,300px), use a2px white crop outline, and scope the keyboard focus outline to the installed library's actual focusable CropArea. Separate zoom label from percentage, expose aria-valuetext and keep the range44px high.48px Cancel/Confirm remain in the scroll flow. Disable pointer interaction/crop tab stop during export, and disable zoom when the image fails.
+- Preserve draft name/picture when cancelling crop, explicit final Save, object-URL cleanup, abort/account protections and error handling. Error messages gain readable tinted blocks; name input describes its visible error. No new copy, package, asset, API, backend or data contract.
+
+Verification:6new Thai/English editor/crop render checks pass; existing related tests7pass, while the global source-translation audit fails on the unrelated missing App.jsx key เอาออก (outside this task). Scoped lint/build pass; detector[] during pass. Browser320px Thai/English,430px Thai and1280px crop verify drag/keyboard/zoom, real512px export, cancel/draft retention, replace/remove saves, invalid-name focus, unreadable-image recovery and save-error retention. Final fresh console errors[]; short screens use document scrolling and actions are reachable above navigation. Native file chooser was blocked by extension file-URL permission; the synthetic fixture feeds a served project logo through the real file input/change handler instead. No permission change, real account upload or physical-phone acceptance. Evidence/verified JPEGs: `tmp/profile-editor-20261023/`.
 
 ## Preference editor refinement (2026-10-20)
 
