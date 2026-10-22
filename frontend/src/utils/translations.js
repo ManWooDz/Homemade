@@ -1,5 +1,7 @@
 // Display copy only; optional third entry preserves the original Thai lookup/payload alias.
 export const COPY = [
+    ["ครอปรูปวัตถุดิบ", "Crop ingredient picture"],
+    ["รูปวัตถุดิบ", "Ingredient picture"],
     ["แพ้ถั่วลิสง", "Peanut allergy"], ["แพ้ถั่วเปลือกแข็ง", "Tree nut allergy"],
     ["แพ้กุ้ง", "Shrimp allergy"], ["แพ้ปู/หอย", "Crab / shellfish allergy"],
     ["ไม่มีอาการแพ้", "No food allergies"], ["ไม่มีข้อจำกัดในการกิน", "No dietary preferences"],

@@ -5,9 +5,11 @@ import { ChevronLeft, Search, Upload, Loader2 } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import NutritionBox from "../components/NutritionBox";
+import AvatarCropper from "../components/AvatarCropper";
+import { profileImageError, profileErrorKey } from "../utils/profileValidation";
 import { toUserIngredientCreate } from "../utils/ingredientPayload";
 import { sortByExpiry } from "../utils/expiry";
-import { QUANTITY_UNITS } from "../utils/quantityUnits";
+import { QUANTITY_UNITS, ENGLISH_QUANTITY_LABELS } from "../utils/quantityUnits";
 import { useAuth } from "../context/AuthContext";
 
 export default function AddIngredient({
@@ -18,7 +20,7 @@ export default function AddIngredient({
     setActiveTab,
     prefill,
 }) {
-    const { t } = useLocale();
+    const { t, locale } = useLocale();
     const { apiFetch } = useAuth();
     const [name, setName] = useState(prefill?.name || "");
     const [category, setCategory] = useState(prefill?.category || "Meat & poultry");
@@ -42,6 +44,23 @@ export default function AddIngredient({
     const [quantityUnit, setQuantityUnit] = useState("");
     const [saveError, setSaveError] = useState("");
     const fileInputRef = useRef(null);
+    const [cropSource, setCropSource] = useState("");
+    const [uploadError, setUploadError] = useState("");
+    const uploadRequest = useRef(null);
+    const uploadButton = useRef(null);
+    const previousCropSource = useRef("");
+
+    useEffect(() => () => { if (cropSource) URL.revokeObjectURL(cropSource); }, [cropSource]);
+    useEffect(() => () => uploadRequest.current?.abort(), []);
+    useEffect(() => {
+        if (cropSource) previousCropSource.current = cropSource;
+        else if (!isUploading && previousCropSource.current) {
+            uploadButton.current?.focus();
+            previousCropSource.current = "";
+        }
+    }, [cropSource, isUploading]);
+
+    const closeCrop = () => setCropSource("");
 
     const inputClass = "w-full min-w-0 min-h-12 bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 placeholder:text-gray-500 focus:outline-2 focus:outline-[#B93E25]";
 
@@ -97,34 +116,46 @@ export default function AddIngredient({
         return () => clearTimeout(timer);
     }, [searchTerm, name]);
 
-    const handleFileChange = async (e) => {
+    const handleFileChange = (e) => {
         const file = e.target.files?.[0];
+        e.target.value = "";
         if (!file) return;
+        const code = profileImageError(file);
+        setUploadError(code ? profileErrorKey(code) : "");
+        if (!code) setCropSource(URL.createObjectURL(file));
+    };
+
+    const uploadCrop = async (blob) => {
+        if (uploadRequest.current) return;
+        const controller = new AbortController();
+        uploadRequest.current = controller;
+        closeCrop();
         setIsUploading(true);
-        setSearchError("");
+        setUploadError("");
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("file", blob, "ingredient.jpg");
             const response = await fetch(
                 "/api/ingredient-images/upload",
-                { method: "POST", body: formData },
+                { method: "POST", body: formData, signal: controller.signal },
             );
             const result = await response.json();
-            if (result.status === "success") {
+            if (controller.signal.aborted) return;
+            if (response.ok && result.status === "success") {
                 setSelectedImage(result.data.image);
             } else {
-                setSearchError("Upload failed");
+                setUploadError("Upload failed");
             }
         } catch {
-            setSearchError("Could not reach upload server");
+            if (!controller.signal.aborted) setUploadError("Could not reach upload server");
         } finally {
-            setIsUploading(false);
-            e.target.value = "";
+            uploadRequest.current = null;
+            if (!controller.signal.aborted) setIsUploading(false);
         }
     };
 
     const handleSave = async () => {
-        if (!name.trim()) return;
+        if (!name.trim() || isSaving || isUploading || cropSource) return;
         setSaveError("");
         // Backend rejects amount <= 0 or > 100000 with a 422 that retrying
         // never fixes -- min="0" on the input still lets someone type 0,
@@ -183,7 +214,7 @@ export default function AddIngredient({
                 {/* Header Actions */}
                 <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
                     <button
-                        onClick={onBack}
+                        onClick={cropSource ? closeCrop : onBack}
                         aria-label={t("กลับ")}
                         className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center"
                     >
@@ -196,12 +227,106 @@ export default function AddIngredient({
                     />
                 </div>
 
-                <main className="flex-1 min-h-0 scrollbar-hide px-5 pb-6">
+                {cropSource && <AvatarCropper key={cropSource} source={cropSource} title="ครอปรูปวัตถุดิบ" imageLabel="รูปวัตถุดิบ" cropShape="rect" onCancel={closeCrop} onConfirm={uploadCrop} />}
+                <main hidden={!!cropSource} className="flex-1 min-h-0 scrollbar-hide px-5 pb-6">
                     <div className="mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">{t("Add Ingredient")}</h2>
                     </div>
 
                     <div className="flex flex-col gap-6">
+                        {/* Image Picker */}
+                        <section className="border-b border-gray-200 pb-6" aria-labelledby="ingredient-image-heading">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-16 h-16 shrink-0 rounded-xl bg-gray-50 overflow-hidden">
+                                    <img src={selectedImage} alt={t("Preview")} className="w-full h-full object-cover" />
+                                </div>
+                                <h3 id="ingredient-image-heading" className="text-lg font-bold text-gray-900">{t("Find an Image")}</h3>
+                            </div>
+                            <div className="relative mb-3">
+                                <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                                <input
+                                    type="text"
+                                    aria-labelledby="ingredient-image-heading"
+                                    placeholder={
+                                        name.trim()
+                                            ? t('ค้นหารูป "{name}"...', { name: name.trim() })
+                                            : t("Search online images...")
+                                    }
+                                    className={`${inputClass} pl-10`}
+                                    value={searchTerm}
+                                    onChange={(e) =>
+                                        setSearchTerm(e.target.value)
+                                    }
+                                />
+                            </div>
+
+                            {isSearching && (
+                                <div role="status" className="flex items-center gap-2 text-sm text-gray-600 py-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />{t("Searching...")}</div>
+                            )}
+
+                            {!isSearching && searchError && (
+                                <p role="alert" className="text-sm text-red-700 py-2">
+                                    {t(searchError)}{t("— try uploading a photo instead.")}</p>
+                            )}
+
+                            {!isSearching &&
+                                !searchError &&
+                                searchResults.length === 0 && (
+                                    <p className="text-sm leading-relaxed text-gray-600 py-2">{t("No results yet. Type an ingredient name to search, or upload your own.")}</p>
+                                )}
+
+                            {searchResults.length > 0 && (
+                                <div className="grid grid-cols-4 gap-3 mb-1">
+                                    {searchResults.map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            disabled={isUploading || isSaving}
+                                            aria-label={`${t("Ingredient option")} ${idx + 1}`}
+                                            aria-pressed={selectedImage === img}
+                                            onClick={() =>
+                                                setSelectedImage(img)
+                                            }
+                                            className={`aspect-square min-w-0 rounded-xl overflow-hidden border-2 transition-colors ${selectedImage === img ? "border-[#B93E25] p-0.5" : "border-transparent"}`}
+                                        >
+                                            <div className="w-full h-full rounded-xl overflow-hidden">
+                                                <img
+                                                    src={img}
+                                                    alt={t("Ingredient option")}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                aria-label={t("เลือกรูป")}
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                            <button
+                                ref={uploadButton}
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading || isSaving}
+                                className="w-full mt-3 min-h-12 flex items-center justify-center gap-2 border border-gray-300 text-gray-700 rounded-xl py-3 text-sm font-medium hover:border-[#B93E25] hover:text-[#B93E25] transition-colors disabled:opacity-50"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />{t("Uploading...")}</>
+                                ) : (
+                                    <>
+                                        <Upload className="w-4 h-4" />{t("Upload or Take Photo")}</>
+                                )}
+                            </button>
+                            <p className="mt-2 text-sm text-gray-600">{t("JPG, PNG หรือ WebP ไม่เกิน 5 MB")}</p>
+                            {uploadError && <p role="alert" className="mt-3 text-sm text-red-700">{t(uploadError)}</p>}
+                        </section>
+
                         {/* Name Input */}
                         <div>
                             <label htmlFor="ingredient-name" className="block text-sm font-semibold text-gray-700 mb-2">{t("Ingredient Name")}</label>
@@ -269,7 +394,7 @@ export default function AddIngredient({
                                     <option value="">{t("หน่วย")}</option>
                                     {QUANTITY_UNITS.map((unit) => (
                                         <option key={unit} value={unit}>
-                                            {t(unit)}
+                                            {locale === "en" ? ENGLISH_QUANTITY_LABELS[unit] : t(unit)}
                                         </option>
                                     ))}
                                 </select>
@@ -288,102 +413,13 @@ export default function AddIngredient({
                             />
                         </div>
 
-                        {/* Image Picker */}
-                        <section className="border-t border-gray-200 pt-6" aria-labelledby="ingredient-image-heading">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-16 h-16 shrink-0 rounded-xl bg-gray-50 overflow-hidden">
-                                    <img src={selectedImage} alt={t("Preview")} className="w-full h-full object-cover" />
-                                </div>
-                                <h3 id="ingredient-image-heading" className="text-lg font-bold text-gray-900">{t("Find an Image")}</h3>
-                            </div>
-                            <div className="relative mb-3">
-                                <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                                <input
-                                    type="text"
-                                    aria-labelledby="ingredient-image-heading"
-                                    placeholder={
-                                        name.trim()
-                                            ? t('ค้นหารูป "{name}"...', { name: name.trim() })
-                                            : t("Search online images...")
-                                    }
-                                    className={`${inputClass} pl-10`}
-                                    value={searchTerm}
-                                    onChange={(e) =>
-                                        setSearchTerm(e.target.value)
-                                    }
-                                />
-                            </div>
-
-                            {isSearching && (
-                                <div role="status" className="flex items-center gap-2 text-sm text-gray-600 py-2">
-                                    <Loader2 className="w-4 h-4 animate-spin" />{t("Searching...")}</div>
-                            )}
-
-                            {!isSearching && searchError && (
-                                <p role="alert" className="text-sm text-red-700 py-2">
-                                    {t(searchError)}{t("— try uploading a photo instead.")}</p>
-                            )}
-
-                            {!isSearching &&
-                                !searchError &&
-                                searchResults.length === 0 && (
-                                    <p className="text-sm leading-relaxed text-gray-600 py-2">{t("No results yet. Type an ingredient name to search, or upload your own.")}</p>
-                                )}
-
-                            {searchResults.length > 0 && (
-                                <div className="grid grid-cols-4 gap-3 mb-1">
-                                    {searchResults.map((img, idx) => (
-                                        <button
-                                            key={idx}
-                                            aria-label={`${t("Ingredient option")} ${idx + 1}`}
-                                            aria-pressed={selectedImage === img}
-                                            onClick={() =>
-                                                setSelectedImage(img)
-                                            }
-                                            className={`aspect-square min-w-0 rounded-xl overflow-hidden border-2 transition-colors ${selectedImage === img ? "border-[#B93E25] p-0.5" : "border-transparent"}`}
-                                        >
-                                            <div className="w-full h-full rounded-xl overflow-hidden">
-                                                <img
-                                                    src={img}
-                                                    alt={t("Ingredient option")}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                className="hidden"
-                                onChange={handleFileChange}
-                            />
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isUploading}
-                                className="w-full mt-3 min-h-12 flex items-center justify-center gap-2 border border-gray-300 text-gray-700 rounded-xl py-3 text-sm font-medium hover:border-[#B93E25] hover:text-[#B93E25] transition-colors disabled:opacity-50"
-                            >
-                                {isUploading ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />{t("Uploading...")}</>
-                                ) : (
-                                    <>
-                                        <Upload className="w-4 h-4" />{t("Upload or Take Photo")}</>
-                                )}
-                            </button>
-                        </section>
-
                         {/* Nutrition (read-only, from Open Food Facts scan) */}
                         <NutritionBox nutrition={prefill?.nutrition_data} />
                     </div>
 
                 </main>
 
-                <div className="page-actions add-ingredient-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
+                <div hidden={!!cropSource} className="page-actions add-ingredient-actions shrink-0 border-t border-gray-200 bg-white px-5 pt-3 pb-4">
                     {saveError && (
                         <p role="alert" className="text-sm text-red-700 mb-3 leading-relaxed">
                             {t(saveError)}
@@ -392,7 +428,7 @@ export default function AddIngredient({
 
                     <button
                         onClick={handleSave}
-                        disabled={!name.trim() || isSaving}
+                        disabled={!name.trim() || isSaving || isUploading}
                         className="w-full min-h-12 bg-[#B93E25] text-white py-3 px-4 rounded-full text-base font-semibold hover:bg-[#9F351F] disabled:opacity-50 transition-colors flex justify-center items-center"
                     >
                         {isSaving ? t("Saving...") : t("Add to My Fridge")}

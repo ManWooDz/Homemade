@@ -17,6 +17,22 @@ export const QUANTITY_UNITS = [
     "ห่อ",
 ];
 
+// Dropdown copy only; submitted unit values stay in Thai.
+export const ENGLISH_QUANTITY_LABELS = {
+    "ชิ้น": "pcs (pieces)",
+    "กรัม": "g (grams)",
+    "กก.": "kg (kilograms)",
+    "มล.": "ml (milliliters)",
+    "ลิตร": "l (liters)",
+    "ขวด": "btl (bottles)",
+    "ถุง": "bag (bags)",
+    "แพ็ค": "pk (packs)",
+    "ฟอง": "egg (eggs)",
+    "หัว": "hd (heads)",
+    "ลูก": "ea (items)",
+    "ห่อ": "pkg (packages)",
+};
+
 // Units that convert to a common base so cross-unit amounts compare
 // meaningfully (2 กก. vs 500 กรัม); everything else groups by its own
 // exact unit string since there's no sensible conversion between e.g.

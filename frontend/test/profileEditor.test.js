@@ -62,3 +62,14 @@ for (const [locale, title, choose, defaultPicture, zoom, confirm] of [
         assert.match(html, new RegExp(`<button[^>]*disabled=""[^>]*>${confirm}</button>`));
     });
 }
+
+test("ingredient cropping reuses the cropper with a square frame and ingredient labels", () => {
+    setLocale("en");
+    const html = renderToStaticMarkup(createElement(Cropper, {
+        source: "/ingredient.jpg", title: "ครอปรูปวัตถุดิบ", imageLabel: "รูปวัตถุดิบ", cropShape: "rect",
+    }));
+    assert.ok(html.includes("Crop ingredient picture"));
+    assert.match(html, /aria-label="Ingredient picture"/);
+    assert.match(html, /data-crop-shape="rect"/);
+    assert.doesNotMatch(html, /profile/i);
+});

@@ -1,5 +1,10 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Keep preview assets outside request interceptors and bound reads (2026-10-23 AddIngredient):**
+- what happened: opening full spec/MEMORY exceeded output bounds again; a targeted move script failed before writing because the following source marker differed; shell Node shims had no active version. Preview HMR re-fetched its sample through the previous API interceptor, and a redundant raw upload receipt caused QA-only horizontal overflow.
+- root cause: bounded returned tokens instead of input lines, assumed source marker/runtime availability, and mixed fixture assets/diagnostics with intercepted application traffic.
+- correct behavior: read bounded opening sections and capped exact matches, verify move boundaries before writing, use the discovered bundled runtime when the shell shim fails and run frontend lint from frontend/ so it finds its config, preserve native fetch across preview HMR and restore it on dispose, and keep long diagnostic JSON only in the existing sr-only output. Recheck a fresh fixture and report historical errors separately.
+
 **Verify the scroll owner, not only footer visibility (2026-10-21):**
 - what happened: consistent dvh bounds fixed the obscured menu on the user's iPhone, but retained inner scrolling kept Safari chrome expanded and allowed gestures to escape to an outer scroll area. User requested normal browser behavior after confirming the first fix.
 - root cause: viewport sizing and scroll ownership are separate problems. A footer-bounds-only synthetic model cannot prove document scrolling or native toolbar collapse; the former model explicitly retained the inner-scroll architecture.
