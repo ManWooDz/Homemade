@@ -24,7 +24,7 @@ export default function Register() {
         const result = await register(email, password, confirmPassword);
         setIsSubmitting(false);
         if (result.success) {
-            navigate("/onboarding");
+            navigate("/register/otp");
         } else {
             setError(result.error);
         }
@@ -98,7 +98,7 @@ export default function Register() {
                             disabled={isSubmitting}
                             className="w-full h-11 mt-6 bg-button-primary hover:opacity-95 text-button-neutral text-body-medium font-semibold rounded-full flex justify-center items-center transition-colors cursor-pointer disabled:opacity-50"
                         >
-                            {isSubmitting ? t("Creating account...") : t("Sign Up")}
+                            {isSubmitting ? t("กำลังส่งรหัสยืนยัน...") : t("Sign Up")}
                         </button>
                         <div className="flex flex-wrap justify-center items-center gap-x-2 mt-4 text-body-medium">
                             <span className="text-text-neutral">{t("มีบัญชีแล้ว?")}</span>

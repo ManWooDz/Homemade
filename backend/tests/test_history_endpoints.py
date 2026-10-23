@@ -24,6 +24,7 @@ from database.models import (
 )
 from history_repository import insert_generate_history
 from main import app
+from auth import hash_password
 from nutrition.calculator import NutritionResult
 
 APPROVED = {
@@ -72,7 +73,9 @@ class HistoryEndpointTestCase(unittest.TestCase):
 
     def login(self, email, password="hunter22"):
         client = TestClient(app)
-        client.post("/api/auth/register", json={"email": email, "password": password}, headers=self.origin)
+        with self.session_local() as db:
+            db.add(User(email=email, hashed_password=hash_password(password)))
+            db.commit()
         client.post("/api/auth/login", data={"username": email, "password": password}, headers=self.origin)
         return client
 

@@ -1,5 +1,26 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Keep OTP browser QA on a fresh intercepted fixture (2026-10-22):**
+- recurrence during Favorites refinement: combined opening excerpts again exceeded the output bound. A browser binding was also referenced before a same-call `var` redeclaration and became undefined; rebinding the known owned tab recovered it. Bound each source range before combining reads, and assign an existing REPL binding without redeclaring it in the call that first uses its previous value.
+- what happened: opening reads again exceeded output bounds; editing the locale catalog during an existing auth preview produced an HMR LocaleProvider error and invalidated its fetch interception. Early resend/success probes from that tab are excluded. A browser documentation call also used the wrong receiver before reading the supported capability documentation.
+- root cause: bounded output instead of source input, continued using a preview after module-context replacement, and guessed a documentation method.
+- correct behavior: read only bounded relevant source sections, complete UI/catalog edits before opening fresh auth fixtures, check their rendered destination and current console, and call each advertised capability's documentation() before use. Never interpret redacted OTP values or their string lengths as the actual input; use visible screenshots, disabled states and unit assertions.
+
+
+**Keep reflection registration identical across migration snapshots (2026-10-22):**
+- final receipt follow-up: a JSON read omitted encoding and hit Windows cp874 on Thai UTF-8 text. Use `read_text(encoding="utf-8")` for every source/JSON receipt, not only console output; the corrected final check reads the same retained files.
+- what happened: the registration migration completed, but its first old-schema comparison failed: the pre-snapshot did not recognize pgvector, while Alembic model imports registered vector reflection before the post-snapshot. No DDL was rerun. A pre-change pg_dump restored only in isolated memory-backed QA PostgreSQL provided the baseline; consistent reflection then confirmed old schema/auth rows unchanged and only the new empty table added.
+- root cause: imported a database type registration between two supposedly comparable inspections. Offline harness setup also initially blocked Windows asyncio's own socketpair, and a frontend hook harness mixed mocked React with the real development JSX runtime; these were verification-harness failures, not application findings.
+- correct behavior: register dialect/type adapters before both snapshots, persist the pre-change receipt before DDL, and separate migration success from postcheck success. If a postcheck fails after commit, preserve the backup/log and verify against an isolated restored baseline; never rerun or weaken DDL guards to hide the failure. Allow only the harness-owned Windows socketpair inside the network guard and stub the matching JSX runtime when mocking hooks.
+
+
+**Bound registration-advice inspection before output (2026-10-22):**
+- what happened: full spec/MEMORY reads and later broad email matches exceeded output budgets during a narrow registration question; a PowerShell rg path containing an unexpanded wildcard also failed. An unrelated OpenAI skill was read unnecessarily.
+- root cause: bounded the tool output instead of the input and reused unrelated setup rather than selecting only task-relevant sources.
+- correct behavior: read the opening spec section, then a few matching headings and bounded exact source ranges; pass existing exact filenames or rg globs, and read only applicable skills. Treat truncated reads and failed path searches as incomplete evidence.
+
+
+
 **Keep preview assets outside request interceptors and bound reads (2026-10-23 AddIngredient):**
 - what happened: opening full spec/MEMORY exceeded output bounds again; a targeted move script failed before writing because the following source marker differed; shell Node shims had no active version. Preview HMR re-fetched its sample through the previous API interceptor, and a redundant raw upload receipt caused QA-only horizontal overflow.
 - root cause: bounded returned tokens instead of input lines, assumed source marker/runtime availability, and mixed fixture assets/diagnostics with intercepted application traffic.

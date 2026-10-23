@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 from database.db import get_db
 from database.models import Base, RefreshToken, User, UserPreference
 from main import app
+from auth import hash_password
 
 
 class UserPreferenceModelTests(unittest.TestCase):
@@ -82,11 +83,9 @@ class UserPreferenceEndpointTests(unittest.TestCase):
         app.dependency_overrides.clear()
 
     def _register_and_login(self, email="prefs@example.com", password="hunter22"):
-        self.client.post(
-            "/api/auth/register",
-            json={"email": email, "password": password},
-            headers=self.origin_headers,
-        )
+        with Session(self.engine) as db:
+            db.add(User(email=email, hashed_password=hash_password(password)))
+            db.commit()
         return self.client.post(
             "/api/auth/login",
             data={"username": email, "password": password},

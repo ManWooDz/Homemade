@@ -20,6 +20,7 @@ from database.models import (
     User,
 )
 from main import app
+from auth import hash_password
 
 
 class BaseFavoritesTestCase(unittest.TestCase):
@@ -68,7 +69,9 @@ class BaseFavoritesTestCase(unittest.TestCase):
 
     def login(self, email, password="hunter22"):
         client = TestClient(app)
-        client.post("/api/auth/register", json={"email": email, "password": password}, headers=self.origin)
+        with self.session_local() as db:
+            db.add(User(email=email, hashed_password=hash_password(password)))
+            db.commit()
         client.post("/api/auth/login", data={"username": email, "password": password}, headers=self.origin)
         return client
 

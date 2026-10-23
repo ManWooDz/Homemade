@@ -7,6 +7,37 @@ import {
 
 const AuthContext = createContext(null);
 
+function readPendingRegistration() {
+    try {
+        const saved = JSON.parse(sessionStorage.getItem("homemade:registration"));
+        return typeof saved?.registration_token === "string" && typeof saved?.email === "string" ? saved : null;
+    } catch {
+        return null;
+    }
+}
+
+async function registrationRequest(path, body) {
+    const { response, networkError } = await safeFetch(path, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    if (networkError) return { success: false, error: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองอีกครั้ง" };
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || payload?.status !== "success") {
+        const errors = {
+            "Invalid email": "Enter a valid email",
+            "Password must be at least 8 characters": "Password must be at least 8 characters",
+            "Password must be at most 72 bytes": "รหัสผ่านยาวเกินไป กรุณาใช้ไม่เกิน 72 ไบต์",
+            "Email already registered": "Email already registered",
+            "Invalid or expired registration code": "รหัสไม่ถูกต้องหรือหมดอายุ กรุณาส่งใหม่หรือเริ่มสมัครอีกครั้ง",
+            "Could not send registration code": "ส่งรหัสยืนยันไม่สำเร็จ กรุณาลองอีกครั้ง",
+        };
+        return { success: false, error: response.status === 429
+            ? "ส่งหรือกรอกรหัสถี่เกินไป กรุณารอสักครู่ หากยังไม่ได้ให้ลองใหม่ใน 1 ชั่วโมง"
+            : Object.hasOwn(errors, payload?.detail) ? errors[payload.detail] : "Could not create account" };
+    }
+    return { success: true, data: payload.data };
+}
+
 // Never lets the caller's await reject — login/register/logout must
 // always resolve to a {success, error?} shape (Login.jsx/Register.jsx
 // have no try/finally around their `await`, so a rejected promise would
@@ -26,9 +57,19 @@ export function AuthProvider({ children }) {
     const [authLoading, setAuthLoading] = useState(true);
     const [pendingResetEmail, setPendingResetEmail] = useState(null);
     const [resetTicket, setResetTicket] = useState(null);
+    const [pendingRegistration, setPendingRegistration] = useState(readPendingRegistration);
 
     const refreshInFlightRef = useRef(null);
     const otpRequestInFlightRef = useRef(null);
+    const registrationInFlightRef = useRef(false);
+
+    const savePendingRegistration = useCallback((value) => {
+        setPendingRegistration(value);
+        try {
+            if (value) sessionStorage.setItem("homemade:registration", JSON.stringify(value));
+            else sessionStorage.removeItem("homemade:registration");
+        } catch { /* A blocked storage policy only disables reload recovery. */ }
+    }, []);
 
     const clearAuthState = useCallback(() => {
         setIsAuthenticated(false);
@@ -120,38 +161,60 @@ export function AuthProvider({ children }) {
             if (!passwordsMatch(password, confirmPassword)) {
                 return { success: false, error: "Passwords do not match" };
             }
-            const { response, networkError } = await safeFetch("/api/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email.trim(), password }),
-            });
-            if (networkError) {
-                return { success: false, error: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองอีกครั้ง" };
+            if (new TextEncoder().encode(password).length > 72) {
+                return { success: false, error: "รหัสผ่านยาวเกินไป กรุณาใช้ไม่เกิน 72 ไบต์" };
             }
-            if (!response.ok) {
-                const payload = await response.json().catch(() => ({}));
-                const knownErrors = {
-                    "Invalid email": "Enter a valid email",
-                    "Password must be at least 8 characters": "Password must be at least 8 characters",
-                    "Email already registered": "Email already registered",
-                };
-                return { success: false, error: Object.hasOwn(knownErrors, payload.detail) ? knownErrors[payload.detail] : "Could not create account" };
+            if (registrationInFlightRef.current) return { success: false, error: "กรุณารอคำขอก่อนหน้าสักครู่" };
+            registrationInFlightRef.current = true;
+            try {
+                const result = await registrationRequest("/api/auth/register", { email: email.trim(), password });
+                if (!result.success) return result;
+                if (typeof result.data?.registration_token !== "string" || typeof result.data?.email !== "string") {
+                    return { success: false, error: "Could not create account" };
+                }
+                savePendingRegistration(result.data);
+                return { success: true };
+            } finally {
+                registrationInFlightRef.current = false;
             }
-            // Account now exists server-side. If auto-login fails below,
-            // never suggest registering again — a second register would
-            // just hit "Email already registered".
-            const loginResult = await login(email, password);
-            if (!loginResult.success) {
-                return {
-                    success: false,
-                    error:
-                        "สร้างบัญชีแล้ว แต่เข้าสู่ระบบอัตโนมัติไม่สำเร็จ กรุณาเข้าสู่ระบบด้วยตนเอง",
-                };
-            }
-            return { success: true };
         },
-        [login]
+        [savePendingRegistration]
     );
+
+    const verifyRegistration = useCallback(async (code) => {
+        if (!pendingRegistration) return { success: false, error: "Session expired — start over" };
+        if (!/^[0-9]{6}$/.test(code)) return { success: false, error: "Enter all 6 digits" };
+        if (registrationInFlightRef.current) return { success: false, error: "กรุณารอคำขอก่อนหน้าสักครู่" };
+        registrationInFlightRef.current = true;
+        try {
+            const result = await registrationRequest("/api/auth/verify-registration", {
+                registration_token: pendingRegistration.registration_token, code,
+            });
+            if (!result.success) return result;
+            if (!result.data?.id || result.data.email !== pendingRegistration.email) {
+                return { success: false, error: "Could not create account" };
+            }
+            setIsAuthenticated(true);
+            setUser(result.data);
+            savePendingRegistration(null);
+            return { success: true };
+        } finally {
+            registrationInFlightRef.current = false;
+        }
+    }, [pendingRegistration, savePendingRegistration]);
+
+    const resendRegistration = useCallback(async () => {
+        if (!pendingRegistration) return { success: false, error: "Session expired — start over" };
+        if (registrationInFlightRef.current) return { success: false, error: "กรุณารอคำขอก่อนหน้าสักครู่" };
+        registrationInFlightRef.current = true;
+        try {
+            return await registrationRequest("/api/auth/resend-registration", {
+                registration_token: pendingRegistration.registration_token,
+            });
+        } finally {
+            registrationInFlightRef.current = false;
+        }
+    }, [pendingRegistration]);
 
     const sendOtpRequest = useCallback(async (email) => {
         if (otpRequestInFlightRef.current?.email === email) {
@@ -313,6 +376,9 @@ export function AuthProvider({ children }) {
         authLoading,
         user,
         pendingResetEmail,
+        pendingRegistration,
+        verifyRegistration,
+        resendRegistration,
         resetTicket,
         login,
         register,

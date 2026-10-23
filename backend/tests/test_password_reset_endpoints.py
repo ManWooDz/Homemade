@@ -15,6 +15,7 @@ from sqlalchemy.pool import StaticPool
 from database.db import get_db
 from database.models import Base, PasswordResetOtp, RefreshToken, User
 from main import app
+from auth import hash_password
 
 
 class PasswordResetEndpointTests(unittest.TestCase):
@@ -57,11 +58,9 @@ class PasswordResetEndpointTests(unittest.TestCase):
                     pass
 
     def _register(self, client, email, password="hunter22"):
-        return client.post(
-            "/api/auth/register",
-            json={"email": email, "password": password},
-            headers=self.origin_headers,
-        )
+        with self.Session() as db:
+            db.add(User(email=email, hashed_password=hash_password(password)))
+            db.commit()
 
     def test_forgot_password_generic_response_for_unknown_email(self):
         client = TestClient(app)

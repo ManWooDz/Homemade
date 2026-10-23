@@ -29,10 +29,13 @@ def validate_email_config() -> None:
             raise RuntimeError("SMTP_PORT must be an integer between 1 and 65535")
 
 
-def send_otp_email(email: str, code: str) -> None:
+def send_otp_email(email: str, code: str, *, purpose: str = "password_reset") -> None:
+    if purpose not in {"password_reset", "registration"}:
+        raise ValueError("Unknown OTP purpose")
+    action = "สมัครสมาชิก" if purpose == "registration" else "รีเซ็ตรหัสผ่าน"
     validate_email_config()
     if os.environ["EMAIL_BACKEND"] == "console":
-        logging.info("password reset OTP for %s: %s", email, code)
+        logging.info("%s OTP for %s: %s", "registration" if purpose == "registration" else "password reset", email, code)
         return
 
     from otp import OTP_EXPIRY_MINUTES
@@ -40,9 +43,9 @@ def send_otp_email(email: str, code: str) -> None:
     message = EmailMessage()
     message["To"] = email
     message["From"] = os.environ["SMTP_FROM"]
-    message["Subject"] = "รหัสยืนยันสำหรับรีเซ็ตรหัสผ่าน Homemade"
+    message["Subject"] = f"รหัสยืนยันสำหรับ{action} Homemade"
     message.set_content(
-        "รหัสยืนยันสำหรับรีเซ็ตรหัสผ่านของคุณคือ:\n\n"
+        f"รหัสยืนยันสำหรับ{action}ของคุณคือ:\n\n"
         f"{code}\n\n"
         f"รหัสนี้มีอายุ {OTP_EXPIRY_MINUTES} นาที\n"
         "หากคุณไม่ได้เป็นผู้ร้องขอ โปรดเพิกเฉยต่ออีเมลฉบับนี้"

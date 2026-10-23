@@ -14,6 +14,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uvicorn
 import json
@@ -48,6 +49,7 @@ from nutrition.calculator import compute_recipe_nutrition, compute_quantities_nu
 from nutrition.llm_fallback import NutritionLLMEstimator
 from email_sender import send_otp_email, validate_email_config
 import otp
+import registration
 from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients, update_user_ingredient
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
@@ -1275,31 +1277,88 @@ async def generate_recipe_text(
         return {"status": "error", "message": str(e)}
 
 class RegisterRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=72)
 
 
-# register a new user — email/password stored with a bcrypt hash
+# Prepare a registration; account/session creation requires mailbox proof.
 @app.post(
     "/api/auth/register",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     dependencies=[Depends(verify_same_origin)],
 )
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+async def register(request: RegisterRequest, response: Response, db: Session = Depends(get_db)):
     email = request.email.strip().lower()
-    if "@" not in email or "." not in email.split("@")[-1]:
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
         raise HTTPException(status_code=400, detail="Invalid email")
     if len(request.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if len(request.password.encode("utf-8")) > 72:
+        raise HTTPException(400, "Password must be at most 72 bytes")
+    try:
+        row, token, code = registration.prepare_registration(db, email, request.password)
+        await run_in_threadpool(send_otp_email, row.email, code, purpose="registration")
+        db.commit()
+        response.headers["Cache-Control"] = "no-store"
+        return {"status": "success", "data": {"registration_token": token, "email": email}}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logging.error("registration preparation/delivery failed: %s", type(exc).__name__)
+        raise HTTPException(503, "Could not send registration code") from None
 
-    if db.query(User).filter_by(email=email).first() is not None:
-        raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = User(email=email, hashed_password=hash_password(request.password))
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return {"status": "success", "data": user_payload(user)}
+class RegistrationTokenRequest(BaseModel):
+    registration_token: str = Field(min_length=40, max_length=100)
+
+
+class RegistrationVerifyRequest(RegistrationTokenRequest):
+    code: str = Field(pattern=r"^[0-9]{6}$")
+
+
+@app.post("/api/auth/resend-registration", dependencies=[Depends(verify_same_origin)])
+async def resend_registration(request: RegistrationTokenRequest, db: Session = Depends(get_db)):
+    try:
+        row, code = registration.prepare_resend(db, request.registration_token)
+        await run_in_threadpool(send_otp_email, row.email, code, purpose="registration")
+        db.commit()
+        return {"status": "success"}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logging.error("registration resend failed: %s", type(exc).__name__)
+        raise HTTPException(503, "Could not send registration code") from None
+
+
+@app.post("/api/auth/verify-registration", dependencies=[Depends(verify_same_origin)])
+async def verify_registration(request: RegistrationVerifyRequest, response: Response, db: Session = Depends(get_db)):
+    try:
+        user = registration.verify_registration(db, request.registration_token, request.code)
+        access_token = create_access_token(user.id)
+        refresh_token = create_refresh_token(user.id)
+        db.add(RefreshToken(
+            user_id=user.id, token_hash=hash_token(refresh_token),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        ))
+        payload = user_payload(user)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(400, "Email already registered") from None
+    except Exception as exc:
+        db.rollback()
+        logging.error("registration activation failed: %s", type(exc).__name__)
+        raise HTTPException(503, "Could not create account") from None
+    set_auth_cookies(response, access_token, refresh_token)
+    response.headers["Cache-Control"] = "no-store"
+    return {"status": "success", "data": payload}
 
 
 class ForgotPasswordRequest(BaseModel):

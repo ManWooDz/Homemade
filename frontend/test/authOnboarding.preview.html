@@ -12,7 +12,21 @@ window.fetch = async (input, init = {}) => {
     document.documentElement.dataset.qaRequests = (document.documentElement.dataset.qaRequests || "") + `${init.method || "GET"} ${path};`;
     if (path === "/api/auth/me") return signedIn ? json({ status: "success", data: user }) : json({}, 401);
     if (path === "/api/auth/refresh") return json({}, 401);
-    if (path === "/api/auth/register") return options.has("authfail") ? json({ detail: "Email already registered" }, 400) : json({ status: "success" });
+    if (path === "/api/auth/register") {
+        user.email = JSON.parse(init.body).email.trim().toLowerCase();
+        return options.has("authfail") ? json({ detail: "Email already registered" }, 400)
+            : json({ status: "success", data: { email: user.email, registration_token: "synthetic-registration-token-for-ui-preview-only" } }, 202);
+    }
+    if (path === "/api/auth/resend-registration") return json({ status: "success" });
+    if (path === "/api/auth/verify-registration") {
+        if (JSON.parse(init.body).code !== "123456") return json({ detail: "Invalid or expired registration code" }, 400);
+        signedIn = true;
+        return json({ status: "success", data: user });
+    }
+    if (path === "/api/auth/forgot-password") return json({ status: "success" });
+    if (path === "/api/auth/verify-otp") return JSON.parse(init.body).code === "123456"
+        ? json({ status: "success", data: { reset_ticket: "synthetic-reset-ticket" } }) : json({}, 400);
+    if (path === "/api/auth/reset-password") return json({ status: "success" });
     if (path === "/api/auth/login") { if (options.has("authfail")) return json({}, 401); signedIn = true; return json({ status: "success", data: user }); }
     if (path === "/api/user-preferences" && init.method === "PUT") {
         saveAttempts++;
@@ -23,6 +37,6 @@ window.fetch = async (input, init = {}) => {
     if (["/api/recipes", "/api/user-ingredients", "/api/history", "/api/base-favorites"].includes(path)) return json({ status: "success", data: [] });
     return json({ message: "Blocked by QA fixture" }, 404);
 };
-history.replaceState({}, "", "/" + (["login", "register", "onboarding"].includes(options.get("view")) ? options.get("view") : "login"));
+history.replaceState({}, "", "/" + (["login", "register", "onboarding", "reset-password"].includes(options.get("view")) ? options.get("view") : "login"));
 await import("/src/main.jsx");
 </script></body></html>

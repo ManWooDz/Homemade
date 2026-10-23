@@ -328,6 +328,25 @@ class RefreshToken(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class PendingRegistration(Base):
+    __tablename__ = "pending_registrations"
+
+    # shortcut: expired requests are reused, not purged; add cleanup when retention is defined.
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
+    hashed_password: Mapped[str | None] = mapped_column(String, nullable=True)
+    registration_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    send_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class PasswordResetOtp(Base):
     """One-time-password rows for the forgot-password flow. code_hash is
     HMAC-SHA256(OTP_HMAC_SECRET, code) — not plain SHA-256 — because the

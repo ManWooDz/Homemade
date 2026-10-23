@@ -8,22 +8,27 @@ import { useAuth } from "../../context/AuthContext";
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
 
-export default function OtpVerify() {
+export default function OtpVerify({ purpose = "reset" }) {
     const { t } = useLocale();
     const navigate = useNavigate();
-    const { pendingResetEmail, verifyOtp, resendOtp } = useAuth();
-    const [code, setCode] = useState("");
+    const { pendingResetEmail, verifyOtp, resendOtp, pendingRegistration, verifyRegistration, resendRegistration } = useAuth();
+    const isRegistration = purpose === "registration";
+    const email = isRegistration ? pendingRegistration?.email : pendingResetEmail;
+    const backTo = isRegistration ? "/register" : "/reset-password";
+    const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""));
+    const code = digits.join("");
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isResending, setIsResending] = useState(false);
     const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
-    const inputRef = useRef(null);
+    const inputRefs = useRef([]);
+    const submittingRef = useRef(false);
 
     useEffect(() => {
-        if (!pendingResetEmail) {
-            navigate("/reset-password", { replace: true });
+        if (!email && !submittingRef.current) {
+            navigate(backTo, { replace: true });
         }
-    }, [pendingResetEmail, navigate]);
+    }, [email, backTo, navigate]);
 
     useEffect(() => {
         if (cooldown <= 0) return;
@@ -31,9 +36,28 @@ export default function OtpVerify() {
         return () => clearTimeout(timer);
     }, [cooldown]);
 
-    const handleChange = (value) => {
-        setCode(value.replace(/[^0-9]/g, "").slice(0, OTP_LENGTH));
+    const handleChange = (value, index = 0) => {
+        const numbers = value.replace(/[^0-9]/g, "").slice(0, OTP_LENGTH);
+        if (value && !numbers) return;
+        if (numbers.length > 1) {
+            setDigits(Array.from({ length: OTP_LENGTH }, (_, i) => numbers[i] || ""));
+            inputRefs.current[Math.min(numbers.length, OTP_LENGTH - 1)]?.focus();
+        } else {
+            setDigits((current) => current.map((digit, i) => i === index ? numbers : digit));
+            if (numbers) inputRefs.current[index + 1]?.focus();
+        }
         setError("");
+    };
+
+    const handleKeyDown = (e, index) => {
+        if (e.key === "Backspace" && !digits[index] && index > 0) {
+            e.preventDefault();
+            handleChange("", index - 1);
+            inputRefs.current[index - 1]?.focus();
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            e.preventDefault();
+            inputRefs.current[index + (e.key === "ArrowLeft" ? -1 : 1)]?.focus();
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -41,11 +65,13 @@ export default function OtpVerify() {
         if (isSubmitting || isResending || !/^[0-9]{6}$/.test(code)) return;
         setError("");
         setIsSubmitting(true);
-        const result = await verifyOtp(code);
+        submittingRef.current = true;
+        const result = await (isRegistration ? verifyRegistration(code) : verifyOtp(code));
         setIsSubmitting(false);
         if (result.success) {
-            navigate("/reset-password/confirm");
+            navigate(isRegistration ? "/onboarding" : "/reset-password/confirm", { replace: true });
         } else {
+            submittingRef.current = false;
             setError(result.error);
         }
     };
@@ -55,14 +81,14 @@ export default function OtpVerify() {
         setError("");
         setIsResending(true);
         try {
-            const result = await resendOtp();
+            const result = await (isRegistration ? resendRegistration() : resendOtp());
             if (!result.success) {
                 setError(result.error);
                 return;
             }
             setCooldown(RESEND_COOLDOWN_SECONDS);
-            setCode("");
-            requestAnimationFrame(() => inputRef.current?.focus());
+            setDigits(Array(OTP_LENGTH).fill(""));
+            requestAnimationFrame(() => inputRefs.current[0]?.focus());
         } finally {
             setIsResending(false);
         }
@@ -75,7 +101,7 @@ export default function OtpVerify() {
                     <HeaderLogo />
 
                     <div className="w-full flex justify-start items-center">
-                        <BackButton to="/reset-password" size="w-11 h-11" disabled={isSubmitting || isResending} />
+                        <BackButton to={backTo} size="w-11 h-11" disabled={isSubmitting || isResending} />
                     </div>
 
                     <form
@@ -83,30 +109,38 @@ export default function OtpVerify() {
                         aria-busy={isSubmitting || isResending}
                         className="w-full flex flex-col items-center mt-6"
                     >
-                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t("Enter OTP")}</h1>
+                        <h1 className="w-full text-h2 font-semibold text-text-black text-left mb-4">{t(isRegistration ? "ยืนยันอีเมลสมัครสมาชิก" : "Enter OTP")}</h1>
 
-                        <p className="w-full text-body-medium text-text-tertiary break-words mb-2">{t("กรอกรหัสสำหรับอีเมล {email}", { email: pendingResetEmail })}</p>
+                        <p className="w-full text-body-medium text-text-tertiary break-words mb-2">{t("กรอกรหัสสำหรับอีเมล {email}", { email })}</p>
                         <p id="otp-hint" className="w-full text-body-medium text-text-neutral mb-6">{t("รหัสอาจใช้เวลาสักครู่ หากยังไม่ได้รับ ให้รอหมดเวลานับถอยหลังแล้วกดส่งใหม่")}</p>
 
                         <div className="w-full flex flex-col items-center gap-3">
-                            <label htmlFor="otp-code" className="auth-label">{t("รหัส OTP 6 หลัก")}</label>
-                            <input
-                                id="otp-code"
-                                name="code"
-                                ref={inputRef}
-                                type="text"
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                maxLength={OTP_LENGTH}
-                                pattern="[0-9]{6}"
-                                required
-                                value={code}
-                                disabled={isSubmitting || isResending}
-                                aria-describedby={error ? "otp-hint otp-error" : "otp-hint"}
-                                onChange={(e) => handleChange(e.target.value)}
-                                onPaste={(e) => { e.preventDefault(); handleChange(e.clipboardData.getData("text")); }}
-                                className="w-full h-14 bg-forms-otp-fill-default border border-stroke-text-field text-center text-2xl tracking-[0.35em] tabular-nums text-text-black rounded-xl focus:outline-none focus:bg-forms-otp-fill-filled focus:border-stroke-brands"
-                            />
+                            <label id="otp-label" htmlFor="otp-code-0" className="auth-label">{t("รหัส OTP 6 หลัก")}</label>
+                            <div role="group" aria-labelledby="otp-label" className="w-full grid grid-cols-6 gap-2 max-[359px]:gap-1 max-[359px]:w-[calc(100%+1rem)]" dir="ltr">
+                                {digits.map((digit, index) => <input
+                                    key={index}
+                                    id={`otp-code-${index}`}
+                                    name={`code-${index}`}
+                                    ref={(element) => { inputRefs.current[index] = element; }}
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete={index === 0 ? "one-time-code" : "off"}
+                                    maxLength={index === 0 ? OTP_LENGTH : 1}
+                                    pattern="[0-9]"
+                                    required
+                                    value={digit}
+                                    disabled={isSubmitting || isResending}
+                                    aria-label={t("หลักที่ {digit} จาก 6", { digit: index + 1 })}
+                                    aria-invalid={Boolean(error)}
+                                    aria-describedby={error ? "otp-hint otp-error" : "otp-hint"}
+                                    onFocus={(e) => e.target.select()}
+                                    onClick={(e) => e.target.select()}
+                                    onChange={(e) => handleChange(e.target.value, index)}
+                                    onKeyDown={(e) => handleKeyDown(e, index)}
+                                    onPaste={(e) => { e.preventDefault(); handleChange(e.clipboardData.getData("text"), index); }}
+                                    className="min-w-0 w-full h-14 bg-forms-otp-fill-default border border-stroke-text-field text-center text-2xl tabular-nums text-text-black rounded-xl focus:bg-forms-otp-fill-filled focus:border-stroke-brands disabled:opacity-50"
+                                />)}
+                            </div>
 
                             <button
                                 type="button"

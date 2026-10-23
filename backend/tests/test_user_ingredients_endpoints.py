@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 from database.db import get_db
 from database.models import Notification, Base, RefreshToken, User, UserIngredient
 from main import app
+from auth import hash_password
 
 
 class UserIngredientsEndpointTests(unittest.TestCase):
@@ -106,11 +107,9 @@ class UserIngredientsEndpointTests(unittest.TestCase):
         app.dependency_overrides.clear()
 
     def _register_and_login(self, client, email, password="hunter22"):
-        client.post(
-            "/api/auth/register",
-            json={"email": email, "password": password},
-            headers=self.origin_headers,
-        )
+        with sessionmaker(bind=self.engine)() as db:
+            db.add(User(email=email, hashed_password=hash_password(password)))
+            db.commit()
         return client.post(
             "/api/auth/login",
             data={"username": email, "password": password},

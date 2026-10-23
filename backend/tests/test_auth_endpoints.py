@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 from database.db import get_db
 from database.models import Base, RefreshToken, User
 from main import app
+from auth import hash_password
 
 
 class AuthEndpointTests(unittest.TestCase):
@@ -46,11 +47,9 @@ class AuthEndpointTests(unittest.TestCase):
         app.dependency_overrides.clear()
 
     def _register_and_login(self, email="user@example.com", password="hunter22"):
-        self.client.post(
-            "/api/auth/register",
-            json={"email": email, "password": password},
-            headers=self.origin_headers,
-        )
+        with sessionmaker(bind=self.engine)() as db:
+            db.add(User(email=email, hashed_password=hash_password(password)))
+            db.commit()
         return self.client.post(
             "/api/auth/login",
             data={"username": email, "password": password},
@@ -74,11 +73,7 @@ class AuthEndpointTests(unittest.TestCase):
         self.assertEqual(res.status_code, 401)
 
     def test_login_wrong_password_is_401(self):
-        self.client.post(
-            "/api/auth/register",
-            json={"email": "user2@example.com", "password": "hunter22"},
-            headers=self.origin_headers,
-        )
+        self._register_and_login("user2@example.com")
         res = self.client.post(
             "/api/auth/login",
             data={"username": "user2@example.com", "password": "wrong"},

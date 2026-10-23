@@ -1,5 +1,13 @@
 // Display copy only; optional third entry preserves the original Thai lookup/payload alias.
 export const COPY = [
+    ["หลักที่ {digit} จาก 6", "Digit {digit} of 6"],
+    ["ยืนยันอีเมลสมัครสมาชิก", "Verify your email"],
+    ["กำลังส่งรหัสยืนยัน...", "Sending verification code..."],
+    ["รหัสผ่านยาวเกินไป กรุณาใช้ไม่เกิน 72 ไบต์", "Password is too long. Use at most 72 bytes."],
+    ["กรุณารอคำขอก่อนหน้าสักครู่", "Please wait for your previous request."],
+    ["รหัสไม่ถูกต้องหรือหมดอายุ กรุณาส่งใหม่หรือเริ่มสมัครอีกครั้ง", "The code is invalid or expired. Resend it or start registration again."],
+    ["ส่งรหัสยืนยันไม่สำเร็จ กรุณาลองอีกครั้ง", "Could not send the verification code. Please try again."],
+    ["ส่งหรือกรอกรหัสถี่เกินไป กรุณารอสักครู่ หากยังไม่ได้ให้ลองใหม่ใน 1 ชั่วโมง", "Too many requests or guesses. Wait a moment; if still blocked, try again in one hour."],
     ["ครอปรูปวัตถุดิบ", "Crop ingredient picture"],
     ["รูปวัตถุดิบ", "Ingredient picture"],
     ["แพ้ถั่วลิสง", "Peanut allergy"], ["แพ้ถั่วเปลือกแข็ง", "Tree nut allergy"],

@@ -23,6 +23,7 @@ createRoot(document.getElementById("root")).render(
                     <Route path="/" element={<Loading />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/register/otp" element={<OtpVerify key="registration" purpose="registration" />} />
                     <Route path="/onboarding" element={<Onboarding />} />
                     <Route path="/reset-password" element={<ResetPasswordEmail />} />
                     <Route path="/reset-password/otp" element={<OtpVerify />} />

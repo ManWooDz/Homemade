@@ -45,6 +45,19 @@ class EmailSenderTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "EMAIL_BACKEND"):
                 email_sender.send_otp_email("user@example.com", "123456")
 
+    def test_registration_copy_is_distinct_and_keeps_code_out_of_subject(self):
+        with mock.patch.dict(os.environ, self.SMTP_ENV, clear=True), mock.patch("email_sender.smtplib.SMTP") as smtp:
+            email_sender.send_otp_email("user@example.com", "123456", purpose="registration")
+        message = smtp.return_value.__enter__.return_value.send_message.call_args.args[0]
+        self.assertIn("สมัครสมาชิก", message["Subject"])
+        self.assertNotIn("รีเซ็ต", message["Subject"])
+        self.assertNotIn("123456", message["Subject"])
+        self.assertIn("123456", message.get_content())
+
+    def test_unknown_purpose_is_rejected_before_delivery(self):
+        with self.assertRaises(ValueError):
+            email_sender.send_otp_email("user@example.com", "123456", purpose="unknown")
+
     def test_send_otp_email_logs_the_code(self):
         with mock.patch.dict(os.environ, {"EMAIL_BACKEND": "console"}, clear=True):
             with self.assertLogs(level="INFO") as captured:
