@@ -1,5 +1,4 @@
 # backend/generators/local_generator.py
-import json
 import os
 
 import requests
@@ -7,59 +6,7 @@ import requests
 from generators.base import RecipeGenerator
 from generators.prompts import build_recipe_prompt
 
-# Character-set-only patterns (no lookahead) for vLLM's guided_json /
-# response_format=json_schema decoding. Verified empirically (2026-09-18)
-# against a live vLLM server: a plain allowed-character-class pattern
-# reliably blocks off-schema scripts (Greek/Arabic/Tamil/Chinese) leaking
-# into fields — a real failure mode observed in benchmark runs before this
-# was added. A `(?=.*[Thai])` lookahead ("must contain at least one Thai
-# character") was also tried and found NOT reliably enforced by this vLLM
-# version's constrained-decoding backend — one field honored it, another
-# didn't, with the identical pattern — so this deliberately does not rely
-# on lookahead assertions, only a plain allowed-character class.
-_THAI_FIELD_PATTERN = r"^[฀-๿a-zA-Z0-9 .,()\-/%:]+$"
-_ENGLISH_FIELD_PATTERN = r"^[a-zA-Z0-9 .,()\-/%:']+$"
-
-_RECIPE_JSON_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "recipe_name": {"type": "string", "pattern": _ENGLISH_FIELD_PATTERN},
-        "servings": {"type": "integer"},
-        "adjusted_ingredients": {
-            "type": "array",
-            "items": {"type": "string", "pattern": _THAI_FIELD_PATTERN},
-        },
-        "diet_tags": {
-            "type": "array",
-            "items": {"type": "string", "pattern": _ENGLISH_FIELD_PATTERN},
-        },
-        "nutrition": {
-            "type": "object",
-            "properties": {
-                "basis": {"type": "string"},
-                "calories": {"type": "number"},
-                "protein_g": {"type": "number"},
-                "carbs_g": {"type": "number"},
-                "fat_g": {"type": "number"},
-            },
-            "required": ["basis", "calories", "protein_g", "carbs_g", "fat_g"],
-        },
-        "instructions": {
-            "type": "array",
-            "items": {"type": "string", "pattern": _THAI_FIELD_PATTERN},
-        },
-        "safety_warning": {"type": "string", "pattern": _THAI_FIELD_PATTERN},
-    },
-    "required": [
-        "recipe_name",
-        "servings",
-        "adjusted_ingredients",
-        "diet_tags",
-        "nutrition",
-        "instructions",
-        "safety_warning",
-    ],
-}
+from recipe_instructions import generation_schema, parse_generated_recipe
 
 
 class LocalLLMGenerator(RecipeGenerator):
@@ -83,13 +30,9 @@ class LocalLLMGenerator(RecipeGenerator):
                 json={
                     "model": self._model,
                     "messages": [{"role": "user", "content": prompt}],
-                    # json_schema (not the looser json_object) with
-                    # character-class patterns per field — see
-                    # _RECIPE_JSON_SCHEMA's module-level comment for why
-                    # this specific form (no lookahead) was chosen.
                     "response_format": {
                         "type": "json_schema",
-                        "json_schema": {"name": "recipe", "schema": _RECIPE_JSON_SCHEMA},
+                        "json_schema": {"name": "recipe", "schema": generation_schema(ingredients)},
                     },
                     # Qwen3.5 is a hybrid thinking/non-thinking model — without this,
                     # the answer goes into a separate "reasoning" field first and
@@ -104,7 +47,7 @@ class LocalLLMGenerator(RecipeGenerator):
             )
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
-            return json.loads(content)
+            return parse_generated_recipe(content, ingredients)
         except Exception as e:
             return {
                 "error": "ไม่สามารถสร้างสูตรอาหารได้ในขณะนี้ (local model)",

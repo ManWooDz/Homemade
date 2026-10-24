@@ -20,9 +20,21 @@ def ingredient_names(items):
     return names
 
 
+def normalize_estimated_total_time(value):
+    if not isinstance(value, dict) or set(value) != {"min_minutes", "max_minutes"}:
+        return None
+    if any(type(minutes) is not int or not 0 < minutes <= 9_007_199_254_740_991 for minutes in value.values()):
+        return None
+    return value if value["max_minutes"] >= value["min_minutes"] else None
+
+
 def validate_generated_recipe_shape(recipe):
     if not isinstance(recipe, dict):
         return False, "Invalid recipe"
+
+    time = recipe.get("estimated_total_time")
+    if time is not None and normalize_estimated_total_time(time) is None:
+        return False, "Invalid estimated total time"
 
     recipe_name = recipe.get("recipe_name")
     if not isinstance(recipe_name, str) or not recipe_name.strip():

@@ -130,7 +130,7 @@ class EmbeddingTests(unittest.TestCase):
 
         self.assertEqual(result, [[1.0] + [0.0] * 767])
 
-    @patch.dict(os.environ, {"GEMINI_API_KEY": ""})
+    @patch.dict(os.environ, {"GEMINI_API_KEY_FREE": "", "GEMINI_API_KEY": ""})
     def test_embedding_rejects_missing_api_key_when_client_is_not_injected(self):
         with self.assertRaises(EmbeddingError):
             embed_history_documents(["document"])
@@ -145,7 +145,7 @@ class EmbeddingTests(unittest.TestCase):
             embed_request_queries(["query"], client=client)
 
     @patch("embeddings.genai.Client", side_effect=RuntimeError("client unavailable"))
-    @patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"GEMINI_API_KEY_FREE": "", "GEMINI_API_KEY": "test-key"})
     def test_embedding_wraps_client_constructor_exception(self, client_constructor):
         with self.assertRaises(EmbeddingError) as raised:
             embed_request_queries(["query"])
@@ -154,7 +154,7 @@ class EmbeddingTests(unittest.TestCase):
         client_constructor.assert_called_once()
 
     @patch("embeddings.genai.Client")
-    @patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"GEMINI_API_KEY_FREE": "", "GEMINI_API_KEY": "test-key"})
     def test_embedding_constructs_client_with_bounded_http_options(self, client_constructor):
         vector = [1.0] + [0.0] * 767
         client_constructor.return_value = SimpleNamespace(

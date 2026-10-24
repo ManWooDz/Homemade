@@ -5,6 +5,16 @@ from generators.prompts import build_recipe_prompt
 
 
 class BuildRecipePromptTests(unittest.TestCase):
+    def test_current_prompt_estimates_final_elapsed_time_without_changing_legacy_training(self):
+        for include_example in (False, True):
+            prompt = build_recipe_prompt(["egg"], {}, {}, include_example=include_example)
+            for text in ('"estimated_total_time"', '"min_minutes"', '"max_minutes"',
+                         "รวมเวลาเตรียม ปรุง และรอ", "วัตถุดิบสำเร็จรูปที่ระบุถือว่าเตรียมแล้ว",
+                         "ถ้าประเมินไม่ได้ให้ส่ง null", "ห้ามคัดลอกเวลาสูตรตั้งต้น"):
+                self.assertIn(text, prompt)
+        legacy = build_recipe_prompt(["egg"], {}, {}, include_example=True, structured_instructions=False)
+        self.assertNotIn("estimated_total_time", legacy)
+
     def test_prompt_declares_all_used_ingredients_and_bounded_flavor_methods(self):
         for include_example in (False, True):
             prompt = build_recipe_prompt(["minced pork", "chives"], {}, {}, include_example=include_example)
@@ -47,12 +57,19 @@ class BuildRecipePromptTests(unittest.TestCase):
     def test_include_example_true_appends_a_worked_example(self):
         import json
 
-        from generators.prompts import FEW_SHOT_EXAMPLE_RECIPE
-
         prompt = build_recipe_prompt(["egg"], {}, {"name": "test"}, include_example=True)
         self.assertIn("ตัวอย่างที่ถูกต้อง", prompt)
-        # the exact example dict must appear as valid, embedded JSON
-        self.assertIn(json.dumps(FEW_SHOT_EXAMPLE_RECIPE, ensure_ascii=False, indent=2), prompt)
+        example = {"instructions": [{"action": "cut", "ingredients": ["i1"], "targets": [], "excluded": []}]}
+        self.assertIn(json.dumps(example, ensure_ascii=False, indent=2), prompt)
+        self.assertIn("i1=egg", prompt)
+        self.assertNotIn("อกไก่ 300 กรัม", prompt)
+
+    def test_legacy_training_prompt_keeps_prose_targets_compatible(self):
+        prompt = build_recipe_prompt(["egg"], {}, {}, include_example=True, structured_instructions=False)
+        self.assertIn('"instructions": ["1. ขั้นตอนแรก', prompt)
+        self.assertIn("อกไก่ 300 กรัม", prompt)
+        self.assertNotIn("รหัสวัตถุดิบที่ backend กำหนด", prompt)
+        self.assertNotIn('"action":', prompt)
 
 
 if __name__ == "__main__":

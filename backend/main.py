@@ -90,14 +90,12 @@ _harden_stdio([sys.stdout, sys.stderr])
 # 
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+from gemini_keys import create_client
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 # Gemini API
-if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-else:
-    print("Warning: ไม่พบ GEMINI_API_KEY ในไฟล์ .env")
-    client = None
+client = create_client()
+if client is None:
+    print("Warning: ไม่พบ GEMINI_API_KEY_FREE หรือ GEMINI_API_KEY ในไฟล์ .env")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -168,6 +166,10 @@ from recipe_checks import (
     BASIC_INGREDIENTS, BAD_FLAVOR_PAIRS, check_ingredients, check_flavor,
     check_logic, check_nutrition, check_core, ingredient_prompt_guidance,
 )
+from recipe_instructions import (
+    FORMAT_ERROR, generation_schema, instruction_prompt,
+    parse_generated_recipe, public_recipe,
+)
 
 from allergen_kg.floor import ALLERGEN_LABELS, ALLERGEN_MAP, ALLERGY_TRIGGER_KEYWORDS, detect_flagged_allergens, parse_allergy_preferences
 from allergen_kg.match import find_allergy_violation, format_violation_reason
@@ -198,6 +200,8 @@ def check_allergy(recipe, user_prefs, resolved_blocks=None):
 # Main Validation Pipeline
 # -------------------------------
 def validate_recipe(recipe, user_ingredients, user_prefs, resolved_blocks=None):
+    if isinstance(recipe, dict) and FORMAT_ERROR in recipe:
+        return {"status": "fail", "reason": recipe[FORMAT_ERROR]}
     valid, msg = validate_generated_recipe_shape(recipe)
     if not valid:
         return {
@@ -309,6 +313,7 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
         {{
             "recipe_name": "ชื่อเมนูที่สมเหตุสมผล (MUST BE IN ENGLISH)",
             "servings": 2,
+            "estimated_total_time": {{"min_minutes": 15, "max_minutes": 20}},
             "adjusted_ingredients": ["วัตถุดิบ 1 (พร้อมระบุปริมาณที่ถูกต้อง IN THAI)", "วัตถุดิบ 2 (IN THAI)"],
             "diet_tags": ["tag1 (MUST BE IN ENGLISH)", "tag2 (MUST BE IN ENGLISH)"],
             "nutrition": {{
@@ -318,24 +323,24 @@ def call_agentic_llm(ingredients, user_prefs, base_recipe, feedback=None):
                 "carbs_g": ตัวเลข,
                 "fat_g": ตัวเลข
             }},
-            "instructions": ["1. ขั้นตอนแรก (IN THAI)...", "2. ขั้นตอนต่อไป (IN THAI)..."],
+            "instructions": [{{"action": "mix", "ingredients": ["i1"], "targets": [], "excluded": []}}],
             "safety_warning": "คำเตือนความปลอดภัย (IN THAI) เช่น เรื่องการแพ้อาหาร (หากไม่มีให้ใส่ข้อความว่า 'ระวังความร้อนขณะประกอบอาหาร')"
         }}
         """
         
         # API to Gemini
+        prompt += instruction_prompt(ingredients)
         response = client.models.generate_content(
             # model='gemini-2.5-flash-lite',
             model='gemini-3.1-flash-lite-preview',
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
+                response_json_schema=generation_schema(ingredients),
             ),
         )
         
-        result_json = json.loads(response.text)
-        return result_json
-
+        return parse_generated_recipe(response.text, ingredients)
     except Exception as e:
         print(f"Gemini API Error: {type(e).__name__}")
         return {
@@ -1202,7 +1207,7 @@ async def generate_recipe_text(
 
         # (rev 3) final_output may be a caller-owned object in some code
         # paths -- copy before mutating so this never corrupts shared state.
-        final_output = dict(final_output)
+        final_output = public_recipe(final_output)
 
         # Nutrition Engine: runs exactly once, on the already-approved
         # recipe -- never inside the retry loop above. Its own try/except

@@ -23,6 +23,15 @@ VALID_RECIPE = {
 
 
 class RecipeContractTests(unittest.TestCase):
+    def test_optional_total_time_contract_is_strict_when_present(self):
+        for time in (None, {"min_minutes": 5, "max_minutes": 5}, {"min_minutes": 5, "max_minutes": 10}):
+            self.assertEqual(validate_generated_recipe_shape({**VALID_RECIPE, "estimated_total_time": time}), (True, "OK"))
+        for time in ({}, [], "15", {"min_minutes": True, "max_minutes": 10},
+                     {"min_minutes": 20, "max_minutes": 10}, {"min_minutes": 1, "max_minutes": 2**53}):
+            with self.subTest(time=time):
+                self.assertEqual(validate_generated_recipe_shape({**VALID_RECIPE, "estimated_total_time": time}),
+                                 (False, "Invalid estimated total time"))
+
     def test_ingredient_names_ignore_fridge_quantity_and_metadata(self):
         result = ingredient_names(
             [

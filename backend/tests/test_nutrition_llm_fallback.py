@@ -32,7 +32,7 @@ class NutritionLLMEstimatorTests(unittest.TestCase):
         self.assertEqual(result, [])
         estimator._client.models.generate_content.assert_not_called()
 
-    @patch.dict(os.environ, {"GEMINI_API_KEY": ""})
+    @patch.dict(os.environ, {"GEMINI_API_KEY_FREE": "", "GEMINI_API_KEY": ""})
     def test_no_api_key_returns_all_none_macros(self):
         estimator = NutritionLLMEstimator(api_key=None)
         result = estimator.estimate(["ใบมะกรูด"])

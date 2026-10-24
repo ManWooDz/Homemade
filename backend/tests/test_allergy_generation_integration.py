@@ -17,6 +17,7 @@ from database.models import (AllergenEdge, Base, BaseRecipe, Favorite, GenerateH
                              IngredientNode, IngredientNutrition, IngredientNutritionAlias, Notification, Rating, User)
 from database.seed_allergen_graph import seed_allergen_graph
 from main import app
+from recipe_instructions import instruction_registry
 
 
 SAFE = {
@@ -27,6 +28,13 @@ SAFE = {
     "nutrition": {"basis": "per_serving", "calories": 300, "protein_g": 15, "carbs_g": 10, "fat_g": 10},
 }
 KEYS = ("shrimp", "peanut", "milk", "egg", "gluten", "shellfish", "fish", "soy", "nut", "sesame")
+
+
+def provider_response(recipe, extra_ingredients=()):
+    registry = instruction_registry(["หมูสับ", *extra_ingredients])
+    refs = {name: key for key, name in registry.items()}
+    raw = {**recipe, "instructions": [{"action": "stir_fry", "ingredients": [refs["minced pork"], refs["oil"]], "targets": [], "excluded": []}]}
+    return SimpleNamespace(text=json.dumps(raw, ensure_ascii=False))
 
 
 class AllergyGenerationIntegrationTests(unittest.TestCase):
@@ -132,7 +140,7 @@ class AllergyGenerationIntegrationTests(unittest.TestCase):
             with self.subTest(flow=recipe_name):
                 self.provider.reset_mock()
                 self.provider.generate_content.side_effect = [
-                    SimpleNamespace(text=json.dumps(output, ensure_ascii=False)) for output in (unsafe, SAFE)]
+                    provider_response(output, ("ทาฮินี (ไม่มีงา)",)) for output in (unsafe, SAFE)]
                 response = self.generate(label, extra_ingredients=("ทาฮินี (ไม่มีงา)",), recipe_name=recipe_name)
                 self.assertEqual(response.json()["status"], "success", response.json())
                 self.assertEqual(self.provider.generate_content.call_count, 2)
@@ -143,12 +151,14 @@ class AllergyGenerationIntegrationTests(unittest.TestCase):
         histories = self.http.get("/api/history").json()["data"]
         self.assertEqual(len(histories), 2)
         self.assertTrue(all("ทาฮินี" not in " ".join(row["recipe_data"]["adjusted_ingredients"]) for row in histories))
+        self.assertTrue(all(isinstance(step, str) for row in histories for step in row["recipe_data"]["instructions"]))
+        self.assertTrue(all("_instruction_plan" not in row["recipe_data"] for row in histories))
 
     def test_persistent_violation_exhausts_three_attempts_without_history(self):
         self.seed_healthy()
         unsafe = deepcopy(SAFE)
         unsafe["adjusted_ingredients"].append("งาดำ 1 กรัม")
-        self.provider.generate_content.return_value = SimpleNamespace(text=json.dumps(unsafe, ensure_ascii=False))
+        self.provider.generate_content.return_value = provider_response(unsafe, ("งาดำ",))
         response = self.generate("แพ้งา", extra_ingredients=("งาดำ",))
         self.assertEqual(response.json()["status"], "error")
         self.assertIn("งาดำ", response.json()["message"])
@@ -156,7 +166,7 @@ class AllergyGenerationIntegrationTests(unittest.TestCase):
         self.assertEqual(self.http.get("/api/history").json()["data"], [])
 
     def test_no_declared_allergy_generates_with_empty_kg(self):
-        self.provider.generate_content.return_value = SimpleNamespace(text=json.dumps(SAFE, ensure_ascii=False))
+        self.provider.generate_content.return_value = provider_response(SAFE)
         response = self.generate("ไม่มีอาการแพ้")
         self.assertEqual(response.json()["status"], "success", response.json())
         self.assertEqual(self.provider.generate_content.call_count, 1)

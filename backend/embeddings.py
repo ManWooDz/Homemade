@@ -7,6 +7,7 @@ from google import genai
 from google.genai import types
 
 from nutrition.parser import parse_ingredient_string
+from gemini_keys import create_client
 
 
 _MODEL_NAME = "gemini-embedding-001"
@@ -63,16 +64,10 @@ def build_request_query(recipe_name, ingredient_names, taste) -> str:
 
 
 def _create_client():
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if not api_key:
+    client = create_client(timeout=5000)
+    if client is None:
         raise EmbeddingError("GEMINI_API_KEY is required to create embeddings")
-    return genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(
-            timeout=5000,
-            retry_options=types.HttpRetryOptions(attempts=1),
-        ),
-    )
+    return client
 
 
 def _validate_and_normalize(response, expected_count: int) -> list[list[float]]:

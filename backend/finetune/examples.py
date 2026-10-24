@@ -156,6 +156,7 @@ def build_tier_a_examples(recipe: Recipe) -> list[dict]:
             base_recipe={"name": recipe.dish_name, "servings": 2},
             feedback=None,
             include_example=True,
+            structured_instructions=False,  # Legacy targets are prose, not action objects.
         )
         target_instructions = _drop_instruction_clauses_mentioning(recipe.instruction_text, dropped_names)
         examples.append(
@@ -208,6 +209,7 @@ def build_tier_b_examples(recipe: Recipe) -> list[dict]:
             base_recipe={"name": recipe.dish_name, "servings": 2},
             feedback=None,
             include_example=True,
+            structured_instructions=False,
         )
         examples.append(
             {

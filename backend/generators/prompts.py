@@ -2,13 +2,9 @@
 import json
 
 from recipe_checks import ingredient_prompt_guidance
+from recipe_instructions import instruction_prompt
 
-# Few-shot example for LocalLLMGenerator only (include_example=True) — the
-# design doc's Phasing section calls for prompt/schema engineering
-# specifically for the local model, since a smaller instruct model is less
-# reliable at strict JSON schema adherence than Gemini without a worked
-# example. GeminiGenerator never sets include_example=True, so production
-# behavior (main.py's call_agentic_llm()) is unaffected.
+# Legacy training targets use prose; current generators get an ID-based example.
 FEW_SHOT_EXAMPLE_RECIPE = {
     "recipe_name": "Stir-Fried Basil Chicken",
     "servings": 2,
@@ -24,17 +20,13 @@ FEW_SHOT_EXAMPLE_RECIPE = {
 }
 
 
-def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, feedback: str | None = None, include_example: bool = False) -> str:
-    """Builds the Thai recipe-generation prompt. With include_example=False
-    (default), textually mirrors the prompt in main.py's call_agentic_llm()
-    (as of 2026-09-14) — kept as a separate copy per this plan's Global
-    Constraints (main.py is not modified this milestone). Shared by
-    GeminiGenerator and LocalLLMGenerator so the two implementations are
-    prompted identically except for this example block."""
+def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, feedback: str | None = None, include_example: bool = False, *, structured_instructions: bool = True) -> str:
+    """Shared generator prompt; only historical training opts out of structured steps."""
     example_section = ""
     language_rule_section = ""
     if include_example:
-        example_json = json.dumps(FEW_SHOT_EXAMPLE_RECIPE, ensure_ascii=False, indent=2)
+        example = {"instructions": [{"action": "cut", "ingredients": ["i1"], "targets": [], "excluded": []}]} if structured_instructions else FEW_SHOT_EXAMPLE_RECIPE
+        example_json = json.dumps(example, ensure_ascii=False, indent=2)
         example_section = f"""
         ตัวอย่างที่ถูกต้อง (โครงสร้าง JSON ที่ต้องเลียนแบบ ไม่ใช่คำตอบจริงสำหรับ request นี้):
         {example_json}
@@ -50,10 +42,18 @@ def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, 
         # already calls for it) but about garbage scripts with no reason to
         # appear at all.
         language_rule_section = """
-        7. ภาษา (Language): เนื้อหาในฟิลด์ adjusted_ingredients, instructions และ safety_warning ต้องเป็นภาษาไทยเท่านั้น อนุญาตคำภาษาอังกฤษเฉพาะกรณีจำเป็นจริง (เช่น ชื่อยี่ห้อ หรือหน่วยที่ไม่มีคำไทยตรง) ห้ามมีอักษรจากภาษาอื่นที่ไม่ใช่ไทยหรืออังกฤษปนอยู่โดยเด็ดขาด (เช่น กรีก จีน เกาหลี ซีริลลิก)
+        7. ภาษา (Language): adjusted_ingredients และ safety_warning ต้องเป็นภาษาไทย อนุญาตชื่อวัตถุดิบอังกฤษที่ยืนยันได้ ห้ามภาษาอื่นปน; instructions ใช้ action และรหัสตาม schema เท่านั้น backend จะสร้างประโยคไทย
         8. การผัด (Stir-Frying): การผัดแบบใช้น้ำมันต้องประกาศน้ำมันและระบุการใช้ในขั้นตอนนั้นหรือก่อนหน้า วิธีที่ไม่ใช้น้ำมันต้องระบุให้ชัด
         9. การแพ้อาหาร (Allergy Enforcement): หากวัตถุดิบที่ผู้ใช้มีตรงกับสารก่อภูมิแพ้ที่ระบุไว้ ต้องตัดวัตถุดิบนั้นออกจาก adjusted_ingredients ทั้งหมด ห้ามใส่เด็ดขาดแม้จะเป็นวัตถุดิบที่ผู้ใช้มีอยู่จริงในรายการก็ตาม
         """
+        if not structured_instructions:
+            language_rule_section = language_rule_section.replace(
+                "adjusted_ingredients และ safety_warning ต้องเป็นภาษาไทย อนุญาตชื่อวัตถุดิบอังกฤษที่ยืนยันได้ ห้ามภาษาอื่นปน; instructions ใช้ action และรหัสตาม schema เท่านั้น backend จะสร้างประโยคไทย",
+                "adjusted_ingredients, instructions และ safety_warning ต้องเป็นภาษาไทย อนุญาตชื่อวัตถุดิบอังกฤษที่ยืนยันได้ ห้ามภาษาอื่นปน",
+            )
+
+    instruction_example = '[{"action": "mix", "ingredients": ["i1"], "targets": [], "excluded": []}]' if structured_instructions else '["1. ขั้นตอนแรก (IN THAI)...", "2. ขั้นตอนต่อไป (IN THAI)..."]'
+    time_example = '\n            "estimated_total_time": {"min_minutes": 15, "max_minutes": 20},' if structured_instructions else ""
 
     feedback_section = ""
     if feedback:
@@ -94,7 +94,7 @@ def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, 
 
         {{
             "recipe_name": "ชื่อเมนูที่สมเหตุสมผล (MUST BE IN ENGLISH)",
-            "servings": 2,
+            "servings": 2,{time_example}
             "adjusted_ingredients": ["วัตถุดิบ 1 (พร้อมระบุปริมาณที่ถูกต้อง IN THAI)", "วัตถุดิบ 2 (IN THAI)"],
             "diet_tags": ["tag1 (MUST BE IN ENGLISH)", "tag2 (MUST BE IN ENGLISH)"],
             "nutrition": {{
@@ -104,8 +104,9 @@ def build_recipe_prompt(ingredients: list, user_prefs: dict, base_recipe: dict, 
                 "carbs_g": ตัวเลข,
                 "fat_g": ตัวเลข
             }},
-            "instructions": ["1. ขั้นตอนแรก (IN THAI)...", "2. ขั้นตอนต่อไป (IN THAI)..."],
+            "instructions": {instruction_example},
             "safety_warning": "คำเตือนความปลอดภัย (IN THAI) เช่น เรื่องการแพ้อาหาร (หากไม่มีให้ใส่ข้อความว่า 'ระวังความร้อนขณะประกอบอาหาร')"
         }}
         {example_section}
+        {instruction_prompt(ingredients) if structured_instructions else ""}
         """

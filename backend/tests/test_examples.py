@@ -29,6 +29,7 @@ class BuildTierAExamplesTests(unittest.TestCase):
         self.assertGreater(len(examples), 0)
         first = examples[0]
         self.assertEqual(first["tier"], "A")
+        self.assertNotIn("รหัสวัตถุดิบที่ backend กำหนด", first["prompt"])
         self.assertNotIn("น้ำปลา 1 ช้อนโต๊ะ", first["target_adjusted_ingredients"])
         self.assertIsNotNone(first["target_instructions"])
         joined = " ".join(first["target_instructions"])
@@ -104,6 +105,7 @@ class BuildTierBExamplesTests(unittest.TestCase):
         self.assertGreater(len(examples), 0)
         first = examples[0]
         self.assertEqual(first["tier"], "B")
+        self.assertNotIn("รหัสวัตถุดิบที่ backend กำหนด", first["prompt"])
         self.assertIsNone(first["target_instructions"])
         self.assertLessEqual(len(first["target_adjusted_ingredients"]), 2)
 

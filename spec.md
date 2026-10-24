@@ -1,5 +1,11 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Structured recipe generation Git delivery (2026-10-25 Bangkok)
+
+- User authorizes commit/push of this chat's recipe-generation repairs and approved free-first Gemini key routing. Scope: closed action/known-ID protocol, explicit roles and set_aside, oil-medium rendering, bounded cooking/pan checks after Allergy, public/private separation, declaration format, benchmark accounting and all related wrappers/fixtures/tests. Include existing optional timing helper/contract required by the shared schema; no timing UI or seed-tag changes.
+- Preserve unrelated frontend/design/search/tag work, history timing-only fixture edits and local spec/MEMORY history. No package, environment/secret, persistent-data migration, ignored raw artifact or forced Git operation. Portable interface/routing/limits documentation: RECIPE_GENERATION.md.
+- Exact isolated HEAD-plus32path candidate passes1100backend tests (1098pass/2skip) in185.910seconds, guard0 and exit0. Source/scope/configured-credential checks pass. One test EOF blank line was normalized with identical AST; all6focused key tests pass afterward, guard0. No new provider request is made for Git delivery; separate prior real three-menu3/3with actual set_aside is retained as live evidence. Current UI/local decoder and grounded-nutrition acceptance remain outside this publication.
+
 ## Registration OTP publication (2026-10-24 Bangkok)
 
 - User explicitly authorizes commit and push of registration email OTP to origin/main. Scope: pending-registration model/migration/helper/endpoints, purpose-specific mail, shared six-box OTP UI, auth state/routes/translations, affected fixtures/tests and REGISTRATION_EMAIL_OTP.md. Selected shared-file hunks keep recipe generation, Gemini keys, recipe timing/search/localization and unrelated design/onboarding work outside this commit.

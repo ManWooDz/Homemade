@@ -11,6 +11,7 @@ from google import genai
 from google.genai import types
 
 from nutrition.lookup import MacroValues
+from gemini_keys import create_client
 
 load_dotenv()
 
@@ -32,8 +33,7 @@ def _to_float_or_none(value) -> float | None:
 
 class NutritionLLMEstimator:
     def __init__(self, api_key: str | None = None):
-        self._api_key = api_key if api_key is not None else os.getenv("GEMINI_API_KEY")
-        self._client = genai.Client(api_key=self._api_key) if self._api_key else None
+        self._client = create_client(api_key)
 
     def estimate(self, names: list[str]) -> list[MacroValues]:
         if not names:

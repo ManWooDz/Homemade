@@ -187,6 +187,15 @@ def unknown_ingredients(recipe, user_ingredients):
 
 
 def check_ingredients(recipe, user_ingredients):
+    if "_instruction_plan" in recipe:
+        from recipe_instructions import instruction_uses, instruction_registry
+        try:
+            instruction_uses(recipe)
+            allowed = set(instruction_registry(user_ingredients).values())
+            if any(not set(step.get(role, [])) <= allowed for step in recipe["_instruction_plan"] for role in ("ingredients", "targets", "excluded")):
+                return False, "Unknown structured ingredient reference"
+        except (ValueError, TypeError, KeyError):
+            return False, "Invalid structured instruction plan"
     unknown = unknown_ingredients(recipe, user_ingredients)
     if unknown:
         return False, f"Invalid ingredient found: {unknown[0]}"
@@ -230,6 +239,11 @@ def _targets(key, declared):
 
 
 def _clauses(recipe, declared):
+    if "_instruction_plan" in recipe:
+        from recipe_instructions import instruction_uses
+        for index, (instruction, used) in enumerate(zip(recipe["instructions"], instruction_uses(recipe)), 1):
+            yield index, normalize_alias(instruction), [(name, name, {name}) for name in used]
+        return
     names = _names(declared)
     for index, instruction in enumerate(recipe["instructions"], 1):
         for clause in _CLAUSE_BREAK.split(normalize_alias(instruction)):
@@ -247,6 +261,12 @@ def _clauses(recipe, declared):
 
 
 def check_logic(recipe):
+    if recipe.get("_instruction_protocol") == 2:
+        from recipe_instructions import _validate_workflow
+        try:
+            _validate_workflow(recipe["_instruction_plan"], check_cooking=True)
+        except ValueError as error:
+            return False, str(error)
     instructions = " ".join(recipe["instructions"])
     warning = recipe.get("safety_warning", "")
     cooking_text = normalize_alias(instructions + " " + (warning if isinstance(warning, str) else ""))
@@ -261,11 +281,14 @@ def check_logic(recipe):
             if len(targets) != 1:
                 return False, f"Ambiguous ingredient in step {index}: {text}; use its declared full name"
         oil_used |= any(targets & _OILS for _, _, targets in uses)
-        if _FRY.search(clause) and not _NO_ADDED_OIL.search(clause):
-            actions = list(_OPERATOR.finditer(clause))
-            if any(action.lastgroup == "positive" and _FRY.search(action[0]) for action in actions):
-                if not (declared & _OILS and oil_used):
-                    return False, f"Oil-based frying in step {index} needs declared oil used at or before this step; clarify an oil-free method if intended"
+        if "_instruction_plan" in recipe:
+            oil_frying = recipe["_instruction_plan"][index - 1]["action"] in ("stir_fry", "fry")
+        else:
+            oil_frying = bool(_FRY.search(clause) and not _NO_ADDED_OIL.search(clause)
+                              and any(action.lastgroup == "positive" and _FRY.search(action[0])
+                                      for action in _OPERATOR.finditer(clause)))
+        if oil_frying and not (declared & _OILS and oil_used):
+            return False, f"Oil-based frying in step {index} needs declared oil used at or before this step; clarify an oil-free method if intended"
     return True, "OK"
 
 
@@ -282,21 +305,38 @@ def check_flavor(recipe):
     if not _stir_fry_family(recipe, declared):
         return True, "OK (Flavor rules not applicable)"
     component = set()
+    cooking_component = False
     for index, clause, uses in _clauses(recipe, declared):
-        separate = any(not re.search(r"(?:ไม่ต้อง|ไม่ควร|ไม่|ห้าม|อย่า|not|never)\s*$", clause[:match.start()])
-                       for match in re.finditer(r"แยก|ต่างหาก|\b(?:separately|alongside)\b", clause))
-        if separate:
-            component = set()
-            continue
         used = set().union(*(targets for _, _, targets in uses)) if uses else set()
-        same_component = re.search(r"กระทะเดิม|กระทะเดียวกัน|ส่วนเดียวกัน|ผัดรวมกัน|\bsame (?:pan|stir[- ]fry|component)\b", clause)
-        if same_component and component:
+        if "_instruction_plan" in recipe:
+            action = recipe["_instruction_plan"][index - 1]["action"]
+            if action == "serve_separately":
+                component, cooking_component = set(), False
+                continue
+            if action == "set_aside":
+                component.difference_update(used)
+                cooking_component = cooking_component and bool(component)
+                continue
+            if action not in ("heat", "mix", "add", "season", "stir_fry"):
+                continue
             component |= used
-        elif any(action.lastgroup == "positive" and _STIR_FRY.search(action[0])
-                 for action in _OPERATOR.finditer(clause)):
-            component = used
+            cooking_component |= action == "stir_fry"
+            if not cooking_component:
+                continue
         else:
-            continue
+            separate = any(not re.search(r"(?:ไม่ต้อง|ไม่ควร|ไม่|ห้าม|อย่า|not|never)\s*$", clause[:match.start()])
+                           for match in re.finditer(r"แยก|ต่างหาก|\b(?:separately|alongside)\b", clause))
+            if separate:
+                component = set()
+                continue
+            same_component = re.search(r"กระทะเดิม|กระทะเดียวกัน|ส่วนเดียวกัน|ผัดรวมกัน|\bsame (?:pan|stir[- ]fry|component)\b", clause)
+            if same_component and component:
+                component |= used
+            elif any(action.lastgroup == "positive" and _STIR_FRY.search(action[0])
+                     for action in _OPERATOR.finditer(clause)):
+                component = used
+            else:
+                continue
         for rule, pair in (("F01", {"cow milk", "fish sauce"}), ("F02", {"chocolate", "garlic"})):
             if pair <= component:
                 return False, f"Flavor {rule}: HomeMade Padthai/Pad kra pao rule rejects {' + '.join(sorted(pair))} in the same stir-fry (step {index}); revise this component"

@@ -3,6 +3,7 @@ import unicodedata
 
 from main import validate_recipe
 from recipe_checks import unknown_ingredients
+from recipe_instructions import instruction_uses
 
 _THAI_TONE_MARKS = "่้๊๋"  # mai ek/tho/tri/chattawa
 
@@ -41,9 +42,19 @@ def check_schema_and_constraints(recipe: dict, ingredients_name_only: list, user
 
 
 def check_ingredient_hallucination(recipe: dict, ingredients: list) -> dict:
-    """Use production ingredient identities; quantity errors are not hallucinations."""
+    """Declaration-only metric; says nothing about free-text instruction completeness."""
     unknown = unknown_ingredients(recipe, ingredients)
     return {"hallucinated": bool(unknown), "unknown_ingredients": unknown}
+
+
+def check_instruction_consistency(recipe):
+    if not isinstance(recipe, dict) or "_instruction_plan" not in recipe:
+        return "unknown"  # Legacy prose cannot establish complete ingredient coverage.
+    try:
+        instruction_uses(recipe)
+        return "valid"
+    except (ValueError, TypeError, KeyError):
+        return "invalid"
 
 
 def summarize_run(results: list) -> dict:
@@ -61,11 +72,17 @@ def summarize_run(results: list) -> dict:
 
     valid_count = sum(1 for r in results if r.get("valid"))
     hallucinated_count = sum(1 for r in results if r.get("hallucinated"))
+    evaluated_count = sum(isinstance(r.get("hallucinated"), bool) for r in results)
     total_latency = sum(r.get("latency_seconds", 0.0) for r in results)
 
     return {
         "n": n,
         "schema_validity_rate": valid_count / n,
-        "hallucination_rate": hallucinated_count / n,
+        "hallucination_rate": hallucinated_count / evaluated_count if evaluated_count else None,
+        "hallucination_evaluated_n": evaluated_count,
+        "generator_error_count": sum(r.get("generation_status") == "provider_error" for r in results),
+        "format_error_count": sum(r.get("generation_status") == "format_error" for r in results),
+        "instruction_consistency_counts": {status: sum(r.get("instruction_consistency") == status for r in results)
+                                           for status in ("valid", "invalid", "unknown", "not_evaluated")},
         "mean_latency_seconds": total_latency / n,
     }

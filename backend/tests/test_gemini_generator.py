@@ -6,11 +6,13 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from generators.gemini_generator import GeminiGenerator
+from test_recipe_instructions import wire_recipe, SELECTED
+from recipe_instructions import normalize_generated_recipe
 
 
 class GeminiGeneratorTests(unittest.TestCase):
     def test_generate_returns_parsed_json_on_success(self):
-        fake_recipe = {"recipe_name": "Thai Basil Pork", "servings": 2}
+        fake_recipe = wire_recipe()
 
         def fake_generate_content(**kwargs):
             return SimpleNamespace(text=json.dumps(fake_recipe))
@@ -20,9 +22,10 @@ class GeminiGeneratorTests(unittest.TestCase):
         )
         gen = GeminiGenerator(api_key="fake-key")
         with patch.object(gen, "_client", fake_client):
-            result = gen.generate(["pork"], {}, {"name": "base"})
+            result = gen.generate(SELECTED, {}, {"name": "base"})
 
-        self.assertEqual(result, fake_recipe)
+        self.assertEqual(result, normalize_generated_recipe(fake_recipe, SELECTED))
+        self.assertEqual(result["estimated_total_time"], {"min_minutes": 5, "max_minutes": 10})
 
     def test_generate_passes_feedback_into_prompt(self):
         captured = {}
@@ -40,7 +43,7 @@ class GeminiGeneratorTests(unittest.TestCase):
 
         self.assertIn("Invalid nutrition value: fat_g", captured["prompt"])
 
-    @patch.dict(os.environ, {"GEMINI_API_KEY": ""})
+    @patch.dict(os.environ, {"GEMINI_API_KEY_FREE": "", "GEMINI_API_KEY": ""})
     def test_generate_returns_error_dict_when_no_api_key(self):
         # This worktree's backend/.env has a real GEMINI_API_KEY (gitignored,
         # environment-local). GeminiGenerator(api_key=None) falls back to

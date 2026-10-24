@@ -25,7 +25,8 @@ import time
 
 from allergen_kg.floor import detect_flagged_allergens
 from eval.allergen_kg_eval import assert_graph_status, seeded_resolver
-from eval.metrics import check_ingredient_hallucination, check_schema_and_constraints, summarize_run
+from eval.metrics import check_ingredient_hallucination, check_instruction_consistency, check_schema_and_constraints, summarize_run
+from recipe_instructions import FORMAT_ERROR, public_recipe
 from generators.gemini_generator import GeminiGenerator
 from generators.local_generator import LocalLLMGenerator
 
@@ -48,8 +49,11 @@ def run_case(generator, case, resolve=None):
     recipe = generator.generate(ingredients_name_only, case["user_prefs"], case["base_recipe"])
     latency = time.monotonic() - start
 
-    if isinstance(recipe, dict) and "error" in recipe:
-        return {"case_id": case["case_id"], "valid": False, "hallucinated": True, "latency_seconds": latency, "reason": recipe["error"], "recipe": recipe, "input": input_snapshot}
+    if isinstance(recipe, dict) and ("error" in recipe or FORMAT_ERROR in recipe):
+        return {"case_id": case["case_id"], "valid": False, "hallucinated": None,
+                "generation_status": "provider_error" if "error" in recipe else "format_error",
+                "instruction_consistency": "not_evaluated", "latency_seconds": latency,
+                "reason": recipe.get("error", recipe.get(FORMAT_ERROR)), "recipe": public_recipe(recipe), "input": input_snapshot}
 
     resolved_blocks = resolve(detect_flagged_allergens(case["user_prefs"])) if resolve else None
     schema_result = check_schema_and_constraints(recipe, ingredients_name_only, case["user_prefs"], resolved_blocks)
@@ -58,11 +62,15 @@ def run_case(generator, case, resolve=None):
     return {
         "case_id": case["case_id"],
         "valid": schema_result["valid"],
+        "generation_status": "ok",
+        "instruction_consistency": check_instruction_consistency(recipe),
+        "instruction_plan": recipe.get("_instruction_plan"),
+        "instruction_protocol": recipe.get("_instruction_protocol"),
         "reason": schema_result["reason"],
         "hallucinated": hallucination_result["hallucinated"],
         "unknown_ingredients": hallucination_result["unknown_ingredients"],
         "latency_seconds": latency,
-        "recipe": recipe,
+        "recipe": public_recipe(recipe),
         "input": input_snapshot,
     }
 

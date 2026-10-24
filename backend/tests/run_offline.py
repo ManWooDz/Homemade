@@ -13,8 +13,9 @@ BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 os.chdir(BACKEND)
 dotenv.load_dotenv(BACKEND / ".env")
-real_key = os.environ.get("GEMINI_API_KEY")
-os.environ["GEMINI_API_KEY"] = ""
+real_keys = {name: os.environ.get(name) for name in ("GEMINI_API_KEY_FREE", "GEMINI_API_KEY")}
+for name in real_keys:
+    os.environ[name] = ""
 os.environ["RUN_PG_TESTS"] = "0"
 os.environ["RUN_GENERATOR_TESTS"] = "0"
 
@@ -48,8 +49,9 @@ def guarded_engine_connect(engine, *args, **kwargs):
 
 def guarded_load_dotenv(*args, **kwargs):
     result = original_load_dotenv(*args, **kwargs)
-    if real_key and os.environ.get("GEMINI_API_KEY") == real_key:
-        os.environ["GEMINI_API_KEY"] = ""
+    for name, real_key in real_keys.items():
+        if real_key and os.environ.get(name) == real_key:
+            os.environ[name] = ""
     return result
 
 
