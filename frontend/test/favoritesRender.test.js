@@ -44,12 +44,34 @@ for (const locale of ["th", "en"]) {
                 assert.ok(html.includes(locale === "th" ? "เมนูพื้นฐาน" : "Base recipes"));
                 assert.ok(html.includes(locale === "th" ? "✨ สูตรของฉัน" : "✨ My recipes"));
                 assert.ok(html.includes('aria-current="page"'));
+                assert.ok(html.includes('aria-controls="recipe-filter-panel"'));
+                assert.ok(html.includes('aria-expanded="false"'));
                 assert.equal(html.includes('id="favorites-categories"'), tab === "base");
                 assert.ok(html.includes(`${populated ? 1 : 0} ${locale === "th" ? "รายการ" : "Items"}</span>`));
                 if (populated) assert.ok(html.includes(tab === "base" ? "ไข่เจียว" : "สูตรของฉัน"));
             });
         }
     }
+}
+
+for (const tab of ["base", "mine"]) {
+    test(`Favorites applies advanced filters to ${tab} without changing favorite membership`, () => {
+        setLocale("en");
+        const recipes = [
+            { id: 1, name: "Favorite Thai", ingredients: [{ name: "egg" }], tags: ["Thai Food"] },
+            { id: 2, name: "Favorite Vegan", tags: ["Vegan"] },
+            { id: 3, name: "Not saved", tags: ["Thai"] },
+        ];
+        const html = renderToStaticMarkup(createElement(Favorites, {
+            recipes, categories: ["All"], favoriteRecipeIds: [1, 2], tab,
+            historyFavorites: [{ id: 10, recipe_name: "My Thai", diet_tags: ["Thai"] }, { id: 11, recipe_name: "My Vegan", diet_tags: ["Vegan"] }],
+            recipeFilters: { cuisine: ["Thai"] }, filtersActive: true,
+        }));
+        assert.ok(html.includes(tab === "base" ? "Favorite Thai" : "My Thai"));
+        assert.equal(html.includes(tab === "base" ? "Favorite Vegan" : "My Vegan"), false);
+        assert.equal(html.includes("Not saved"), false);
+        assert.ok(html.includes("1 Items</span>"));
+    });
 }
 
 for (const locale of ["th", "en"]) {

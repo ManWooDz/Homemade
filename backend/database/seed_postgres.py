@@ -28,7 +28,7 @@ MOCK_RECIPES = [
         "ratings": 4.8,
         "review": 72,
         "image": "images/menus/superfood_veggie.png",
-        "tags": ["Healthy / Diet", "Quick & Easy"],
+        "tags": ["Healthy / Diet", "Quick & Easy", "Brunch", "Lunch", "Dinner", "Picnic"],
         "ingredients": ["kale", "quinoa", "avocado", "cherry tomatoes", "pumpkin seeds"],
         "servings": 1,
         "ingredient_quantities": [
@@ -48,7 +48,7 @@ MOCK_RECIPES = [
         "ratings": 4.6,
         "review": 105,
         "image": "images/menus/fresh_power_salad.png",
-        "tags": ["Healthy / Diet", "Quick & Easy"],
+        "tags": ["Healthy / Diet", "Quick & Easy", "Brunch", "Lunch", "Dinner", "Picnic"],
         "ingredients": ["spinach", "cucumber", "bell pepper", "red onion", "feta cheese", "balsamic vinaigrette"],
         "servings": 1,
         "ingredient_quantities": [
@@ -69,7 +69,7 @@ MOCK_RECIPES = [
         "ratings": 4.9,
         "review": 210,
         "image": "images/menus/rainbow_healthy.png",
-        "tags": ["Healthy / Diet", "Quick & Easy"],
+        "tags": ["Healthy / Diet", "Quick & Easy", "Lunch", "Dinner", "Picnic"],
         "ingredients": ["purple cabbage", "carrot", "edamame", "yellow bell pepper", "cherry tomatoes", "sesame dressing"],
         "servings": 1,
         "ingredient_quantities": [
@@ -90,7 +90,7 @@ MOCK_RECIPES = [
         "ratings": 4.9,
         "review": 340,
         "image": "images/menus/chashu_ramen.png",
-        "tags": ["Asian Food", "Japanese Food"],
+        "tags": ["Asian Food", "Japanese Food", "Lunch", "Dinner"],
         "ingredients": ["ramen noodles", "pork belly (chashu)", "tonkotsu broth", "soft-boiled egg", "green onion", "nori seaweed", "soy sauce"],
         "servings": 1,
         "ingredient_quantities": [
@@ -112,7 +112,7 @@ MOCK_RECIPES = [
         "ratings": 4.7,
         "review": 185,
         "image": "images/menus/padthai.png",
-        "tags": ["Asian Food", "Thai Food"],
+        "tags": ["Asian Food", "Thai Food", "Lunch", "Dinner"],
         "ingredients": ["rice noodles", "shrimp", "egg", "bean sprouts", "chives", "tofu", "tamarind paste", "fish sauce", "palm sugar", "peanuts"],
         "servings": 1,
         "ingredient_quantities": [
@@ -137,7 +137,7 @@ MOCK_RECIPES = [
         "ratings": 4.8,
         "review": 450,
         "image": "images/menus/pad_kra_pao.png",
-        "tags": ["Asian Food", "Thai Food"],
+        "tags": ["Asian Food", "Thai Food", "Lunch", "Dinner", "Spicy"],
         "ingredients": ["minced pork", "holy basil leaves", "garlic", "bird's eye chilies", "oyster sauce", "soy sauce", "fish sauce", "sugar", "vegetable oil"],
         "servings": 1,
         "ingredient_quantities": [
@@ -161,7 +161,7 @@ MOCK_RECIPES = [
         "ratings": 4.5,
         "review": 89,
         "image": "images/menus/greek_salad.png",
-        "tags": ["Healthy / Diet", "Western Food", "Quick & Easy"],
+        "tags": ["Healthy / Diet", "Western Food", "Quick & Easy", "Brunch", "Lunch", "Dinner", "Picnic"],
         "ingredients": ["feta cheese", "kalamata olives", "cucumber", "cherry tomatoes", "red onion", "olive oil", "oregano"],
         "servings": 1,
         "ingredient_quantities": [
@@ -183,7 +183,7 @@ MOCK_RECIPES = [
         "ratings": 4.9,
         "review": 512,
         "image": "images/menus/grilled_steak.png",
-        "tags": ["Western Food", "High Protein"],
+        "tags": ["Western Food", "High Protein", "Lunch", "Dinner", "Date Night"],
         "ingredients": ["beef steak", "garlic", "rosemary", "butter", "black pepper", "salt", "olive oil"],
         "servings": 1,
         "ingredient_quantities": [
@@ -205,7 +205,7 @@ MOCK_RECIPES = [
         "ratings": 4.8,
         "review": 405,
         "image": "images/menus/tom_yum_kung.png",
-        "tags": ["Asian Food", "Thai Food", "Spicy"],
+        "tags": ["Asian Food", "Thai Food", "Spicy", "Lunch", "Dinner"],
         "ingredients": ["shrimp", "lemongrass", "galangal", "kaffir lime leaves", "bird's eye chilies", "fish sauce", "lime juice", "mushrooms", "cilantro", "chili paste"],
         "servings": 1,
         "ingredient_quantities": [

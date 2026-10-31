@@ -63,11 +63,11 @@ export default function CustomCookingPage({
 
                 <header className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button type="button" onClick={onBack} aria-label={t("กลับ")}
-                        className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md">
+                        className="page-header-back w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md">
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <img src={logo} alt="HomeMade" className="h-18 object-contain" />
-                    <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
+                    <NotificationBell count={notificationCount} onClick={onNotifications} />
                 </header>
 
                 <main className="flex-1 min-h-0 px-6 pb-8">

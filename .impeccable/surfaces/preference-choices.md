@@ -7,6 +7,8 @@ related_targets: ["frontend/src/pages/Profile.jsx", "frontend/src/pages/auth/Onb
 
 # Cooking preferences
 
+Header follow-up (2026-10-21): CustomCookingPage uses a40px Back circle, matching Favorites/UserIngredients and Profile, while preserving the existing24px chevron and header/notification positioning. Profile Preferences now uses the shared104px header frame and72px title row with side clearance. Browser320×568/1280×720,48targeted tests, scoped lint/build and detector pass; preference logic/data unchanged.
+
 Mode: Operate. Extend the existing HomeMade orange/white, Thai-font, 430px mobile shell with the user-confirmed shared choices and account defaults. Preserve surrounding ingredient, navigation, Profile main and six-step Onboarding behavior.
 
 Profile-specific refinement (2026-10-20): the preference editor now overrides the shared presentation with left-aligned compact choices, blush selections and24px section separators, plus header-level existing save/error feedback. Other callers retain the shared32px group spacing. See frontend-src-pages-profile-jsx.md for its scoped visual evidence; data/category behavior below is unchanged.

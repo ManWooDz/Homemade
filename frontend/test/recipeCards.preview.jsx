@@ -37,6 +37,7 @@ const base = {id:1,name:params.has('long') ? 'Superfood Veggie Bowl — เม�
 if(params.has('missing'))Object.assign(base,{nutrition:null,computed_nutrition:null,nutrition_origin:'base_calculation',nutrition_partially_estimated:true});
 const generated = {...base,_historyId:1,recipe_name:base.name,servings:2,usage_time:locale==='th'?'15–20 นาที':'15–20 min',diet_tags:base.tags,
   adjusted_ingredients:locale==='th'?['กรีนโอ๊ค 200 กรัม','มะเขือเทศ 300 กรัม','กะหล่ำม่วง 150 กรัม']:['Green Oak 200 g','Tomatoes 300 g','Purple cabbage 150 g'],safety_warning:'ตรวจสอบอาหารที่แพ้ก่อนรับประทาน'};
+if(params.has('unknownTime'))generated.estimated_total_time=null;
 export default function Preview(){
   const [receipt,setReceipt]=useState('');
   const [favorite,setFavorite]=useState(false);

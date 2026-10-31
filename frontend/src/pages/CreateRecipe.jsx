@@ -10,6 +10,7 @@ import { OTHER_OPTION, TASTE_OPTIONS } from "../constants/preferenceOptions";
 import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/CookingPreferenceFields";
 import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
 import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
+import { formatIngredientName } from "../utils/translations";
 
 export default function CreateRecipe({
   recipe,
@@ -77,7 +78,7 @@ export default function CreateRecipe({
 
         <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
           <button onClick={onBack} aria-label={t("กลับ")}
-            className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center">
+            className="page-header-back w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <img src={logo} alt="HomeMade" className="h-14 object-contain" />
@@ -91,7 +92,7 @@ export default function CreateRecipe({
             </div>
             <div className="flex-1 min-w-0">
               <h2 id="create-recipe-title" className="text-xl leading-snug font-bold text-gray-900 wrap-anywhere">{recipe?.name || t("Food Menu's name")}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-gray-600">{recipe?.short_description || t("short-description")}</p>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">{t(recipe?.short_description) || t("short-description")}</p>
               <div className="flex flex-wrap gap-2 mt-3">
                 {recipe?.tags?.slice(0, 2).map((tag, idx) => (
                   <span key={idx} className={`text-xs leading-relaxed font-medium px-2 py-0.5 rounded-full wrap-anywhere ${idx === 0 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{tag}</span>
@@ -114,8 +115,8 @@ export default function CreateRecipe({
                 {currentIngredients.map(ing => (
                   <div key={ing.id} className="max-w-full min-h-11 bg-[#FDECE5] border border-[#B93E25] pl-3 rounded-full flex items-center gap-2">
                     <img src={ing.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-                    <span className="block min-w-0 text-sm font-medium text-[#9F351F] wrap-anywhere first-letter:uppercase">{ing.name}</span>
-                    <button type="button" onClick={() => removeIngredient(ing.id)} aria-label={t("นำ {name} ออกจากสูตร", { name: ing.name })}
+                    <span className="block min-w-0 text-sm font-medium text-[#9F351F] wrap-anywhere first-letter:uppercase">{formatIngredientName(ing.name, locale)}</span>
+                    <button type="button" onClick={() => removeIngredient(ing.id)} aria-label={t("นำ {name} ออกจากสูตร", { name: formatIngredientName(ing.name, locale) })}
                       className="group w-11 h-11 shrink-0 rounded-full text-[#9F351F] flex items-center justify-center">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center transition-colors group-hover:bg-[#B93E25] group-hover:text-white group-active:bg-[#9F351F] group-active:text-white">
                         <X aria-hidden="true" className="w-4 h-4" />
@@ -136,7 +137,7 @@ export default function CreateRecipe({
                         className={`max-w-full min-h-11 px-3 py-2 rounded-xl flex items-center gap-2 text-left text-sm transition-colors ${isSelected ? "bg-gray-200 text-gray-600 cursor-not-allowed" : "bg-white border border-gray-300 text-gray-700 hover:border-[#B93E25] hover:text-[#B93E25]"}`}>
                         <img src={ing.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0"
                           onError={e => (e.target.src = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150")} />
-                        <span className="block min-w-0 wrap-anywhere first-letter:uppercase">{ing.name}
+                        <span className="block min-w-0 wrap-anywhere first-letter:uppercase">{formatIngredientName(ing.name, locale)}
                           {expiryBadgeLabel(ing.expiry_date, locale) && <span className="block text-xs font-medium text-red-700">{expiryBadgeLabel(ing.expiry_date, locale)}</span>}
                         </span>
                         {!isSelected && <Plus aria-hidden="true" className="w-4 h-4 shrink-0" />}

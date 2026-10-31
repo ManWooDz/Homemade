@@ -9,6 +9,7 @@ import logo from "../assets/HomeMade_Logo.png";
 
 import BottomMenu from "../components/bottomMenu";
 import { getTagColor } from "../utils/tagColors";
+import { formatIngredientName } from "../utils/translations";
 
 export default function RecipeDetail({
   recipe,
@@ -19,7 +20,7 @@ export default function RecipeDetail({
   isFavorite,
   onToggleFavorite,
 }) {
-    const { t } = useLocale();
+    const { t, locale } = useLocale();
   const time = recipe?.estimated_total_time;
   const hasTime = Number.isSafeInteger(time?.min_minutes) && Number.isSafeInteger(time?.max_minutes)
     && time.min_minutes > 0 && time.max_minutes >= time.min_minutes;
@@ -158,7 +159,7 @@ export default function RecipeDetail({
 
             <h3 className="text-xl font-medium text-black mb-2">{t("Description")}</h3>
             <p className="text-black text-sm mb-6 leading-relaxed">
-              {recipe?.short_description || t("error")}
+              {t(recipe?.short_description) || t("error")}
             </p>
 
             <RecipeNutrition recipe={recipe} compact />
@@ -177,21 +178,21 @@ export default function RecipeDetail({
                     <div className="w-12 h-12 bg-white rounded-full overflow-hidden p-1 shadow-sm">
                       <img
                         src={ing.image}
-                        alt={ing.name}
+                        alt={formatIngredientName(ing.name, locale)}
                         className="w-full h-full object-cover rounded-full"
                       />
                     </div>
                     <div className="flex flex-col justify-center">
                       <span className="font-medium text-black text-base capitalize">
-                        {ing.name}
+                        {formatIngredientName(ing.name, locale)}
                       </span>
                     </div>
                   </div>
-                  <input type="checkbox" checked={ing.selected} onChange={() => toggleIngredient(ing.id)} aria-label={ing.name} aria-describedby="recipe-ingredient-help" className="h-5 w-5 shrink-0 accent-[#B93E25]" />
+                  <input type="checkbox" checked={ing.selected} onChange={() => toggleIngredient(ing.id)} aria-label={formatIngredientName(ing.name, locale)} aria-describedby="recipe-ingredient-help" className="h-5 w-5 shrink-0 accent-[#B93E25]" />
                 </label>
               ))}
             </div>
-              <RecipeInstructions instructions={recipe?.instructions} compact />
+              <RecipeInstructions instructions={recipe?.instructions?.map(step => t(step))} compact />
               <button
                 onClick={() =>
                   onConfirm(ingredients.filter((ing) => ing.selected))

@@ -14,6 +14,7 @@ import {
     TrendingUp,
     Type,
     Tag,
+    X,
 } from "lucide-react";
 import { FaUtensils } from "react-icons/fa6";
 import logo from "../assets/HomeMade_Logo.png";
@@ -37,10 +38,10 @@ const CATEGORY_CHIPS = [
 ];
 
 const SORT_OPTIONS = [
-    { key: "expiry", label: "เรียงตามวันหมดอายุ", icon: CalendarClock },
-    { key: "quantity", label: "ปริมาณ", icon: TrendingUp },
-    { key: "alphabetical", label: "ตามตัวอักษร", icon: Type },
-    { key: "category", label: "ประเภท", icon: Tag },
+    { key: "expiry", label: "เรียงตามวันหมดอายุ", hint: "วันหมดอายุเร็วที่สุดก่อน ไม่ระบุไว้ท้าย", icon: CalendarClock },
+    { key: "quantity", label: "ปริมาณ", hint: "น้อยไปมาก ภายในกลุ่มหน่วยที่เปรียบเทียบกันได้", icon: TrendingUp },
+    { key: "alphabetical", label: "ตามตัวอักษร", hint: "เรียงตามชื่อวัตถุดิบ", icon: Type },
+    { key: "category", label: "ประเภท", hint: "จัดกลุ่มประเภท แล้วเรียงตามวันหมดอายุ", icon: Tag },
 ];
 const DEFAULT_SORT = "expiry";
 
@@ -107,12 +108,16 @@ export default function UserIngredients({
     const [pendingSort, setPendingSort] = useState(DEFAULT_SORT);
     const [sheetTop, setSheetTop] = useState(0);
     const searchBarRef = useRef(null);
+    const sortSheetRef = useRef(null);
 
     useLayoutEffect(() => {
         if (showSortSheet && searchBarRef.current) {
             setSheetTop(
                 searchBarRef.current.getBoundingClientRect().bottom,
             );
+            const trigger = document.activeElement;
+            sortSheetRef.current?.querySelector("input:checked")?.focus();
+            return () => trigger?.focus();
         }
     }, [showSortSheet]);
 
@@ -120,6 +125,23 @@ export default function UserIngredients({
         window.scrollTo({ top: 0, behavior: "instant" });
         setPendingSort(sortBy);
         setShowSortSheet(true);
+    };
+
+    const handleSortKeyDown = (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            setShowSortSheet(false);
+        } else if (event.key === "Tab") {
+            const controls = event.currentTarget.querySelectorAll("button, input:checked");
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+            }
+        }
     };
 
     const byCategory =
@@ -150,7 +172,8 @@ export default function UserIngredients({
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
                         onClick={onBack}
-                        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
+                        aria-label={t("กลับ")}
+                        className="page-header-back w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -159,7 +182,7 @@ export default function UserIngredients({
                         alt="HomeMade"
                         className="h-18 object-contain"
                     />
-                    <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
+                    <NotificationBell count={notificationCount} onClick={onNotifications} />
                 </div>
 
                 <div
@@ -176,24 +199,29 @@ export default function UserIngredients({
                         ref={searchBarRef}
                         className="flex items-center gap-3 mb-4 px-5"
                     >
-                        <div className="flex-1 flex items-center bg-white border border-gray-300 rounded-full px-4 py-2.5">
+                        <div className="min-w-0 flex-1 flex items-center bg-white border border-gray-300 rounded-full px-4 py-2.5 focus-within:border-[#B93E25]">
                             <Search className="w-4 h-4 text-gray-400 mr-2" />
                             <input
                                 type="text"
                                 placeholder={t("Search Ingredients...")}
+                                aria-label={t("Search Ingredients...")}
                                 value={searchQuery}
                                 onChange={(e) =>
                                     setSearchQuery(e.target.value)
                                 }
-                                className="w-full outline-none text-gray-700 bg-transparent text-sm"
+                                className="min-w-0 w-full outline-none text-gray-700 bg-transparent text-sm"
                             />
                         </div>
                         <button
+                            type="button"
                             onClick={openSortSheet}
                             aria-label={t("Sort By")}
-                            className="bg-[#EF5A3A] p-2.5 rounded-full text-white shadow-sm hover:bg-orange-600 transition shrink-0"
+                            aria-expanded={showSortSheet}
+                            aria-controls="ingredient-sort-sheet"
+                            className="relative shrink-0 w-11 h-11 bg-[#EF5A3A] p-3 rounded-full text-white shadow-sm hover:bg-orange-600 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
                         >
-                            <SlidersHorizontal className="w-4 h-4" />
+                            <SlidersHorizontal aria-hidden="true" className="w-5 h-5" />
+                            {sortBy !== DEFAULT_SORT && <span aria-hidden="true" className="absolute -top-1 -right-1 w-3 h-3 bg-gray-900 rounded-full border-2 border-white" />}
                         </button>
                     </div>
 
@@ -317,56 +345,68 @@ export default function UserIngredients({
                 {showSortSheet && (
                     <>
                         <div
-                            className="fixed inset-0 bg-black/30 z-40"
+                            className="fixed inset-0 bg-black/30 z-60"
                             onClick={() => setShowSortSheet(false)}
                         ></div>
                         <div
-                            className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 flex flex-col"
+                            id="ingredient-sort-sheet" ref={sortSheetRef} role="dialog" aria-modal="true"
+                            aria-labelledby="ingredient-sort-title" onKeyDown={handleSortKeyDown}
+                            className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-70 flex flex-col"
                             style={{ top: sheetTop }}
                         >
-                            <p className="text-xs text-gray-400 font-medium px-5 pt-4 mb-2">{t("Sort By")}</p>
-                            <div className="flex-1 overflow-y-auto px-5">
+                            <div className="flex shrink-0 items-center justify-between gap-3 px-5 pt-3 pb-2">
+                                <h3 id="ingredient-sort-title" className="text-lg font-bold text-gray-900">{t("Sort By")}</h3>
+                                <button type="button" onClick={() => setShowSortSheet(false)} aria-label={t("ปิด")}
+                                    className="w-11 h-11 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]">
+                                    <X aria-hidden="true" className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div role="radiogroup" aria-labelledby="ingredient-sort-title" className="min-h-0 flex-1 overflow-y-auto scrollbar-hide px-5 pt-1 pb-3">
                                 {SORT_OPTIONS.map((opt) => {
                                     const Icon = opt.icon;
                                     const isSelected = pendingSort === opt.key;
                                     return (
-                                        <button
+                                        <label
                                             key={opt.key}
-                                            onClick={() =>
-                                                setPendingSort(opt.key)
-                                            }
-                                            className="w-full flex items-center justify-between py-3.5 border-b border-gray-100"
+                                            className={`w-full min-h-14 flex items-center justify-between gap-3 rounded-xl px-3 py-3 mb-1 cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#B93E25] ${isSelected ? "bg-orange-50" : "hover:bg-gray-50"}`}
                                         >
-                                            <span className="flex items-center gap-3 text-sm text-gray-700">
-                                                <Icon className="w-4 h-4 text-gray-400" />
-                                                {t(opt.label)}
+                                            <input type="radio" name="ingredient-sort" value={opt.key} checked={isSelected}
+                                                onChange={() => setPendingSort(opt.key)} className="sr-only"
+                                                aria-labelledby={`ingredient-sort-${opt.key}-label`} aria-describedby={`ingredient-sort-${opt.key}-hint`} />
+                                            <Icon aria-hidden="true" className={`w-5 h-5 shrink-0 ${isSelected ? "text-[#B93E25]" : "text-gray-600"}`} />
+                                            <span className="min-w-0 flex-1">
+                                                <span id={`ingredient-sort-${opt.key}-label`} className="block text-sm font-semibold text-gray-800">{t(opt.label)}</span>
+                                                <span id={`ingredient-sort-${opt.key}-hint`} className="block text-xs text-gray-600 mt-1">{t(opt.hint)}</span>
                                             </span>
                                             <span
+                                                aria-hidden="true"
                                                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                                                     isSelected
-                                                        ? "border-[#EF5A3A]"
-                                                        : "border-gray-300"
+                                                        ? "border-[#B93E25]"
+                                                        : "border-gray-500"
                                                 }`}
                                             >
                                                 {isSelected && (
-                                                    <span className="w-2.5 h-2.5 rounded-full bg-[#EF5A3A]" />
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-[#B93E25]" />
                                                 )}
                                             </span>
-                                        </button>
+                                        </label>
                                     );
                                 })}
                             </div>
-                            <div className="flex items-center gap-3 px-5 py-4 pb-24 border-t border-gray-100">
+                            <div className="flex shrink-0 items-center gap-3 px-5 py-4 border-t border-gray-100" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
                                 <button
+                                    type="button"
                                     onClick={() => setPendingSort(DEFAULT_SORT)}
-                                    className="flex-1 py-3 rounded-full text-sm font-bold text-gray-600 border border-gray-300"
+                                    className="min-h-11 flex-1 py-3 rounded-full text-sm font-bold text-gray-600 border border-gray-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
                                 >{t("Clear")}</button>
                                 <button
+                                    type="button"
                                     onClick={() => {
                                         setSortBy(pendingSort);
                                         setShowSortSheet(false);
                                     }}
-                                    className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#EF5A3A] shadow-md hover:bg-orange-600 transition"
+                                    className="min-h-11 flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#B93E25] shadow-md hover:bg-[#9F321E] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
                                 >{t("Apply")}</button>
                             </div>
                         </div>

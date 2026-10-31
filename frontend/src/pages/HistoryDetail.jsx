@@ -81,7 +81,7 @@ export default function HistoryDetail({ item, onBack, activeTab, setActiveTab, o
             onClick={() => leave(onBack)}
             disabled={saving}
             aria-label={t("กลับ")}
-            className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md disabled:opacity-50"
+            className="page-header-back w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md disabled:opacity-50"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>

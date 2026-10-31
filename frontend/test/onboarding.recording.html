@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homemade onboarding — 2× recording</title>
+<style>
+html{margin:0;width:860px;height:932px;overflow:clip}
+body{position:fixed;inset:0;margin:0;width:860px;height:932px;overflow:clip;background:white;outline:none}
+/* Render the 430×932 responsive app at twice its CSS size before screenshot capture. */
+iframe{position:absolute;left:0;top:0;display:block;border:0;width:430px;height:932px;transform:scale(2);transform-origin:top left}
+.capture-anchor{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0}
+</style></head><body><button class="capture-anchor" aria-label="Capture top" onclick="document.querySelector('iframe').style.top='0px'"></button><button class="capture-anchor" aria-label="Capture bottom" onclick="document.querySelector('iframe').style.top='-932px'"></button><iframe src="./onboarding.workflow.html" title="Onboarding demo"></iframe></body></html>

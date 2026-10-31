@@ -2,7 +2,9 @@ import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import NotificationBell from "../components/NotificationBell";
 import { useState } from "react";
-import { ChevronLeft, Heart, Plus, Search, Sparkles, Star } from "lucide-react";
+import { ChevronLeft, Heart, Plus, Sparkles, Star } from "lucide-react";
+import RecipeSearchBar from "../components/RecipeSearchBar";
+import { matchesRecipeFilters } from "../utils/recipeFilters";
 import { BiSolidFoodMenu } from "react-icons/bi";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
@@ -24,6 +26,7 @@ export default function Favorites({
     onToggleHistoryFavorite,
     onOpenHistoryItem,
     notificationCount, onNotifications,
+    onOpenFilters, filtersOpen = false, filtersActive = false, searchBarRef, recipeFilters,
 }) {
     const { t } = useLocale();
     const [selectedCategory, setSelectedCategory] = useState("All");
@@ -33,12 +36,12 @@ export default function Favorites({
         favoriteRecipeIds.includes(recipe.id),
     );
 
-    const categoryFilteredRecipes =
+    const categoryFilteredRecipes = (
         selectedCategory === "All"
             ? allFavoriteRecipes
             : allFavoriteRecipes.filter((recipe) =>
                   recipe.tags && recipe.tags.includes(selectedCategory),
-              );
+              )).filter((recipe) => matchesRecipeFilters(recipe, recipeFilters));
 
     const favoriteRecipes = searchQuery.trim()
         ? categoryFilteredRecipes.filter((recipe) =>
@@ -51,11 +54,12 @@ export default function Favorites({
     const [pendingHistoryIds, setPendingHistoryIds] = useState([]);
 
     const query = searchQuery.trim().toLowerCase();
+    const filteredHistory = historyFavorites.filter((item) => matchesRecipeFilters(item, recipeFilters));
     const myRecipes = query
-        ? historyFavorites.filter((item) =>
+        ? filteredHistory.filter((item) =>
               (item.recipe_name || "").toLowerCase().includes(query),
           )
-        : historyFavorites;
+        : filteredHistory;
 
     const unfavoriteHistory = async (historyId) => {
         if (pendingHistoryIds.includes(historyId)) return;
@@ -70,13 +74,14 @@ export default function Favorites({
     const HISTORY_PLACEHOLDER = "http://localhost:8000/images/No-image-available.png";
 
     return (
-        <PageShell>
+        <PageShell lockScroll={filtersOpen}>
 
                 {/* Header Actions */}
                 <div className="pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
                         onClick={onBack}
-                        className="absolute left-6 w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
+                        aria-label={t("กลับ")}
+                        className="page-header-back w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -85,7 +90,7 @@ export default function Favorites({
                         alt="HomeMade"
                         className="h-18 object-contain"
                     />
-                    <div className="absolute right-6 top-1/2 translate-y-4"><NotificationBell count={notificationCount} onClick={onNotifications} /></div>
+                    <NotificationBell count={notificationCount} onClick={onNotifications} />
                 </div>
 
                 <div className="flex-1 pb-8">
@@ -115,19 +120,9 @@ export default function Favorites({
                     </div>
 
                     {/* Search Bar */}
-                    <div className="px-5 mb-4">
-                        <div className="relative">
-                            <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                            <input
-                                type="text"
-                                placeholder={t("Search favorites...")}
-                                className="w-full bg-gray-50 border border-gray-300 rounded-2xl pl-10 pr-4 py-2.5 outline-none text-sm focus:border-[#EF5A3A] transition"
-                                value={searchQuery}
-                                onChange={(e) =>
-                                    setSearchQuery(e.target.value)
-                                }
-                            />
-                        </div>
+                    <div className="px-5">
+                        <RecipeSearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search favorites..."
+                            onOpenFilters={onOpenFilters} filtersOpen={filtersOpen} filtersActive={filtersActive} containerRef={searchBarRef} />
                     </div>
 
                     {tab === "base" && (
@@ -161,7 +156,7 @@ export default function Favorites({
                         </div>
                     ) : favoriteRecipes.length === 0 ? (
                         <div className="text-center text-gray-400 mt-10">
-                            <p>{t("No favorites found in '")}{t(selectedCategory)}'.</p>
+                            <p>{t("No recipes match your search and filters. Try changing or clearing them.")}</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 px-5">
@@ -221,7 +216,7 @@ export default function Favorites({
                             </div>
                         ) : myRecipes.length === 0 ? (
                             <div className="text-center text-gray-400 mt-10">
-                                <p>{t("ไม่พบสูตรที่ค้นหา")}</p>
+                                <p>{t("No recipes match your search and filters. Try changing or clearing them.")}</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 px-5">

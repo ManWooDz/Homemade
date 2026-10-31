@@ -18,6 +18,12 @@ Mode: Operate. User explicitly includes the Edit subview and crop flow. Preserve
 
 Verification:6new Thai/English editor/crop render checks pass; existing related tests7pass, while the global source-translation audit fails on the unrelated missing App.jsx key เอาออก (outside this task). Scoped lint/build pass; detector[] during pass. Browser320px Thai/English,430px Thai and1280px crop verify drag/keyboard/zoom, real512px export, cancel/draft retention, replace/remove saves, invalid-name focus, unreadable-image recovery and save-error retention. Final fresh console errors[]; short screens use document scrolling and actions are reachable above navigation. Native file chooser was blocked by extension file-URL permission; the synthetic fixture feeds a served project logo through the real file input/change handler instead. No permission change, real account upload or physical-phone acceptance. Evidence/verified JPEGs: `tmp/profile-editor-20261023/`.
 
+## Header consistency (2026-10-21)
+
+Follow-up: user explicitly included all subviews. History, Language, Preferences, Help and Edit now share the104px frame and40px Back at y48. Title rows reserve72px height plus48px horizontal clearance inside page padding, allowing long Thai headings to wrap. Removed compact prop/layout; earlier title-header preservation below is superseded. Browser assertions pass for all5subviews at1280×720 and320×568;48targeted tests, lint/build and detector pass.
+
+User requested the Favorites/UserIngredients header geometry. Main and Edit logo headers use32px top padding,24px side offsets,72px logo,40px Back circle with24px chevron/shadow and24px bottom gap; the shared44px Bell uses the reference wrapper. Title-based headers, including compact Preferences, retain their existing geometry. This supersedes the earlier56px main-logo guidance. Browser1280×720/320×568 verifies alignment, navigation clearance and callbacks; scoped lint/build pass, detector[].
+
 ## Preference editor refinement (2026-10-20)
 
 Mode: Operate. The user separately authorized refinement of view=preferences; this expands the earlier main-only brief for this subview. Keep the430px shell, Thai font, orange/white identity, choice values and all persistence handlers. Scope new CSS to the preference editor's unique classes.

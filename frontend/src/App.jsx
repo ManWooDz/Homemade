@@ -1,4 +1,6 @@
 import PageShell from "./components/PageShell";
+import RecipeSearchBar from "./components/RecipeSearchBar";
+import { matchesRecipeFilters, recipeIngredients } from "./utils/recipeFilters";
 import { useLocale } from "./context/LocaleContext";
 import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from "react";
 import {
@@ -8,7 +10,6 @@ import {
     Heart,
     User,
     Search,
-    SlidersHorizontal,
     Plus,
     X,
 } from "lucide-react";
@@ -78,12 +79,17 @@ function App() {
     const [showFilterPanel, setShowFilterPanel] = useState(false);
     const [filterTab, setFilterTab] = useState("ingredient");
     const [filterIngredientQuery, setFilterIngredientQuery] = useState("");
-    const [selectedIngredientNames, setSelectedIngredientNames] = useState([]);
-    const [selectedMealTypes, setSelectedMealTypes] = useState([]);
-    const [selectedDietary, setSelectedDietary] = useState([]);
-    const [selectedCuisine, setSelectedCuisine] = useState([]);
-    const [selectedOccasion, setSelectedOccasion] = useState([]);
+    const [pageFilters, setPageFilters] = useState({ home: {}, favorites: {} });
+    const [draftFilters, setDraftFilters] = useState({});
+    const filterPage = currentView === "favorites" ? "favorites" : "home";
+    const activeFilters = pageFilters[filterPage];
+    const filtersActive = Object.values(activeFilters).some((values) => values.length > 0);
+    const {
+        ingredientNames: selectedIngredientNames = [], mealType: selectedMealTypes = [],
+        dietary: selectedDietary = [], cuisine: selectedCuisine = [], occasion: selectedOccasion = [],
+    } = draftFilters;
     const searchBarRef = useRef(null);
+    const filterPanelRef = useRef(null);
     // One app-wide set of base-recipe ids whose favorite request is in flight
     // (Home card, Favorites base tab and RecipeDetail all share toggleFavorite).
     const favoritePendingRef = useRef(new Set());
@@ -487,24 +493,29 @@ function App() {
         occasion: selectedOccasion.length,
     };
 
+    const filterRecipes = useMemo(() => currentView === "favorites"
+        ? favoritesTab === "mine" ? cookingHistory.filter((item) => item.is_favorite)
+            : recipes.filter((recipe) => favoriteRecipeIds.includes(recipe.id))
+        : recipes, [currentView, favoritesTab, cookingHistory, recipes, favoriteRecipeIds]);
+
     const allIngredients = useMemo(() => {
         const map = new Map();
-        recipes.forEach((recipe) => {
-            (recipe.ingredients || []).forEach((ing) => {
+        filterRecipes.forEach((recipe) => {
+            recipeIngredients(recipe).forEach((ing) => {
                 const key = (ing.name || "").toLowerCase().trim();
                 if (key && !map.has(key)) {
-                    map.set(key, { name: key, image: ing.image });
+                    map.set(key, { name: key, image: ing.image || logo });
                 }
             });
         });
         return Array.from(map.values());
-    }, [recipes]);
+    }, [filterRecipes]);
 
     const visibleIngredients = allIngredients.filter((ing) =>
         ing.name.includes(filterIngredientQuery.trim().toLowerCase()),
     );
-    const selectedIngredientObjs = allIngredients.filter((ing) =>
-        selectedIngredientNames.includes(ing.name),
+    const selectedIngredientObjs = selectedIngredientNames.map((name) =>
+        allIngredients.find((ingredient) => ingredient.name === name) || { name, image: logo },
     );
 
     useLayoutEffect(() => {
@@ -512,29 +523,51 @@ function App() {
             setFilterPanelTop(
                 searchBarRef.current.getBoundingClientRect().bottom,
             );
+            const trigger = document.activeElement;
+            filterPanelRef.current?.querySelector("button, input")?.focus();
+            return () => trigger?.focus();
         }
     }, [showFilterPanel]);
 
-    const toggleInList = (value, list, setList) => {
-        setList(
-            list.includes(value)
-                ? list.filter((v) => v !== value)
-                : [...list, value],
-        );
+    const handleFilterKeyDown = (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            setShowFilterPanel(false);
+        } else if (event.key === "Tab") {
+            const controls = event.currentTarget.querySelectorAll("button:not(:disabled), input:not(:disabled)");
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+            }
+        }
+    };
+
+    const toggleFilter = (key, value) => {
+        setDraftFilters((previous) => {
+            const list = previous[key] || [];
+            return { ...previous, [key]: list.includes(value) ? list.filter((item) => item !== value) : [...list, value] };
+        });
     };
 
     const openFilterPanel = () => {
+        setDraftFilters(activeFilters);
+        setFilterIngredientQuery("");
         window.scrollTo({ top: 0, behavior: "instant" });
         setShowFilterPanel(true);
     };
 
     const clearFilters = () => {
-        setSelectedIngredientNames([]);
-        setSelectedMealTypes([]);
-        setSelectedDietary([]);
-        setSelectedCuisine([]);
-        setSelectedOccasion([]);
+        setDraftFilters({});
         setFilterIngredientQuery("");
+    };
+
+    const applyFilters = () => {
+        setPageFilters((previous) => ({ ...previous, [filterPage]: draftFilters }));
+        setShowFilterPanel(false);
     };
 
     // Optimistic, persisted toggle for base-recipe favorites. Ignores taps while
@@ -577,13 +610,6 @@ function App() {
         }
     };
 
-    const selectedTagFilters = [
-        ...selectedMealTypes,
-        ...selectedDietary,
-        ...selectedCuisine,
-        ...selectedOccasion,
-    ].map((t) => t.toLowerCase());
-
     const filteredRecipes = recipes.filter((recipe) => {
         if (
             selectedCategory !== "All" &&
@@ -595,27 +621,7 @@ function App() {
         if (searchLower && !recipe.name.toLowerCase().includes(searchLower))
             return false;
 
-        if (selectedIngredientNames.length > 0) {
-            const recipeIngNames = (recipe.ingredients || []).map((i) =>
-                (i.name || "").toLowerCase(),
-            );
-            if (
-                !selectedIngredientNames.some((n) =>
-                    recipeIngNames.includes(n),
-                )
-            )
-                return false;
-        }
-
-        if (selectedTagFilters.length > 0) {
-            const recipeTagsLower = (recipe.tags || []).map((t) =>
-                t.toLowerCase(),
-            );
-            if (!selectedTagFilters.some((t) => recipeTagsLower.includes(t)))
-                return false;
-        }
-
-        return true;
+        return matchesRecipeFilters(recipe, pageFilters.home);
     });
 
     const handleTabChange = (tab) => {
@@ -639,6 +645,211 @@ function App() {
             setCurrentView("custom-cooking");
         }
     };
+
+    const recipeFilterPanel = (<>
+                {/* === Filter Panel === */}
+                {showFilterPanel && (
+                    <>
+                        <div
+                            className="fixed inset-0 bg-black/30 z-60"
+                            onClick={() => setShowFilterPanel(false)}
+                        ></div>
+                        <div
+                            id="recipe-filter-panel" ref={filterPanelRef} role="dialog" aria-modal="true"
+                            aria-label={t("Explore recipe by")} onKeyDown={handleFilterKeyDown}
+                            className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-70 flex flex-col"
+                            style={{ top: filterPanelTop }}
+                        >
+                            <p className="text-xs text-gray-400 font-medium px-5 pt-4">{t("Explore recipe by")}</p>
+
+                            {/* Tab badges */}
+                            <DragScrollRow
+                                className="flex gap-2 overflow-x-auto scrollbar-hide px-5 py-3 cursor-grab active:cursor-grabbing select-none"
+                            >
+                                {FILTER_TABS.map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        aria-pressed={filterTab === tab.key}
+                                        onClick={() => setFilterTab(tab.key)}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                                            filterTab === tab.key
+                                                ? "bg-[#EF5A3A] text-white"
+                                                : "bg-white border border-gray-300 text-gray-600"
+                                        }`}
+                                    >
+                                        {t(tab.label)}
+                                        {filterCounts[tab.key] > 0 &&
+                                            ` (${filterCounts[tab.key]})`}
+                                    </button>
+                                ))}
+                            </DragScrollRow>
+
+                            {/* Tab content */}
+                            <div className="flex-1 overflow-y-auto px-5 pb-4 scrollbar-hide">
+                                <p id="recipe-filter-availability" className="text-xs text-gray-600 mb-4">
+                                    {t("Filters use recorded recipe details. Some recipes have incomplete details; options with no matching recipes are unavailable.")}
+                                </p>
+                                {filterTab === "ingredient" && (
+                                    <>
+                                        <div className="flex items-center bg-gray-100 rounded-full px-4 py-2.5 mb-4">
+                                            <Search className="w-4 h-4 text-gray-400 mr-2" />
+                                            <input
+                                                type="text"
+                                                placeholder={t("Search ingredient")}
+                                                value={filterIngredientQuery}
+                                                onChange={(e) =>
+                                                    setFilterIngredientQuery(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full outline-none bg-transparent text-sm text-gray-600"
+                                            />
+                                        </div>
+
+                                        {selectedIngredientObjs.length > 0 && (
+                                            <div className="mb-4">
+                                                <h4 className="text-sm font-bold text-gray-700 mb-2">{t("Selected")}</h4>
+                                                <div className="grid grid-cols-4 gap-3">
+                                                    {selectedIngredientObjs.map(
+                                                        (ing) => (
+                                                            <button
+                                                                key={ing.name}
+                                                                aria-label={t("เอาออก") + " " + ing.name}
+                                                                onClick={() =>
+                                                                    toggleFilter("ingredientNames", ing.name)
+                                                                }
+                                                                className="flex flex-col items-center gap-1"
+                                                            >
+                                                                <div className="relative w-14 h-14">
+                                                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100">
+                                                                        <img
+                                                                            src={
+                                                                                ing.image
+                                                                            }
+                                                                            alt={
+                                                                                ing.name
+                                                                            }
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                    </div>
+                                                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center border-2 border-white">
+                                                                        <X className="w-3 h-3" />
+                                                                    </span>
+                                                                </div>
+                                                                <span className="text-xs text-gray-700 capitalize text-center break-words w-full">
+                                                                    {ing.name}
+                                                                </span>
+                                                            </button>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <h4 className="text-sm font-bold text-gray-700 mb-2">{t("All Ingredient")}</h4>
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {visibleIngredients.map((ing) => {
+                                                const isSelected =
+                                                    selectedIngredientNames.includes(
+                                                        ing.name,
+                                                    );
+                                                return (
+                                                    <button
+                                                        key={ing.name}
+                                                        aria-pressed={isSelected}
+                                                        onClick={() =>
+                                                            toggleFilter("ingredientNames", ing.name)
+                                                        }
+                                                        className="flex flex-col items-center gap-1"
+                                                    >
+                                                        <div
+                                                            className={`w-14 h-14 rounded-full overflow-hidden bg-gray-100 ${
+                                                                isSelected
+                                                                    ? "opacity-40"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            <img
+                                                                src={
+                                                                    ing.image
+                                                                }
+                                                                alt={ing.name}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <span
+                                                            className={`text-xs capitalize text-center break-words w-full ${
+                                                                isSelected
+                                                                    ? "text-gray-400"
+                                                                    : "text-gray-700"
+                                                            }`}
+                                                        >
+                                                            {ing.name}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </>
+                                )}
+
+                                {filterTab === "mealType" && (
+                                    <FilterCheckboxList
+                                        emojiMap={OPTION_EMOJI}
+                                        options={MEAL_TYPE_OPTIONS}
+                                        selected={selectedMealTypes}
+                                        available={MEAL_TYPE_OPTIONS.filter((value) => filterRecipes.some((recipe) => matchesRecipeFilters(recipe, { mealType: [value] })))}
+                                        onToggle={(value) => toggleFilter("mealType", value)}
+                                    />
+                                )}
+
+                                {filterTab === "dietary" && (
+                                    <FilterCheckboxList
+                                        emojiMap={OPTION_EMOJI}
+                                        options={DIETARY_OPTIONS}
+                                        selected={selectedDietary}
+                                        available={DIETARY_OPTIONS.filter((value) => filterRecipes.some((recipe) => matchesRecipeFilters(recipe, { dietary: [value] })))}
+                                        onToggle={(value) => toggleFilter("dietary", value)}
+                                    />
+                                )}
+
+                                {filterTab === "cuisine" && (
+                                    <FilterCheckboxList
+                                        emojiMap={OPTION_EMOJI}
+                                        options={CUISINE_OPTIONS}
+                                        selected={selectedCuisine}
+                                        available={CUISINE_OPTIONS.filter((value) => filterRecipes.some((recipe) => matchesRecipeFilters(recipe, { cuisine: [value] })))}
+                                        onToggle={(value) => toggleFilter("cuisine", value)}
+                                    />
+                                )}
+
+                                {filterTab === "occasion" && (
+                                    <FilterCheckboxList
+                                        emojiMap={OPTION_EMOJI}
+                                        options={OCCASION_OPTIONS}
+                                        selected={selectedOccasion}
+                                        available={OCCASION_OPTIONS.filter((value) => filterRecipes.some((recipe) => matchesRecipeFilters(recipe, { occasion: [value] })))}
+                                        onToggle={(value) => toggleFilter("occasion", value)}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Clear / Apply */}
+                            <div className="flex shrink-0 items-center gap-3 px-5 py-4 border-t border-gray-100" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+                                <button
+                                    onClick={clearFilters}
+                                    className="flex-1 py-3 rounded-full text-sm font-bold text-gray-600 border border-gray-300"
+                                >{t("Clear")}</button>
+                                <button
+                                    onClick={applyFilters}
+                                    className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#EF5A3A] shadow-md hover:bg-orange-600 transition"
+                                >{t("Apply")}</button>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+    </>);
 
     const renderPage = () => {
     if (currentView === "notifications") {
@@ -825,6 +1036,9 @@ function App() {
             <Favorites
                 notificationCount={notificationCount} onNotifications={openNotifications}
                 recipes={recipes}
+                onOpenFilters={openFilterPanel} filtersOpen={showFilterPanel} searchBarRef={searchBarRef}
+                filtersActive={filtersActive}
+                recipeFilters={activeFilters}
                 categories={categories}
                 favoriteRecipeIds={favoriteRecipeIds}
                 toggleFavorite={toggleFavorite}
@@ -966,7 +1180,7 @@ function App() {
 
     return (
         // พื้นหลังสีเทา เพื่อให้ตัวแอปสีขาวโดดเด่นขึ้นมา (เวลาเปิดบนคอม)
-        <PageShell lockScroll={showFilterPanel}>
+        <PageShell className="home-screen" lockScroll={showFilterPanel}>
             {/* 📱 กล่องแอปพลิเคชัน (จำกัดความกว้างเป็นทรงมือถือ) */}
 
                 {/* === เนื้อหาหลักของแอป (Content) === */}
@@ -983,29 +1197,9 @@ function App() {
                         />
                     </div>
 
-                    {/* Search Bar */}
-                    <div ref={searchBarRef} className="flex items-center gap-3 mb-6">
-                        <div className="flex-1 flex items-center bg-white border border-gray-400 rounded-full px-4 py-3">
-                            <Search className="w-5 h-5 text-gray-500 mr-2" />
-                            <input
-                                type="text"
-                                placeholder={t("Find the menu")}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full outline-none text-gray-600 bg-transparent text-base"
-                            />
-                        </div>
-                        <button
-                            onClick={openFilterPanel}
-                            aria-label={t("Explore recipe by")}
-                            className="bg-[#EF5A3A] p-3 rounded-full text-white shadow-sm hover:bg-orange-600 transition relative"
-                        >
-                            <SlidersHorizontal className="w-5 h-5" />
-                            {Object.values(filterCounts).some((c) => c > 0) && (
-                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-gray-900 rounded-full border-2 border-white"></span>
-                            )}
-                        </button>
-                    </div>
+                    <RecipeSearchBar value={searchQuery} onChange={setSearchQuery} onOpenFilters={openFilterPanel}
+                        containerRef={searchBarRef} filtersOpen={showFilterPanel}
+                        filtersActive={filtersActive} />
 
                     {/* Banner */}
                     <div className="w-full h-48 bg-black rounded-3xl mb-6 relative overflow-hidden shadow-sm flex items-center">
@@ -1042,6 +1236,9 @@ function App() {
                     </DragScrollRow>
 
                     {/* Recipe Cards */}
+                    {filteredRecipes.length === 0 && (
+                        <p className="px-5 py-8 text-center text-sm text-gray-600">{t("No recipes match your search and filters. Try changing or clearing them.")}</p>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                         {filteredRecipes.map((recipe) => (
                             <div
@@ -1099,228 +1296,6 @@ function App() {
                     </div>
                 </div>
 
-                {/* === Filter Panel === */}
-                {showFilterPanel && (
-                    <>
-                        <div
-                            className="fixed inset-0 bg-black/30 z-30"
-                            onClick={() => setShowFilterPanel(false)}
-                        ></div>
-                        <div
-                            className="page-overlay bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 flex flex-col"
-                            style={{ top: filterPanelTop }}
-                        >
-                            <p className="text-xs text-gray-400 font-medium px-5 pt-4">{t("Explore recipe by")}</p>
-
-                            {/* Tab badges */}
-                            <DragScrollRow
-                                className="flex gap-2 overflow-x-auto scrollbar-hide px-5 py-3 cursor-grab active:cursor-grabbing select-none"
-                            >
-                                {FILTER_TABS.map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        onClick={() => setFilterTab(tab.key)}
-                                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                                            filterTab === tab.key
-                                                ? "bg-[#EF5A3A] text-white"
-                                                : "bg-white border border-gray-300 text-gray-600"
-                                        }`}
-                                    >
-                                        {t(tab.label)}
-                                        {filterCounts[tab.key] > 0 &&
-                                            ` (${filterCounts[tab.key]})`}
-                                    </button>
-                                ))}
-                            </DragScrollRow>
-
-                            {/* Tab content */}
-                            <div className="flex-1 overflow-y-auto px-5 pb-4 scrollbar-hide">
-                                {filterTab === "ingredient" && (
-                                    <>
-                                        <div className="flex items-center bg-gray-100 rounded-full px-4 py-2.5 mb-4">
-                                            <Search className="w-4 h-4 text-gray-400 mr-2" />
-                                            <input
-                                                type="text"
-                                                placeholder={t("Search ingredient")}
-                                                value={filterIngredientQuery}
-                                                onChange={(e) =>
-                                                    setFilterIngredientQuery(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="w-full outline-none bg-transparent text-sm text-gray-600"
-                                            />
-                                        </div>
-
-                                        {selectedIngredientObjs.length > 0 && (
-                                            <div className="mb-4">
-                                                <h4 className="text-sm font-bold text-gray-700 mb-2">{t("Selected")}</h4>
-                                                <div className="grid grid-cols-4 gap-3">
-                                                    {selectedIngredientObjs.map(
-                                                        (ing) => (
-                                                            <button
-                                                                key={ing.name}
-                                                                onClick={() =>
-                                                                    toggleInList(
-                                                                        ing.name,
-                                                                        selectedIngredientNames,
-                                                                        setSelectedIngredientNames,
-                                                                    )
-                                                                }
-                                                                className="flex flex-col items-center gap-1"
-                                                            >
-                                                                <div className="relative w-14 h-14">
-                                                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100">
-                                                                        <img
-                                                                            src={
-                                                                                ing.image
-                                                                            }
-                                                                            alt={
-                                                                                ing.name
-                                                                            }
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    </div>
-                                                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center border-2 border-white">
-                                                                        <X className="w-3 h-3" />
-                                                                    </span>
-                                                                </div>
-                                                                <span className="text-xs text-gray-700 capitalize text-center break-words w-full">
-                                                                    {ing.name}
-                                                                </span>
-                                                            </button>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <h4 className="text-sm font-bold text-gray-700 mb-2">{t("All Ingredient")}</h4>
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {visibleIngredients.map((ing) => {
-                                                const isSelected =
-                                                    selectedIngredientNames.includes(
-                                                        ing.name,
-                                                    );
-                                                return (
-                                                    <button
-                                                        key={ing.name}
-                                                        onClick={() =>
-                                                            toggleInList(
-                                                                ing.name,
-                                                                selectedIngredientNames,
-                                                                setSelectedIngredientNames,
-                                                            )
-                                                        }
-                                                        className="flex flex-col items-center gap-1"
-                                                    >
-                                                        <div
-                                                            className={`w-14 h-14 rounded-full overflow-hidden bg-gray-100 ${
-                                                                isSelected
-                                                                    ? "opacity-40"
-                                                                    : ""
-                                                            }`}
-                                                        >
-                                                            <img
-                                                                src={
-                                                                    ing.image
-                                                                }
-                                                                alt={ing.name}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        </div>
-                                                        <span
-                                                            className={`text-xs capitalize text-center break-words w-full ${
-                                                                isSelected
-                                                                    ? "text-gray-400"
-                                                                    : "text-gray-700"
-                                                            }`}
-                                                        >
-                                                            {ing.name}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </>
-                                )}
-
-                                {filterTab === "mealType" && (
-                                    <FilterCheckboxList
-                                        emojiMap={OPTION_EMOJI}
-                                        options={MEAL_TYPE_OPTIONS}
-                                        selected={selectedMealTypes}
-                                        onToggle={(v) =>
-                                            toggleInList(
-                                                v,
-                                                selectedMealTypes,
-                                                setSelectedMealTypes,
-                                            )
-                                        }
-                                    />
-                                )}
-
-                                {filterTab === "dietary" && (
-                                    <FilterCheckboxList
-                                        emojiMap={OPTION_EMOJI}
-                                        options={DIETARY_OPTIONS}
-                                        selected={selectedDietary}
-                                        onToggle={(v) =>
-                                            toggleInList(
-                                                v,
-                                                selectedDietary,
-                                                setSelectedDietary,
-                                            )
-                                        }
-                                    />
-                                )}
-
-                                {filterTab === "cuisine" && (
-                                    <FilterCheckboxList
-                                        emojiMap={OPTION_EMOJI}
-                                        options={CUISINE_OPTIONS}
-                                        selected={selectedCuisine}
-                                        onToggle={(v) =>
-                                            toggleInList(
-                                                v,
-                                                selectedCuisine,
-                                                setSelectedCuisine,
-                                            )
-                                        }
-                                    />
-                                )}
-
-                                {filterTab === "occasion" && (
-                                    <FilterCheckboxList
-                                        emojiMap={OPTION_EMOJI}
-                                        options={OCCASION_OPTIONS}
-                                        selected={selectedOccasion}
-                                        onToggle={(v) =>
-                                            toggleInList(
-                                                v,
-                                                selectedOccasion,
-                                                setSelectedOccasion,
-                                            )
-                                        }
-                                    />
-                                )}
-                            </div>
-
-                            {/* Clear / Apply */}
-                            <div className="flex items-center gap-3 px-5 py-4 pb-24 border-t border-gray-100">
-                                <button
-                                    onClick={clearFilters}
-                                    className="flex-1 py-3 rounded-full text-sm font-bold text-gray-600 border border-gray-300"
-                                >{t("Clear")}</button>
-                                <button
-                                    onClick={() => setShowFilterPanel(false)}
-                                    className="flex-1 py-3 rounded-full text-sm font-bold text-white bg-[#EF5A3A] shadow-md hover:bg-orange-600 transition"
-                                >{t("Apply")}</button>
-                            </div>
-                        </div>
-                    </>
-                )}
-
                 {/* === 🔘 Bottom Navigation (แถบเมนูด้านล่าง) === */}
                 <BottomMenu
                     activeTab={activeTab}
@@ -1334,27 +1309,33 @@ function App() {
     const showToast = notice && !isGenerating && !showFilterPanel &&
         ["home", "user-ingredients", "favorites", "profile"].includes(currentView) &&
         !(currentView === "profile" && profileNotificationPaused);
-    return <>{renderPage()}{showToast && <NotificationToast key={notice.id} notice={notice} ingredients={userIngredients} onDismiss={dismissToast}
+    return <>{renderPage()}{recipeFilterPanel}{showToast && <NotificationToast key={notice.id} notice={notice} ingredients={userIngredients} onDismiss={dismissToast}
         onOpen={() => { dismissToast(); if (notice.kind === "expiry_summary") openNotifications(); else { setNotificationReturnView(currentView); setCurrentView("notifications"); void openNotificationTarget(notice); } }} />}</>;
 }
 
-function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {
+function FilterCheckboxList({ options, selected, onToggle, emojiMap, available }) {
     const { t } = useLocale();
     return (
         <div className="flex flex-col gap-3">
             {options.map((option) => {
                 const isChecked = selected.includes(option);
+                const unavailable = !available.includes(option);
                 return (
-                    <div
+                    <button
                         key={option}
+                        type="button"
+                        aria-pressed={isChecked}
+                        disabled={unavailable && !isChecked}
+                        aria-describedby={unavailable ? "recipe-filter-availability" : undefined}
                         onClick={() => onToggle(option)}
-                        className="flex items-center justify-between bg-gray-100 p-3 rounded-2xl cursor-pointer"
+                        className="flex items-center justify-between gap-3 bg-gray-100 p-3 rounded-2xl cursor-pointer text-left disabled:cursor-not-allowed disabled:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
                     >
-                        <span className="font-medium text-black text-base">
+                        <span className={`font-medium text-base ${unavailable ? "text-gray-600" : "text-black"}`}>
                             {emojiMap?.[option] && (
                                 <span className="mr-2">{emojiMap[option]}</span>
                             )}
                             {t(option)}
+                            {unavailable && <span className="block text-xs font-normal mt-1">{t("No recipes support this option yet")}</span>}
                         </span>
                         <div
                             className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${
@@ -1379,7 +1360,7 @@ function FilterCheckboxList({ options, selected, onToggle, emojiMap }) {
                                 </svg>
                             )}
                         </div>
-                    </div>
+                    </button>
                 );
             })}
         </div>

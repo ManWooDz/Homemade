@@ -2,6 +2,20 @@
 
 Canonical language for Homemade's recipe, fridge, account and account-recovery domain. Terms here describe product meaning, not implementation details.
 
+## Recipe Discovery
+
+**Recipe Discovery Filter**:
+An ingredient or recipe-detail choice used to narrow the menus shown while browsing Home or Favorites. Recorded meal and occasion tags are suggestions for serving the dish; discovery tags do not establish independently validated dietary compliance or allergy safety.
+_Avoid_: Allergy validation, cooking request preference
+
+**Applied Recipe Filters**:
+The discovery choices the account holder has confirmed for the current browsing page. Choices being edited take effect only when applied; leaving the editor without applying retains the previously confirmed choices.
+_Avoid_: Unconfirmed filter choices, saved cooking preferences
+
+**Unavailable Filter Option**:
+A discovery choice for which the recipes in the current list have no recorded matching details. The choice remains visible, and becomes available when matching recipe details exist.
+_Avoid_: Unsupported category forever, inferred recipe property
+
 ## Recipe Adaptation
 
 **Allowed Recipe Ingredient**:
@@ -79,6 +93,10 @@ _Avoid_: Critic feedback, validation failure reason
 **Estimated Total Recipe Time**:
 A reviewed approximate range of elapsed time from preparing the ingredients to food ready to eat, including cooking and waiting specified by the recipe. Ingredients described as prepared foods are ready at the start; the range is an estimate, not a measured or guaranteed duration.
 _Avoid_: Active cooking time, time to make every ingredient from scratch, guaranteed completion time
+
+**AI-estimated Total Recipe Time**:
+An approximate range of elapsed preparation, cooking and specified waiting time estimated by AI from a generated recipe until the food is ready to eat, with named prepared ingredients ready at the start. It is not a measured or guaranteed duration and does not imply the user review applied to base-menu estimates.
+_Avoid_: Measured cooking duration, reviewed base-menu time, guaranteed completion time
 
 ## Allergen Validation
 

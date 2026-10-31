@@ -66,19 +66,19 @@ export default function IngredientDetail({
         <PageShell className="ingredient-detail-screen">
 
                 {/* Header Actions */}
-                <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
+                <div className="shrink-0 pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
                     <button
                         onClick={onBack}
                         disabled={isSaving}
                         aria-label={t("กลับ")}
-                        className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center disabled:opacity-50"
+                        className="page-header-back w-10 h-10 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md disabled:opacity-50"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <img
                         src={logo}
                         alt="HomeMade"
-                        className="h-14 object-contain"
+                        className="h-18 object-contain"
                     />
                 </div>
 

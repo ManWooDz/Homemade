@@ -7,6 +7,10 @@ related_targets: ["frontend/src/components/IngredientEditor.jsx","frontend/src/c
 
 # Fridge and recipe nutrition extension
 
+## Header consistency (2026-10-21)
+
+User requested the Favorites/UserIngredients header geometry:32px top padding,24px side offsets,72px logo,40px Back circle with24px chevron/shadow and24px bottom gap. This supersedes the earlier56px compact-logo guidance. Retain the existing disabled Back state and no notification control. Browser1280×720/320×568 verifies alignment, scrolling clearance and Back/Edit/Cancel; scoped lint/build pass, detector[].
+
 Mode: Operate. Keep the existing orange/white, self-hosted Noto Sans Thai and 430px mobile shell. The user approved the scoped backend update plan on 2026-10-13. This is an extension of established screens, without a new visual world or raster assets.
 
 ## Direction contract

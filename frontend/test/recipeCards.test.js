@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { translate, formatIngredientName } from "../src/utils/translations.js";
 
 const require = createRequire(import.meta.url);
 const result = await build({
@@ -19,6 +20,7 @@ const result = await build({
 const compiled = { exports: {} };
 new Function("require", "module", "exports", result.outputFiles[0].text)(require, compiled, compiled.exports);
 const { Detail, Cooking, Instructions, setLocale } = compiled.exports;
+
 for (const [locale, title, note] of [
   ["th", "กำลังสร้างสูตรอาหาร...", "เริ่มต้นจากวัตถุดิบที่คุณเลือก"],
   ["en", "Creating your recipe...", "Starting with your chosen ingredients"],
@@ -38,6 +40,67 @@ for (const [locale, title, note] of [
 const recipe = { id: 1, name: "Vegetable Bowl", recipe_name: "Vegetable Bowl", ingredients: [{ name: "Kale" }], adjusted_ingredients: ["Kale 200 g"],
   servings: 2, tags: ["Vegan"], diet_tags: ["Vegan"], instructions: ["1. Prepare\nWash the kale.", "2. Cook until tender."],
   nutrition: { basis: "per_serving", calories: 320, carbs_g: 42, protein_g: 12, fat_g: 8 }, nutrition_partially_estimated: true, safety_warning: "Keep the allergy warning." };
+
+// Read literals only: never import the seed module or connect to its database.
+const seed = readFileSync(new URL("../../backend/database/seed_postgres.py", import.meta.url), "utf8");
+const baseMenus = [...seed.matchAll(/"short_description": ("[^"\r\n]*")[\s\S]*?"ingredients": (\[[^\r\n]*\])[\s\S]*?"instructions": (\[[^\r\n]*\])/g)]
+  .map(([, description, ingredients, instructions]) => ({ short_description: JSON.parse(description), ingredients: JSON.parse(ingredients), instructions: JSON.parse(instructions) }));
+
+test("all nine base menus have Thai descriptions, all 55 ingredient names and every step", () => {
+  assert.equal(baseMenus.length, 9);
+  assert.equal(new Set(baseMenus.flatMap(menu => menu.ingredients)).size, 55);
+  for (const menu of baseMenus) {
+    for (const original of [menu.short_description, ...menu.ingredients, ...menu.instructions]) {
+      const thai = translate(original, "th");
+      assert.match(thai, /[ก-๙]/, original);
+      assert.doesNotMatch(thai, /[a-z]/i, original);
+      assert.equal(translate(original, "en"), original);
+    }
+    for (const name of menu.ingredients) {
+      assert.equal(formatIngredientName(name), `${translate(name)} (${name})`);
+      assert.equal(formatIngredientName(name, "en"), name);
+    }
+  }
+});
+
+for (const locale of ["th", "en"]) {
+  test(`actual base-menu detail renders translated content without mutating API data (${locale})`, () => {
+    setLocale(locale);
+    for (const menu of baseMenus) {
+      const input = { ...menu, ingredients: menu.ingredients.map(name => ({ name })) };
+      const before = JSON.stringify(input);
+      const html = renderToStaticMarkup(createElement(Detail, { recipe: input }));
+      assert.ok(html.includes(translate(menu.short_description, locale)));
+      for (const name of menu.ingredients) {
+        const escaped = (locale === "th" ? `${translate(name)} (${name})` : name).replaceAll("'", "&#x27;");
+        assert.ok(html.includes(`aria-label="${escaped}"`), name);
+      }
+      for (const step of menu.instructions) assert.ok(html.includes(translate(step, locale).replace(/^\d+\.\s*/, "")), step);
+      assert.equal(JSON.stringify(input), before);
+    }
+  });
+}
+
+test("unknown recipe text remains unchanged in either locale", () => {
+  for (const locale of ["th", "en"]) {
+    assert.equal(translate("My custom ingredient", locale), "My custom ingredient");
+    assert.equal(translate("สูตรของฉัน", locale), "สูตรของฉัน");
+    assert.equal(formatIngredientName("My custom ingredient", locale), "My custom ingredient");
+    assert.equal(formatIngredientName("วัตถุดิบของฉัน", locale), "วัตถุดิบของฉัน");
+  }
+});
+
+test("requested ingredient names and legacy Thai aliases share the bilingual label", () => {
+  for (const [english, thai, oldThai] of [
+    ["kale", "ผักเคล", "เคล"], ["spinach", "ผักปวยเล้ง", "ปวยเล้ง"],
+    ["yellow bell pepper", "พริกหวานสีเหลือง", "พริกหวานเหลือง"], ["chives", "กุยช่ายฝรั่ง", "กุยช่าย"],
+  ]) {
+    for (const input of [english, thai, oldThai]) {
+      assert.equal(formatIngredientName(input), `${thai} (${english})`);
+      assert.equal(formatIngredientName(input, "en"), english);
+    }
+  }
+});
 
 for (const locale of ["th", "en"]) {
   for (const mode of ["detail", "cooking", "custom"]) {

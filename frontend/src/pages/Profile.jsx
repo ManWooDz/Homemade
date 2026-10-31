@@ -44,23 +44,23 @@ const LANGUAGE_OPTIONS = [
   { code: "en", label: "English", description: "ภาษาอังกฤษ", descriptionLang: "th" },
 ];
 
-function Header({ title, onBack, notificationCount, onNotifications, compact = false }) {
+function Header({ title, onBack, notificationCount, onNotifications }) {
   const { t } = useLocale();
   return (
-    <div className={compact ? `shrink-0 pt-5 pb-6 ${title ? "pl-20 pr-5 min-h-24" : "px-6"} flex items-center justify-center relative z-20` : "pt-8 px-6 h-18 flex items-center justify-center relative z-20 mb-6"}>
+    <div className="shrink-0 pt-8 px-6 flex items-center justify-center relative z-20 mb-6">
       <button
         onClick={onBack}
         aria-label={t("กลับ")}
-        className={`absolute ${compact ? "left-5" : "left-6 shadow-md"} w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]`}
+        className="page-header-back w-10 h-10 shadow-md bg-[#EF5A3A] text-white rounded-full flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
       {title ? (
-        <h2 className="min-w-0 text-center text-lg font-bold text-black">{title}</h2>
+        <h2 className="w-full min-w-0 min-h-18 px-12 flex items-center justify-center text-center text-lg font-bold text-black">{title}</h2>
       ) : (
-        <img src={logo} alt="HomeMade" className={`${compact ? "h-14" : "h-18"} object-contain`} />
+        <img src={logo} alt="HomeMade" className="h-18 object-contain" />
       )}
-      {onNotifications && <div className={compact ? "profile-main-notifications absolute right-5" : "absolute right-6 top-1/2 translate-y-4"}><NotificationBell count={notificationCount} onClick={onNotifications} /></div>}
+      {onNotifications && <NotificationBell count={notificationCount} onClick={onNotifications} />}
     </div>
   );
 }
@@ -451,7 +451,7 @@ export default function Profile({
     return (
       <PageShell className="profile-preferences-screen" scrollKey={view}>
 
-          <Header title={t("Preferences")} onBack={goMain} compact />
+          <Header title={t("Preferences")} onBack={goMain} />
           <div className="profile-preferences-feedback shrink-0 px-6 pb-4">
             {(prefsLoaded || !prefsError) && <p role="status" className="text-sm text-gray-600">{t(!prefsLoaded ? "กำลังโหลดค่าจากโปรไฟล์…" : prefsSaving ? "กำลังบันทึกค่าการทำอาหาร…" : "เลือกแล้วบันทึกให้อัตโนมัติ")}</p>}
             {[["allergies", "allergyOther"], ["dietary", "dietaryOther"], ["equipment", "equipmentOther"]].some(([key, other]) => preferences[key].includes(OTHER_OPTION) && preferences[other].some(value => !value.trim())) && <p role="status" className="mt-3 text-sm text-gray-700">{t("กรุณาระบุข้อความในตัวเลือกอื่น ๆ ให้ครบ")}</p>}
@@ -577,7 +577,7 @@ export default function Profile({
   return (
     <PageShell className="profile-main-screen" scrollKey={view}>
 
-        <Header compact onBack={onBack} notificationCount={notificationCount} onNotifications={onNotifications} />
+        <Header onBack={onBack} notificationCount={notificationCount} onNotifications={onNotifications} />
 
         <main className="profile-main-content flex-1 min-h-0 scrollbar-hide px-5 pb-6">
           {notice && <p role="status" className="text-sm text-green-700 mb-4">{t(notice)}</p>}

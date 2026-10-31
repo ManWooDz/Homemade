@@ -201,7 +201,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="auth-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
+    <div className="auth-screen onboarding-screen h-dvh bg-gray-100 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-107.5 bg-white h-full relative shadow-2xl overflow-hidden flex flex-col">
         <main ref={contentRef} className="w-full flex-1 min-h-0 px-6 pt-6 pb-6 bg-background-primary flex flex-col items-center overflow-y-auto">
           <div className="w-full flex flex-col items-center">

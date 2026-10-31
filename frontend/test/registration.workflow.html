@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homemade registration workflow — synthetic data</title></head>
+<body><div id="root"></div><script type="module">
+// Recording fixture: signup and OTP are simulated; no request reaches a backend.
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import Login from '../src/pages/auth/Login.jsx';
+import Register from '../src/pages/auth/Register.jsx';
+import OtpVerify from '../src/pages/auth/OtpVerify.jsx';
+import Onboarding from '../src/pages/auth/Onboarding.jsx';
+import '../src/index.css';
+
+const requests = [];
+const token = 'synthetic-registration-recording-only';
+let registeredEmail = null;
+let verified = false;
+const ok = (data, status = 200) => Response.json({status:'success',data}, {status});
+window.fetch = async (input, options = {}) => {
+    const path = new URL(typeof input === 'string' ? input : input.url, location.origin).pathname;
+    const method = options.method || 'GET';
+    requests.push({path,method});
+    if (path === '/api/auth/me') return verified
+        ? ok({id:999,email:registeredEmail,locale:'th',has_avatar:false}) : Response.json({}, {status:401});
+    if (path === '/api/auth/refresh') return Response.json({}, {status:401});
+    if (path === '/api/auth/register' && method === 'POST') {
+        const body = JSON.parse(options.body);
+        if (!body.email.endsWith('@example.test') || body.password.length < 8)
+            return Response.json({detail:'Invalid demo signup'}, {status:400});
+        registeredEmail = body.email.trim().toLowerCase();
+        return ok({email:registeredEmail,registration_token:token}, 202);
+    }
+    if (path === '/api/auth/verify-registration' && method === 'POST') {
+        const body = JSON.parse(options.body);
+        if (!registeredEmail || body.registration_token !== token || body.code !== '123456')
+            return Response.json({detail:'Invalid or expired registration code'}, {status:400});
+        verified = true;
+        return ok({id:999,email:registeredEmail,locale:'th',has_avatar:false});
+    }
+    throw new Error('Unexpected request blocked by registration recording: '+path);
+};
+function Demo() {
+    const location = useLocation();
+    return React.createElement(React.Fragment,null,
+        React.createElement(Routes,null,
+            React.createElement(Route,{path:'/login',element:React.createElement(Login)}),
+            React.createElement(Route,{path:'/register',element:React.createElement(Register)}),
+            React.createElement(Route,{path:'/register/otp',element:React.createElement(OtpVerify,{purpose:'registration'})}),
+            React.createElement(Route,{path:'/onboarding',element:React.createElement(Onboarding)})),
+        React.createElement('output',{id:'workflow-receipt',className:'sr-only'},JSON.stringify({route:location.pathname,registeredEmail,verified,requests})),
+    );
+}
+createRoot(document.getElementById('root')).render(React.createElement(MemoryRouter,{initialEntries:['/login']},
+    React.createElement(AuthProvider,null,React.createElement(LocaleProvider,null,React.createElement(Demo)))));
+</script></body></html>

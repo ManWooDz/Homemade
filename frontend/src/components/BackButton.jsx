@@ -19,14 +19,16 @@ export default function BackButton({ to, onClick, disabled = false, size = "w-9 
   };
 
   return (
+    <span className={`inline-flex shrink-0 ${size}`}>
     <button
       type="button"
       disabled={disabled}
       onClick={handleBack}
       aria-label={t("Back")}
-      className={`${size} bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer`}
+      className={`auth-back-control ${size} bg-button-primary text-text-white rounded-full flex items-center justify-center shadow-md cursor-pointer`}
     >
       <ChevronLeft className={iconSize} />
     </button>
+    </span>
   );
 }

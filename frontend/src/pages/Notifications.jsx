@@ -17,10 +17,10 @@ export default function Notifications({ items, ingredients = [], count, tab, onT
     const dateFormat = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium" });
     const timestamp = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "th-TH", { timeZone: "Asia/Bangkok", dateStyle: "short", timeStyle: "short" });
     const titles = { expiry_near: "วัตถุดิบใกล้วันที่หมดอายุ", expiry_today: "ถึงวันที่หมดอายุที่บันทึกไว้", expiry_passed: "เลยวันที่หมดอายุที่บันทึกไว้", recipe_history_saved: "สร้างสูตรและบันทึกในประวัติแล้ว", recipe_favorite_added: "บันทึกเป็นสูตรที่ชอบแล้ว" };
-    return <PageShell scrollKey={tab} initialScroll={getScroll?.(tab) ?? 0}>
+    return <PageShell className="notifications-screen" scrollKey={tab} initialScroll={getScroll?.(tab) ?? 0}>
 
             <header className="pt-8 px-5 pb-6 relative flex justify-center items-center">
-                <button type="button" aria-label={t("กลับ")} onClick={onBack} className="absolute left-5 w-11 h-11 flex items-center justify-center rounded-full bg-[#B93E25] text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"><ChevronLeft /></button>
+                <button type="button" aria-label={t("กลับ")} onClick={onBack} className="page-header-back w-11 h-11 flex items-center justify-center rounded-full bg-[#B93E25] text-white shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"><ChevronLeft /></button>
                 <img src={logo} alt="HomeMade" className="h-18 object-contain" />
             </header>
             <div className="px-5">

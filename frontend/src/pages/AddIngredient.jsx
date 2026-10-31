@@ -216,7 +216,7 @@ export default function AddIngredient({
                     <button
                         onClick={cropSource ? closeCrop : onBack}
                         aria-label={t("กลับ")}
-                        className="absolute left-5 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center"
+                        className="page-header-back w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>

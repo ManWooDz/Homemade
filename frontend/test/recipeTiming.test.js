@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 const require = createRequire(import.meta.url);
 const result = await build({
-    stdin: { contents: 'export { default as RecipeDetail } from "./src/pages/RecipeDetail.jsx"; export { setLocale } from "./src/context/LocaleContext";', resolveDir: fileURLToPath(new URL("../", import.meta.url)), loader: "jsx" },
+    stdin: { contents: 'export { default as RecipeDetail } from "./src/pages/RecipeDetail.jsx"; export { default as RecipeContent } from "./src/components/RecipeContent.jsx"; export { setLocale } from "./src/context/LocaleContext";', resolveDir: fileURLToPath(new URL("../", import.meta.url)), loader: "jsx" },
     bundle: true, write: false, platform: "node", format: "cjs", packages: "external", jsx: "automatic", loader: { ".png": "dataurl" },
     plugins: [{ name: "test-locale", setup(build) {
         build.onResolve({ filter: /\/context\/LocaleContext$/ }, () => ({ path: "locale", namespace: "test" }));
@@ -17,13 +17,42 @@ const result = await build({
 });
 const module = { exports: {} };
 new Function("require", "module", "exports", result.outputFiles[0].text)(require, module, module.exports);
-const { RecipeDetail, setLocale } = module.exports;
+const { RecipeDetail, RecipeContent, setLocale } = module.exports;
 const render = time => renderToStaticMarkup(createElement(RecipeDetail, { recipe: {
     id: 1, name: "Chashu Ramen", review: 72, ingredients: [],
     estimated_total_time: time, usage_time: "legacy unsupported time",
 } }));
 
 for (const locale of ["th", "en"]) {
+    for (const compact of [false, true]) {
+        const renderGenerated = time => renderToStaticMarkup(createElement(RecipeContent, { compact, recipe: {
+            recipe_name: "Spinach Salad", servings: 1, adjusted_ingredients: ["ผักปวยเล้ง 100 กรัม"],
+            instructions: ["คลุกเคล้าผักปวยเล้ง"], diet_tags: [],
+            estimated_total_time: time, usage_time: "legacy unsupported time",
+        } }));
+        test(`generated time shows AI elapsed range in ${locale}, compact=${compact}`, () => {
+            setLocale(locale);
+            for (const time of [{ min_minutes: 5, max_minutes: 10 }, { min_minutes: 5, max_minutes: 5 }]) {
+                const html = renderGenerated(time);
+                assert.ok(html.includes(locale === "en" ? `About 5–${time.max_minutes} min` : `ประมาณ 5–${time.max_minutes} นาที`));
+                assert.ok(html.includes(locale === "en" ? "AI estimate includes prep" : "AI ประเมินเวลาเตรียม"));
+                assert.ok(!html.includes("legacy unsupported time"));
+            }
+        });
+        test(`generated legacy/invalid time stays unknown in ${locale}, compact=${compact}`, () => {
+            setLocale(locale);
+            for (const time of [undefined, null, {}, [], "15", { min_minutes: 0, max_minutes: 10 },
+                { min_minutes: 20, max_minutes: 10 }, { min_minutes: "5", max_minutes: 10 },
+                { min_minutes: 1.5, max_minutes: 10 }, { min_minutes: true, max_minutes: 10 },
+                { min_minutes: 1, max_minutes: Infinity }, { min_minutes: 1, max_minutes: 2**53 },
+                { min_minutes: 5, max_minutes: 10, extra: true }]) {
+                const html = renderGenerated(time);
+                assert.ok(html.includes(locale === "en" ? "Time unavailable" : "ยังไม่มีข้อมูลเวลา"));
+                assert.ok(!html.includes(locale === "en" ? "AI estimate includes prep" : "AI ประเมินเวลาเตรียม"));
+                assert.ok(!html.includes("legacy unsupported time"));
+            }
+        });
+    }
     test(`base-menu time shows approximate elapsed range and assumptions in ${locale}`, () => {
         setLocale(locale);
         const html = render({ min_minutes: 15, max_minutes: 20 });

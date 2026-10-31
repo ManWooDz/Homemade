@@ -6,6 +6,10 @@ import { getTagColor } from "../utils/tagColors";
 
 export default function RecipeContent({ recipe, onDone, compact = false }) {
     const { t } = useLocale();
+    const time = recipe.estimated_total_time;
+    const hasTime = time && Object.keys(time).length === 2
+      && Number.isSafeInteger(time.min_minutes) && Number.isSafeInteger(time.max_minutes)
+      && time.min_minutes > 0 && time.max_minutes >= time.min_minutes;
   return (
     <>
       <h2 className="recipe-title text-2xl font-bold text-black mb-2 leading-normal">
@@ -16,10 +20,11 @@ export default function RecipeContent({ recipe, onDone, compact = false }) {
         <div className="flex items-center gap-1.5">
           <Clock className="w-4 h-4 text-gray-400" />
           <span className="text-gray-500 text-sm">
-            {recipe.usage_time || t("error")}
+            {hasTime ? t("ประมาณ {min}–{max} นาที", { min: time.min_minutes, max: time.max_minutes }) : t("ยังไม่มีข้อมูลเวลา")}
           </span>
         </div>
       </div>
+      {hasTime && <p className="text-sm text-gray-600 mb-3">{t("AI ประเมินเวลาเตรียม ปรุง และรอตามสูตร โดยวัตถุดิบสำเร็จรูปที่ระบุถือว่าเตรียมแล้ว")}</p>}
 
       {/* Diet Tags */}
       {recipe.diet_tags && recipe.diet_tags.length > 0 && (

@@ -75,7 +75,7 @@ export default function BarcodeScanPage({
                             lookup.current?.abort();
                             onBack();
                         }}
-                        className="absolute left-6 w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
+                        className="page-header-back w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25]"
                     >
                         <ChevronLeft aria-hidden="true" className="w-6 h-6" />
                     </button>

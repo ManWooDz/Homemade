@@ -2,6 +2,8 @@
 
 Approved 2026-10-14 Bangkok. Product envelope; only base menus on RecipeDetail.
 
+The separately approved 2026-10-22 [generated-recipe time extension](generated-recipe-time.md) reuses the field shape with AI-estimated provenance. It does not change these reviewed base-menu values or this change's historical scope.
+
 GET `/api/recipes` adds `estimated_total_time` to each menu:
 
 ```json

@@ -95,6 +95,7 @@ from dataclasses import FrozenInstanceError
 from unittest.mock import patch
 
 APPROVED = {
+    "estimated_total_time": {"min_minutes": 15, "max_minutes": 20},
     "recipe_name": "Thai Basil Pork",
     "servings": 2,
     "adjusted_ingredients": ["หมูสับ 200 กรัม", "น้ำมัน 1 ช้อนโต๊ะ"],

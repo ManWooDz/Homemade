@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homemade onboarding workflow — synthetic data</title></head>
+<body><div id="root"></div><script type="module">
+// Recording fixture: all account writes stay in memory; no real signup or API calls.
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import Onboarding from '../src/pages/auth/Onboarding.jsx';
+import App from '../src/App.jsx';
+import padKrapao from '../../backend/images/menus/pad_kra_pao.png';
+import padThai from '../../backend/images/menus/padthai.png';
+import '../src/index.css';
+
+const requests = [];
+let saved = null;
+const ok = data => Response.json({status:'success',data});
+const recipes = [
+    {id:1,name:'ผัดกะเพรา',tags:['อาหารไทย','มื้อกลางวัน'],ingredients:[],image:padKrapao},
+    {id:2,name:'ผัดไทย',tags:['อาหารไทย','มื้อเย็น'],ingredients:[],image:padThai},
+];
+window.fetch = async (input, options = {}) => {
+    const path = new URL(typeof input === 'string' ? input : input.url, location.origin).pathname;
+    const method = options.method || 'GET';
+    requests.push({path,method});
+    if (path === '/api/auth/me') return ok({id:999,display_name:'เชฟโฮมเมด',locale:'th',has_avatar:false});
+    if (path === '/api/user-preferences') {
+        if (method === 'PUT') {
+            saved = JSON.parse(options.body);
+            console.assert(saved.age >= 15 && saved.cooking_goals.length > 0, 'Complete onboarding before saving');
+        }
+        return ok(saved);
+    }
+    if (path === '/api/recipes') return ok(recipes);
+    if (['/api/user-ingredients','/api/history','/api/base-favorites'].includes(path)) return ok([]);
+    if (path === '/api/notifications/sync') return ok({created_items:[],unread_count:0});
+    if (path === '/api/notifications') return ok({items:[],unread_count:0,next_before_id:null});
+    throw new Error('Unexpected request blocked by onboarding recording: '+path);
+};
+function Demo() {
+    const location = useLocation();
+    return React.createElement(React.Fragment,null,
+        React.createElement(Routes,null,
+            React.createElement(Route,{path:'/onboarding',element:React.createElement(Onboarding)}),
+            React.createElement(Route,{path:'/home',element:React.createElement(App)})),
+        React.createElement('output',{id:'workflow-receipt',className:'sr-only'},JSON.stringify({route:location.pathname,saved,requests})),
+    );
+}
+createRoot(document.getElementById('root')).render(React.createElement(MemoryRouter,{initialEntries:['/onboarding']},
+    React.createElement(AuthProvider,null,React.createElement(LocaleProvider,null,React.createElement(Demo)))));
+</script></body></html>

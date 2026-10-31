@@ -1,11 +1,219 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Preflight verification runtimes and compare source-only baselines (2026-11-01):**
+- what happened: initial frontend commands hit an unconfigured NVM shim; direct existing bundled Node ran successfully. Whole-directory lint traversed ignored historical frontend copies and reported419findings, while source-only lint reports the same4findings on candidate and HEAD. Existing backend dependencies are in backend/venv, not the alternate test environment initially probed.
+- root cause: assumed PATH/runtime availability and used an unbounded lint target containing saved source copies before checking the actual environment.
+- correct behavior: resolve and invoke an existing working runtime, probe its dependency imports, scope lint to shipped source, and compare failures with an unchanged HEAD export before attributing them to the candidate. Keep failed receipts; install nothing and do not weaken offline guards or assertions.
+
+**Inspect staging after ignored-parent warnings without force (2026-11-01):**
+- what happened: explicit-path git add returned1 citing ignored .impeccable/docs parents, although inspection confirmed all46intended paths were staged and no unstaged diff remained.
+- root cause: git add's ignored-parent exit status was distinct from the resulting tracked/new-file index state.
+- correct behavior: inspect cached paths after a failed staging command, verify the exact authorized scope, update tracked paths with git add --update and add only remaining new paths separately. Never use force flags or assume a nonzero staging command made no changes.
+
+**Include translated accessible labels in delivery checks (2026-11-01):**
+- what happened: pre-publication frontend suite had5failures versus4on HEAD; the additional failure identified the new filter remove label's missing Thai/English dictionary entry. Added only that entry; final suite has the same4baseline failures and focused76tests pass.
+- root cause: a new static translation lookup was added without its COPY dictionary entry.
+- correct behavior: run the existing static translation-coverage test after adding or moving translated labels, add the missing entry at the shared dictionary, and verify the full failure set against HEAD before publication.
+
+**Bound deployment-advice inspection and discover paths first (2026-11-01 recurrence):**
+- what happened: initial whole spec/MEMORY reads exceeded output budgets; a later search assumed services/lib/api/config paths that do not exist. Repeated during gitignore maintenance with an unbounded ignored-tree search and a nonexistent root package.json. Read-only failures; no application changes.
+- what happened: Git-status inspection repeated oversized spec/MEMORY reads, including a line-bounded read with long entries; subsequent compact Git checks succeeded. No application/backend edits.
+- root cause: ignored existing bounded-read guidance and inferred conventional paths instead of inspecting the actual tree; line limits alone do not bound long entries.
+- correct behavior: start with the current spec section and bounded topic matches, locate files before searching them, exclude tmp and copied checkouts from discovery, cap per-file and per-line output, and never treat truncated reads or missing-path searches as completed verification.
+
+**Verify animation canvas and encoded rectangles, not only decoded frames (2026-10-31):**
+- what happened: user reported transparent regions in registration media. Earlier checks verified size, duration and frame equality but omitted animation-canvas alpha. Original WebP used its encoder's transparent-black default canvas although decoded frames were opaque; original GIF already had no transparent pixels, so its exact viewer symptom remains unconfirmed.
+- root cause: treated RGB source images and decoded frame checks as sufficient for every animation player; omitted container background, disposal and partial-frame compatibility. An initial metadata dump also tried to serialize binary extension data.
+- correct behavior: set an explicit opaque-white WebP canvas, white-matte sources, and inspect alpha extrema for every decoded frame. For compatibility-sensitive GIF delivery, verify full frame rectangles, transparency flags and disposal from the encoded blocks; retain originals and distinguish confirmed metadata problems from unconfirmed viewer behavior. Serialize only selected scalar animation metadata when writing diagnostic JSON.
+
+**Resolve presentation versions before assigning page numbers (2026-10-31):**
+- what happened: exact-name Library lookup returned a25-page presentation, while the project record identified a newer28-page local version of the same name; inspection confirmed Q&A moves from19to22. Final review used the verified local version.
+- root cause: matching a filename was insufficient to establish the user-intended current revision across Library and the project.
+- correct behavior: check the project record for an explicitly identified current source, verify its page count/hash and Q&A anchor, and state the reviewed version before giving page-specific advice. Do not transfer page numbers between revisions.
+
+
+**Check complete staged snapshots including previously untracked tests (2026-10-25 recipe publication):**
+- what happened: full isolated tests passed, but the first complete staged whitespace check found an extra blank EOF line in the previously untracked test_gemini_keys.py. Removed only that line, verified identical AST, reran6focused tests and restaged the same32paths before committing.
+- root cause: ordinary working-tree git diff checks omit untracked files, so earlier scoped checks did not inspect every line that would enter the commit.
+- correct behavior: construct the complete candidate, run staged git diff --check including new files, bind staged/committed blobs to the tested manifest, and preserve unrelated work. If only EOF whitespace changes after a full run, prove identical AST and run focused checks; never suppress the staged error or report an interrupted check as passing.
+
+**Represent cooking medium and transfer explicitly without dropping food references (2026-10-25):**
+- what happened: a real schema-compliant basil recipe rendered oil as food being fried and omitted taking the eggs out before the next oil-heating/pork cycle. Automatic3/3acceptance did not reveal these wording/transition gaps.
+- root cause: one positive ingredient list was rendered uniformly, and the closed action set had no explicit set-aside operation or bounded check for a fresh oil-heating cycle with food still present.
+- correct behavior: render reviewed oil identities as media while retaining their IDs/amounts for safety and nutrition, require explicit set_aside/serving references before an ambiguous new oil-only heat cycle, and check this quality rule after Allergy. Remove only explicitly transferred IDs, preserve direct sequential/explicit-food reheating, and label the unnamed-pan/mixture limits instead of claiming full kitchen-state validation. Replay originals separately from authored repairs and never silently rescore historical live outcomes.
+
+**Aggregate per-step ingredient uses when auditing a whole recipe (2026-10-25 live recheck):**
+- what happened: the temporary audit checked expected pork/egg identities against instruction_uses(recipe)[0], which contains only the first crushing step, so it failed despite valid later positive references. Correcting that assertion made all three actual-output audits pass without changing any original/model/production output.
+- root cause: treated a list of per-step ingredient lists as a flat recipe-wide result without reading the helper's return contract.
+- correct behavior: inspect instruction_uses before consuming it and flatten all step lists for whole-recipe coverage assertions; keep first-step checks only for actual first-step requirements. Distinguish a harness assertion failure from a provider or production-validation failure.
+
+**Retain guards when Windows async verification needs host execution (2026-10-25 recurrence):**
+- what happened: the default-sandbox full run showed errors then stalled; the focused Allergy run timed out at60seconds in Windows socket._fallback_socketpair accept while TestClient was creating its event loop. Neither run supplied a completed test receipt. The full sandbox run was interrupted; reviewed host execution of the same verification code completed1093tests/1091pass/2skip, guard0 and exit0.
+- root cause: sandbox restrictions can block Windows internal loopback setup even when the repository guard permits that internal socketpair; this repeats the documented17-Oct harness failure and is not evidence of a schema or Allergy regression.
+- correct behavior: capture the traceback, label interrupted/timed-out runs incomplete, and rerun the unchanged bounded offline wrapper with reviewed host execution. Keep real API keys cleared and external-network/non-SQLite guards enabled; verify the host run's actual summary and exit code before claiming regression success.
+
+**Verify provider compliance with action-specific roles, not only required fields (2026-10-25):**
+- what happened: all9offline workflow tests pass, but3authorized real free-key responses are rejected by the new role protocol: duplicated ingredients/targets during cooking, targets on simmer, and empty targets on add/season. All original requests/responses are retained; no retries or paid calls were made.
+- root cause: the response schema constrains role fields and known IDs while action-dependent role rules remain in prompt prose and Python validation. Structured JSON acceptance and synthetic tests do not establish model compliance with those additional rules.
+- correct behavior: replay saved raw responses through current normalization, distinguish first refusal from per-step diagnostics, and keep live outcomes separate from authored/synthetic passes. Before a backend repair, review supported action-specific schema constraints and aligned examples; retain strict validation and never infer or move ingredient roles silently. Set a fresh explicit live-call budget after each exhausted run.
+
+**Match bibliography author names rather than substrings (2026-10-24 reference review):**
+- what happened: an initial substring check for Chai reported a match because an existing title contains Chain-of-thought; it did not identify a Chai/Draxler bibliography entry.
+- root cause: substring existence was mistaken for author/reference identity.
+- correct behavior: verify author names with word boundaries and author initials or inspect the complete bibliography entry; retain separate checks for title and author fields. Do not infer that a method is already cited from a partial name match.
+
+
+**Normalize draw.io row terminals before comparing FK tables (2026-10-24 ER refresh):**
+- what happened: the supplied latest diagram correctly attaches three relationship endpoints to attribute-row cells; a reused checker compared those row IDs directly with table IDs and rejected generate_history despite correct displayed ownership/cardinality. It was corrected to resolve parent-table ancestry without changing any original graph cell; full checks then pass. Some combined initial source/status reads again exceeded output caps.
+- root cause: validation assumed the previous whole-table endpoint representation, and bounded line counts still included long notes/status entries.
+- correct behavior: resolve every edge terminal through its parent cells to the owning entity before FK/geometry checks, while preserving the actual original terminal/port/layout. Compare recursive semantic XML rather than indentation; fail explicitly if ancestry leaves the table. Cap total printed characters and print compact summaries instead of full notes/status. Stop sequential checks on failed native exit codes and bind final render evidence to the exact saved draw.io hash.
+
+**Preserve a stated plan while correcting unsupported justification (2026-10-24 evaluation review):**
+- what happened: the earlier formal-language draft removed the original explicit participant/time plan and numerical targets into generic future decisions, and replaced identifiable test cases with a broad test-scope table. The user now requests a comparison against the actual24-Oct manuscript.
+- root cause: overcorrected unsupported guarantees by removing plan specificity, rather than distinguishing a proposed target from a measured result; treated a scope overview as a substitute for executable test cases.
+- correct behavior: preserve user-source plans as clearly marked provisional plans, correct their rationale/status, retain test IDs and operational expected results, and flag every substantive method/denominator change separately from language edits. Define feedback repair success on the same initial-failure cohort in addition to overall request success.
+
+
+**Adapt structural checks to the actual document formulas (2026-10-24 Nutrition Engine prose):**
+- what happened: a reused document builder initially required at least7subscript elements, while the two correct nutrition equations contain5subscript elements and a separately represented bounded sum. Verification stopped before saving the report.
+- root cause: inherited a structural count from another section rather than deriving it from the formulas being authored.
+- correct behavior: count the actual formula variables and mathematical constructs before asserting structure; verify C_ij,V_ij,W_i,N_j,C_ij plus the bounded sum for these two equations. Include table-cell text when checking fields documented in a table, and retain complete paragraph and equation-reference checks before saving.
+
+
+**Use Unicode suffix operations when revising Thai prose (2026-10-24 thesis guide revision):**
+- what happened: a draft-time replacement removed5characters from ดังนี้ although the Python string has6code points, leaving คำนวณดดังสมการ. Inspection caught and corrected every affected reference before the revised document was generated. An overbroad assertion for ดดัง also matched the valid phrase ตัวชี้วัดดังกล่าว.
+- root cause: hardcoded a Thai suffix length and then checked a substring without its word context.
+- correct behavior: use removesuffix('ดังนี้') or len of the actual suffix when appending equation references; inspect the complete resulting sentences and verify specific malformed phrases rather than arbitrary Thai substrings. Read explicitly supplied local source files directly when attachment extraction is unavailable.
+
+
+**Distinguish a usable draft from unavailable guide verification (2026-10-24 thesis editing):**
+- what happened: the earlier draft was readable, but both named guide formats returned no text/pages; network-restricted transfers and remote PDF fetch failed. Native report creation succeeded, while its bundled POSIX xattr helper failed on Windows and Word COM rendering returned access denied. Initial combined historical reads were also truncated.
+- root cause: guide text extraction and local byte access are separate capabilities; POSIX metadata and desktop automation are not guaranteed on the Windows sandbox. Large output limits do not bound historical input.
+- correct behavior: read bounded relevant sections; verify the accessible source and generated DOCX structurally; label guide compliance and visual rendering unverified when their checks fail. Preserve returned Library identity/version/attributes in a local sidecar if os.setxattr is unavailable. Keep editorial limits separate from chapter prose, retain the successful saved report, and request readable relevant guide pages before claiming compliance.
+
+
+**Keep workflow quality checks after Allergy (2026-10-23):**
+- what happened: the first workflow repair ran explicit-cooking checks inside model normalization; full1084regression exposed1failure because a raw shrimp quality refusal hid the existing declared-allergen reason. Moving cooking to Logic restored the established Allergy-first ordering.
+- root cause: role/schema integrity and cooking quality were grouped in one helper at the trust boundary, even though they belong at different stages in the fail-fast pipeline.
+- correct behavior: validate known/disjoint/declared roles before acceptance, but run method/doneness-mention checks only in Cooking Logic after Allergy. Exercise the actual provider-boundary allergy regression alongside pure workflow tests; never infer preserved stage ordering from isolated role tests alone.
+
+**Preserve model evidence separately from authored replay examples (2026-10-23 workflow repair):**
+- what happened: user wants to inspect original outputs; workflow repair requires target fields and explicit cooking actions absent from some saved samples. Created readable originals and separate labelled counterfactuals while verifying all31original JSON hashes unchanged.
+- root cause: an authored fix that passes new validation could otherwise be mistaken for a new model success or silently change historical evidence.
+- correct behavior: retain raw/prompt/plan/result files, hash originals, and label manual replay artifacts as authored offline inputs. Share readable exact-original output and separate before/after examples; do not pool their passes into live generation rates or call a model again after the approved budget is exhausted.
+
+**Do not equate positive ingredient occurrence with a complete cooking workflow (2026-10-23 nine-menu smoke):**
+- what happened: all9real free-key samples pass current validation, but saved text includes Pad Thai egg only beaten without an explicit pan transition, serving peanuts/cilantro alone, and steak's first season step referring to a previous mixture that does not exist.
+- root cause: shared ingredient lists do not encode target-versus-seasoning roles, component/result references, garnish-versus-dish serving or preparation/cooking states. Valid action enums/IDs and generic Thai templates do not establish those semantics.
+- correct behavior: report automatic acceptance separately from manual workflow observations; inspect first-step prerequisites, target/component/serving context and egg/protein transitions using saved outputs before claiming recipe readiness. Scope a reviewed deterministic action-role/state repair rather than silently rewriting recipes, treating ID occurrence as completion or adding a reviewer-model call. Preserve the exhausted9request budget and original results.
+
+**Enforce declaration order at both generation boundaries (2026-10-23 repair):**
+- what happened: the smoke's quantity-first, ID-annotated ingredient strings satisfy the old broad character regex but fail identity resolution, producing an undeclared-step error even when the named foods are present. Four focused tests reproduce8failures/subcases before repair.
+- root cause: schema constrained character set without constraining declaration grammar; validation resolved step IDs before distinguishing malformed ingredient lines.
+- correct behavior: generate a permitted-name-first declaration pattern from the selected/pantry registry and reviewed aliases, reuse existing quantity syntax, and apply that pattern to both response schema and Python preflight. Give format-specific feedback before matching used IDs. Preserve original lines, numeric safety checks, unknown-amount abstention and original live scores; never infer a new food/nutrition need from a formatting failure alone.
+
+**Validate declaration formatting independently of structured cooking steps (2026-10-23):**
+- what happened: a two-request free-key smoke accepts salad but rejects basil/egg although all10foods are present. Model emits quantity-first declarations with `(iN)` suffixes; the name-first parser cannot match them to used step IDs. Format-only offline replay passes without changing actions; original live result remains1/2.
+- root cause: closing the instruction schema does not constrain still-free-text adjusted_ingredients to the parser's supported order/annotation contract. A valid JSON string and a known step ID do not establish a parseable ingredient declaration.
+- correct behavior: retain original provider output, diagnose parsed identities before calling a refusal a missing food/nutrition-data issue, and test name-first/quantity-first/ID-annotation cases at the actual decoding boundary. Propose a declaration-format/schema change separately; do not silently strip arbitrary text or count an edited offline replay as real generation success. Respect the exhausted two-call free-only budget.
+
+**Isolate every credential source when adding API key priority (2026-10-23):**
+- what happened: adding GEMINI_API_KEY_FREE makes existing tests that clear only GEMINI_API_KEY insufficient to represent a missing-key environment. The offline runner and missing-key/embedding-constructor fixtures were extended to cover both variables before direct verification; no real Gemini call occurred.
+- root cause: a new preferred credential changes default construction even though existing test inputs and the original key variable are unchanged.
+- correct behavior: whenever adding a credential source, update offline environment clearing, dotenv-reload protection, missing-key fixtures and explicit-client overrides together. Test actual caller routing with synthetic keys and mocked SDK operations; bound SDK retries explicitly before claiming an API-call budget.
+
+**Keep preview assets outside request interceptors and bound reads (2026-10-23 AddIngredient):**
+- what happened: opening full spec/MEMORY exceeded output bounds again; a targeted move script failed before writing because the following source marker differed; shell Node shims had no active version. Preview HMR re-fetched its sample through the previous API interceptor, and a redundant raw upload receipt caused QA-only horizontal overflow.
+- root cause: bounded returned tokens instead of input lines, assumed source marker/runtime availability, and mixed fixture assets/diagnostics with intercepted application traffic.
+- correct behavior: read bounded opening sections and capped exact matches, verify move boundaries before writing, use the discovered bundled runtime when the shell shim fails and run frontend lint from frontend/ so it finds its config, preserve native fetch across preview HMR and restore it on dispose, and keep long diagnostic JSON only in the existing sr-only output. Recheck a fresh fixture and report historical errors separately.
+
+**Bound shared-file publication review output (2026-10-23):**
+- what happened: combined full diffs across shared translation/tests and multiple source files exceeded the output bound while preparing UI delivery. Later bounded excerpts and a14path candidate/manifest established the actual scope; no unrelated working changes were staged.
+- root cause: selected whole shared-file diffs before measuring their size, repeating the existing unbounded-output pattern.
+- correct behavior: inspect numstat and exact task-owned ranges first, then review the generated scoped patch/candidate. Verify staged and committed blobs against the tested manifest, check working-file hashes before/after publication, and use independent ls-remote to confirm the exact remote SHA.
+
+**Verify the crop library's actual focus owner and separate fixture failures (2026-10-23):**
+- what happened: the initial profile QA targeted reactEasyCrop_Container for keyboard input/focus styling, but the installed library places cropperProps/tabIndex and keyboard events on CropArea. Browser DOM and installed source identified the right element; keyboard/drag/export checks then passed. Native file selection was blocked by extension file-URL permission, and a later extension popup paused automation until the user closed it. Initial SSR dependency import and a missing mock resolveDir failed before the corrected component harness passed.
+- root cause: inferred DOM ownership from current docs/class names and assumed the crop dependency's CommonJS shape/virtual-module resolution matched the test harness. Initial combined historical reads again exceeded output bounds; test-name filtering also did not produce a clean scoped run, so its failure remains in the evidence.
+- correct behavior: inspect installed DOM/source before targeting focus or keyboard controls; exercise the real cropper in-browser and stub its boundary only in component rendering tests with an explicit resolveDir. Use a served synthetic asset through the real change handler when native file access is unavailable, disclose that limit and do not change browser permissions for QA. Stop browser commands when extension UI blocks control and resume only after the user resolves it. Save verbose logs, read bounded source ranges and report actual final pass/fail counts rather than assuming a filter excluded a global check.
+
+**Bound historical coverage searches before printing (2026-10-23):**
+- what happened: the Impeccable-coverage inventory again printed full spec and oversized combined matches; several outputs were truncated. Focused exact-section reads supplied the final evidence.
+- root cause: capped returned tokens instead of limiting input records and total combined character counts.
+- correct behavior: read only the opening spec section, then search headings and exact terms with capped match counts; keep each combined excerpt under 5000 characters. Treat detector-only or scoped refinement records as partial coverage, not a whole-page critique or proof that a page was never checked.
+
+**Verify tiled recording composition before encoding (2026-10-23 onboarding):**
+- what happened:860×1864capture exceeded the hidden browser's backing surface; scrolling paired tiles created repeated content, mid-transition selections and clipped headers. Fixed-stage offsets corrected content geometry; the Home fixed navigation layer needed its separately captured native pixels. Initial named-button clicks missed transformed iframe targets, while keyboard activation worked. An optional read also guessed a nonexistent RecipeCard component.
+- root cause: assumed a large CSS viewport guarantees an equally tall capture, treated iframe/fixed-layer compositing as ordinary page scrolling, and trusted input dispatch before selection paint. Component location was assumed rather than discovered.
+- correct behavior: prove a complete composed sample and fixed layers before recording a whole flow; verify CSS viewport and native tile dimensions separately. Use a fixed clipping stage for2×captures, capture settled selected states, and inspect contact sheets before delivery. Retain actual native fixed-layer pixels when composing the verified Home image, disclose that capture limit, and keep failed candidates outside the manifest. Discover exact filenames before optional reads and preserve unexplained console errors without claiming a clean run.
+
+**Capture the actual viewport and refresh recording targets after reload (2026-10-23):**
+- what happened: a requested430×932viewport produced430×931default screenshots. A clip atdocument0captured page-top content after scrolling, a reload restored the previous scroll position, and reused AX indices selected different controls. These candidates were excluded; an exact-size scroll-aware clip, named locators and a verified initial frame produced the final GIF.
+- root cause: viewport settings were mistaken for screenshot pixel guarantees; page-relative clips were treated as viewport-relative and reload was assumed to preserve indices/reset scrolling. Initial combined spec output again exceeded its bound.
+- correct behavior: assert every captured image's dimensions before encoding, anchor explicit viewport clips to observed window.scrollX/scrollY, verify the first frame atscroll0, and resolve controls by their current visible names after reload. Inspect a contact sheet before delivery and exclude failed candidates from the final manifest. Read only the current relevant spec section before searching older headings.
+
+**Inspect file state after a failed multi-file patch (2026-10-23):**
+- what happened: the loading-screen patch included an incomplete preview-file context line and reported failure. A later retry encountered already-applied earlier hunks; direct reads established the actual state before applying only the missing translation/preview/test changes. Initial instruction reads and verbose baseline-test failure output also exceeded output bounds.
+- root cause: treated a multi-file patch failure as atomic and used tool output limits instead of bounding large history/failure payloads.
+- correct behavior: after any patch failure, inspect every intended target before retrying and apply only missing hunks. Bound source reads before printing; save verbose test logs and print only counts/failing names. Compare against a saved pre-task source before classifying unrelated failures.
+
+**Preserve intended geometry when fixing a reported visual defect (2026-10-23):**
+- what happened: interpreted the user's sort-sheet screenshot as unwanted blank space and compacted the panel. The user clarified that the full-height panel was intended; the actual defect was the first radio row's orange top outline being clipped. Restored the original full-height geometry while retaining4px top padding.
+- root cause: inferred a redesign from an ambiguous bug report; the measured94–233px empty region was real but was not the reported defect. The outline extended outside an overflow container without top clearance.
+- correct behavior: identify the reported visual defect before changing layout geometry. Preserve the requested full-height sheet; reserve at least outline width plus outline offset inside a scrolling container (4px for the authored2px+2px outline), and verify the focused first row and short-screen scrolling in the browser.
+
+**Assert intended translations rather than echoing the translator (2026-10-22):**
+- browser follow-up: at320px a direct setChecked probe could not hit the clipped sr-only radio; inspection confirmed the intended choice was unchanged. Clicking its visible label succeeds and scrolls the option body while Apply stays visible. Use native arrow keys or visible label interactions for hidden native controls; keep locator failures separate from product failures.
+- what happened: initial sort-sheet render tests derived their expected Close label from the same translator as the component, so an absent Close entry passed while English UI exposed the Thai label. Browser inspection caught it; added the catalog entry and explicit Thai/English expected labels. Initial setup also guessed a nonexistent quantitySorting.test.js and combined excerpts exceeded the output bound.
+- root cause: test expectations repeated implementation output instead of checking the intended language; file discovery/output bounds were not applied before reads.
+- correct behavior: assert concrete user-facing words for each supported locale and cross-check accessible names in a fresh browser fixture. Discover test filenames before reading, cap source sections before combining them, and observe the resulting paint before retaining screenshots.
+
+**Shared generation schemas do not imply shared prompts (2026-10-22):**
+- what happened: the first timing implementation passed199offline tests, but final caller inspection found main.py constructs its own production prompt: it had the new schema but lacked the timing example/meaning. Added the production example, moved timing guidance into existing shared instruction_prompt, and verified captured direct-provider contents plus final affected165tests/guard0. The screenshot files also initially had .png names despite JPEG payloads; Pillow inspection confirmed320×720/1280×720 and metadata-only renames corrected both to .jpg.
+- root cause: checking imports of build_recipe_prompt missed a caller using its own contents string; schema checks and synthetic response fixtures did not establish prompt meaning. Screenshot dimensions were initially parsed as PNG without first checking actual format.
+- correct behavior: inspect actual contents construction at every provider call, assert new field examples and guidance in captured requests, and preserve old prompt hash expectations by stripping only reviewed additions. Inspect screenshot format before decoding dimensions or naming the file; use the actual encoding extension without modifying pixels.
+
+**Preflight the timing-test runtime and keep stalled runs separate (2026-10-22):**
+- what happened: default Python lacked SQLAlchemy, and the discovered minimal test venv lacked it too. Bundled Python with existing backend/venv dependencies passed import checks. The sandbox offline recipe run then produced no result/log and was interrupted; unchanged reviewed execution passed87tests/guard0. A read-only glob path and one log read from frontend cwd also failed before corrected discovery/absolute context.
+- root cause: ambient/default or minimal venv availability was mistaken for a complete dependency environment; sandbox execution and current working directory remained separate launch boundaries.
+- correct behavior: verify existing dependency imports first, set process-local PYTHONPATH and synthetic settings for parent/subprocesses, use the unchanged offline network/persistent-DB guard, and retain interrupted runs as incomplete. Use discovered filenames, directory-plus-rg-glob searches and explicit working directories; never install or rewrite venv/backend guards to make verification run.
+
+**Bound timing-interview reads before invoking tools (2026-10-22):**
+- follow-up recurrence: a combined parser/prompt/caller excerpt also exceeded its per-command output budget. Bound each source excerpt separately and size the combined budget for every excerpt before invoking the tool.
+- what happened: initial full spec/MEMORY reads and subsequent broad timing matches exceeded output budgets again during the generated-time interview; those outputs are incomplete evidence.
+- root cause: combined large records and uncapped matching lines instead of selecting short source excerpts before printing.
+- correct behavior: read the opening current spec section and exact discovered timing contract/source ranges separately, cap match counts and line lengths before output, and use only successful bounded reads as evidence.
+
+**Observe layout after viewport changes before retaining screenshots (2026-10-22):**
+- what happened: the first base-tag result capture immediately after a430×720viewport override was a430×242JPEG with stale scaled layout. The next DOM/layout observation and interaction produced a correct430px panel capture (JPEG430×719); only that panel image is final evidence. Earlier read-only setup also guessed a missing conftest.py instead of discovering test runners.
+- root cause: treated viewport command completion as a completed browser paint, and inferred a conventional filename rather than checking the actual test layout.
+- correct behavior: after viewport changes, observe current DOM/layout before capturing; inspect encoded dimensions and retain stale captures only as excluded evidence. Discover runner/source filenames before reading, and use the repo's documented unittest discovery entry point.
+
+**Exclude archived and held-out trees before catalog discovery (2026-10-22):**
+- what happened: broad docs searches for dietary/tag context reached denied held-out directories and unrelated archived checkouts; combined source/doc excerpts also exceeded output budgets. No held-out rows were read and no application/data mutation occurred.
+- root cause: top-level glob exclusions did not cover nested paths, and output limits were used instead of short source ranges.
+- correct behavior: search known exact data-contract/source filenames first; when inventory is necessary, exclude nested archive and held-out trees with directory-aware globs before traversal. Read one short relevant section at a time. Treat failed/truncated probes as incomplete; use only successful current-source/API observations in tag proposals.
+
+**Include fixed navigation in filter-modal verification (2026-10-22):**
+- what happened: the first320px screenshot showed the fixed bottom menu above the filter modal, while the old pb-24 footer reservation left only a small portion of the option list visible.
+- root cause: modal/backdrop z40/z30 were below the existing navigation z50; preserving those inherited values carried forward a modal coverage defect.
+- correct behavior: compare modal/backdrop/navigation stacking and actual hit targets at narrow and desktop widths. Put the backdrop above navigation and the panel above the backdrop; reserve only safe-area padding inside the panel, then verify scrolling and Apply visibility together.
+
+**Scope filter browser checks to the dialog (2026-10-22):**
+- what happened: a browser assertion initially inspected the enabled American category chip behind the modal instead of its disabled cuisine option; pressing Escape on a non-focusable dialog also timed out. A guessed Impeccable App surface filename and rg wildcard paths failed during read-only discovery. No application bug is established by these probes.
+- root cause: reused ambiguous labels across background and modal, targeted a container for keyboard input, and inferred filesystem paths rather than using discovered names.
+- correct behavior: scope option locators to the active dialog, send keyboard events through a focusable control, and discover filenames with rg --files or use directories plus rg -g patterns. Preserve failed probes separately from corrected checks; read capped source ranges before printing.
+
+**Bound filter-investigation source reads (2026-10-22):**
+- what happened: initial full spec/MEMORY reads and a later combined glossary excerpt exceeded output budgets while investigating Home/Favorites filters; those outputs are incomplete evidence.
+- root cause: bounded returned output instead of selecting short source ranges before reading, repeating the existing inspection failure.
+- correct behavior: read the opening current spec section and exact relevant source ranges separately; cap each input excerpt before combining results, and do not treat truncated instruction/history output as fully read.
+
 **Keep OTP browser QA on a fresh intercepted fixture (2026-10-22):**
 - recurrence during Favorites refinement: combined opening excerpts again exceeded the output bound. A browser binding was also referenced before a same-call `var` redeclaration and became undefined; rebinding the known owned tab recovered it. Bound each source range before combining reads, and assign an existing REPL binding without redeclaring it in the call that first uses its previous value.
 - what happened: opening reads again exceeded output bounds; editing the locale catalog during an existing auth preview produced an HMR LocaleProvider error and invalidated its fetch interception. Early resend/success probes from that tab are excluded. A browser documentation call also used the wrong receiver before reading the supported capability documentation.
 - root cause: bounded output instead of source input, continued using a preview after module-context replacement, and guessed a documentation method.
 - correct behavior: read only bounded relevant source sections, complete UI/catalog edits before opening fresh auth fixtures, check their rendered destination and current console, and call each advertised capability's documentation() before use. Never interpret redacted OTP values or their string lengths as the actual input; use visible screenshots, disabled states and unit assertions.
-
 
 **Keep reflection registration identical across migration snapshots (2026-10-22):**
 - final receipt follow-up: a JSON read omitted encoding and hit Windows cp874 on Thai UTF-8 text. Use `read_text(encoding="utf-8")` for every source/JSON receipt, not only console output; the corrected final check reads the same retained files.
@@ -13,18 +221,31 @@
 - root cause: imported a database type registration between two supposedly comparable inspections. Offline harness setup also initially blocked Windows asyncio's own socketpair, and a frontend hook harness mixed mocked React with the real development JSX runtime; these were verification-harness failures, not application findings.
 - correct behavior: register dialect/type adapters before both snapshots, persist the pre-change receipt before DDL, and separate migration success from postcheck success. If a postcheck fails after commit, preserve the backup/log and verify against an isolated restored baseline; never rerun or weaken DDL guards to hide the failure. Allow only the harness-owned Windows socketpair inside the network guard and stub the matching JSX runtime when mocking hooks.
 
-
 **Bound registration-advice inspection before output (2026-10-22):**
 - what happened: full spec/MEMORY reads and later broad email matches exceeded output budgets during a narrow registration question; a PowerShell rg path containing an unexpanded wildcard also failed. An unrelated OpenAI skill was read unnecessarily.
 - root cause: bounded the tool output instead of the input and reused unrelated setup rather than selecting only task-relevant sources.
 - correct behavior: read the opening spec section, then a few matching headings and bounded exact source ranges; pass existing exact filenames or rg globs, and read only applicable skills. Treat truncated reads and failed path searches as incomplete evidence.
 
+**Reuse bundled Node and verify browser access before recording (2026-10-22):**
+- what happened: default npm failed because nvm has no active Node version; a sandbox Vite reported ready but browser navigation timed out. Bundled Node with approved loopback-only Vite successfully served the GIF fixture.
+- root cause: shell launcher configuration and sandbox network reachability were assumed from package presence/readiness; a previously documented preview-host limitation recurred.
+- correct behavior: use the configured bundled Node when the default launcher is unavailable, verify one page in the selected browser before capturing, and stop owned preview processes after delivery. For an unreachable sandbox preview, use the reviewed loopback-only execution path; never install another runtime or modify project/backend settings merely to record a demo.
 
+**Bound review setup and distinguish file presence from readable evidence (2026-10-22):**
+- Recurrence during GIF feasibility (2026-10-22): an initial full spec read again exceeded the output budget. Cause: output truncation was used instead of bounding the input. Command: read only the opening current section first, then use targeted heading searches for any additional context.
+- what happened: Chapter 3 review setup printed an oversized spec excerpt again; the exact PDF was resolved but text/page reads returned no content and local download failed. An initial search used query instead of the documented q field and was rejected.
+- root cause: selected the entire growing spec before bounding its output and invoked a deferred tool before reading its exact schema; an available file identifier was mistaken for immediately readable content.
+- correct behavior: inspect headings and bounded relevant sections, read deferred-tool schemas before invocation, and require actual PDF text or pixels before making any page-specific finding. When both supported reading and downloading fail, report the blocker and request a readable reattachment or explicit local path; retain older-review findings only as historical context.
 
-**Keep preview assets outside request interceptors and bound reads (2026-10-23 AddIngredient):**
-- what happened: opening full spec/MEMORY exceeded output bounds again; a targeted move script failed before writing because the following source marker differed; shell Node shims had no active version. Preview HMR re-fetched its sample through the previous API interceptor, and a redundant raw upload receipt caused QA-only horizontal overflow.
-- root cause: bounded returned tokens instead of input lines, assumed source marker/runtime availability, and mixed fixture assets/diagnostics with intercepted application traffic.
-- correct behavior: read bounded opening sections and capped exact matches, verify move boundaries before writing, use the discovered bundled runtime when the shell shim fails and run frontend lint from frontend/ so it finds its config, preserve native fetch across preview HMR and restore it on dispose, and keep long diagnostic JSON only in the existing sr-only output. Recheck a fresh fixture and report historical errors separately.
+**Bound PDF and project-record tool output (2026-10-21):**
+- what happened: presentation preparation printed an oversized combined PDF image/reference response and full project records, truncating the output.
+- root cause: serialized entire connector/tool results rather than selecting needed text and image blocks; repeated the existing unbounded-read mistake.
+- correct behavior: cap instruction-file excerpts before printing, retain connector results privately, emit only requested page text or actual image blocks, and inspect result keys without serializing large payloads. Do not count asset pointers as visual verification.
+
+**Remove transformed ancestors when floating a control (2026-10-21):**
+- what happened: the first fixed Bell CSS worked on Home but placed CustomCooking's Bell at114px instead of46px, because four existing notification wrappers used translate-y-4. The first screenshot crop also showed document y0 instead of the visible scrolled region; its JPEG bytes were initially saved with a PNG suffix.
+- root cause: a translated ancestor becomes the containing block for a fixed descendant. Screenshot clip coordinates follow the document, and the screenshot API's returned encoding was assumed instead of inspected.
+- correct behavior: inspect control ancestors for translation before switching to fixed positioning; remove obsolete wrappers and verify viewport bounds both before and after a real scroll gesture. Keep logos/titles in normal flow and reserve a slot when a formerly in-flow button floats. Capture using observed document scrollY, inspect image encoding/dimensions before naming the deliverable, and exclude failed candidates from evidence. The corrected430×650JPEG is after-scroll.jpg; retain the old candidate as deprecated under the no-delete rule.
 
 **Verify the scroll owner, not only footer visibility (2026-10-21):**
 - what happened: consistent dvh bounds fixed the obscured menu on the user's iPhone, but retained inner scrolling kept Safari chrome expanded and allowed gestures to escape to an outer scroll area. User requested normal browser behavior after confirming the first fix.
@@ -51,6 +272,41 @@
 - root cause: output limits were applied after oversized input selection, prior recorded discovery lessons were not followed, and the browser mirror was treated as a full JavaScript page environment.
 - correct behavior: read bounded current spec sections first; discover exact frontend paths before opening files, keep QA discovery to known top-level paths, and save large launcher output before selecting directives. Derive sizes from exposed computed-style strings using supported string operations/numeric coercion; wait for a visible heading before measuring asynchronous auth pages. Treat truncated reads, absent paths and failed/pre-mount probes as incomplete evidence.
 
+**Check every local header variant when matching page geometry (2026-10-21):**
+- what: the first alignment preserved Profile's title-header variants, so its subpages still had different Back height/size; CustomCookingPage also retained a44px Back circle.
+- root cause: limited comparison to logo headers and kept title variants outside the initial implementation.
+- correct: inventory every Header caller and title/compact variant; when the user requests consistent header levels, verify each included subview's rendered centerline and button bounds against the reference at wide and narrow widths, while preserving its title and callbacks.
+
+**Check every prompt caller and fake provider when changing the wire format (2026-10-21):**
+- what: structured action/ID generation passed focused wrapper/handler tests, but the first full1042run failed5assertions in authenticated allergy integration because its fake provider still emitted prose. Shared prompts also serve historical fine-tune preparation whose targets remain prose.
+- root cause: mocked call_agentic_llm fixtures bypass provider decoding, and shared-prompt callers extend beyond the two runtime generators. A green shallow mock does not establish compatibility at the actual provider boundary.
+- correct: search shared prompt callers and fake models.generate_content responses before changing the wire contract; exercise actual decoding, feedback retry and HTTP/history seams offline. Version the legacy training format explicitly instead of silently pairing action prompts with prose targets. Preserve allergy/history assertions while updating wire fixtures; never regenerate training data or rescore historical reports without separate scope.
+
+**Use closed cooking actions as the authority for rendered steps (2026-10-21):**
+- what: user selected backend Thai rendering after token-only/free-text audits exposed missed unknown foods and Thai substring false positives. Even cooking-method regexes can mistake a selected food name such as เต้าหู้ทอด/fried tofu for a new frying operation.
+- root cause: rescanning backend-rendered prose discards the validated structure and reintroduces food/action ambiguity; model-supplied free text can disagree with its reference list.
+- correct: accept only reviewed actions and known used/excluded IDs at generation boundaries, render the Thai sentence in code, and verify the retained plan still matches it before validation. Drive ingredient/method/Flavor checks from the plan while retaining independent declaration, Allergy and Nutrition checks. Label historical prose coverage unknown; do not claim general semantic or food-safety verification from ID consistency.
+
+**Translate recipe display text without changing ingredient identity (2026-10-21):**
+- what: Thai recipe headings were translated, but base-menu descriptions, ingredient names and instructions rendered the English source directly.
+- root cause: the locale catalog covered static UI copy while base content bypassed its lookup; ingredient names also serve as selection/submission identities.
+- correct: translate curated base content at render sites, including accessible names; preserve original ingredient state and request values. Verify every seeded menu in both locales and leave unknown/custom content intact instead of inventing a translation or changing backend data.
+
+**Keep list-level hallucination, language format and step completeness separate (2026-10-21):**
+- what: current vocabulary/action probes miss8unseen food names in steps and6known-food usages with unsupported actions;4of516context probes misread หั่น+ม… as นม. Historical fine-tuned output marked hallucinated:false still contains extra step foods and Chinese开. Current local charset allows Latin-only strings, excludes proposed {{id}} braces, and wrapper does not validate returned schema again if upstream enforcement is absent. Existing46tests nevertheless pass.
+- root cause: list-only ingredient metric was easy to interpret as whole-recipe completeness; character-constrained JSON and prompt language requests do not establish semantic consistency. Thai pattern matching plus a fixed action list misses vocabulary/actions and creates cross-word false positives. Historical direct-model inference is a different path from the guided-vLLM wrapper.
+- correct: audit declarations and steps independently in Thai/English, test unfamiliar names and realistic action boundaries, and separate generator errors, format/language failures and ingredient violations in new evaluations. Verify the exact serving path and token/schema compatibility before rollout; do not treat mock transport as a live server replay or rescore old reports to support a new policy. Propose source/schema changes separately and obtain approval before any reviewer-model call.
+
+**Ingredient-reference protocols must model meaning and untagged text (2026-10-21 experiment):**
+- what:20approved real Gemini samples return JSON; reference candidate9/10passes the strict ID/declaration rule, but its single refusal is “ไม่ใส่” undeclared pepper rather than actual use. Candidate still leaves some food names outside tokens. Both arms pass unchanged text diagnostics3/10; synthetic unseen durian passes token-only and bounded residual checks. Real text exposes นม across หั่นมะเขือเทศ/จนมีกลิ่นหอม and น้ำตาล in สีน้ำตาล as further false positives.
+- root cause: formatting/known IDs do not establish complete correspondence with instruction semantics; the prototype conflates mention with positive use, and the original regex still runs after rendering. Vocabulary probes in isolation do not cover Thai word junctions, color descriptions or utility-water phrases.
+- correct: retain all bounded experiment outputs and original scoring, distinguish used/excluded references before requiring declarations, and test untagged known and unseen food names before replacing any checker. Measure reference compliance separately from full acceptance/safety; keep allergy/nutrition/method rules independent. Do not claim an accuracy gain, silently rescore a negative-reference failure or deploy from one sample per case.
+
+**Test Thai non-food contexts and audit nutrition lookup paths separately (2026-10-21):**
+- what: a new salad log repeatedly rejects เคล; real checker reproduction finds เคล inside คลุกเคล้า and น้ำ inside น้ำหนัก. Prior literal vocabulary/egg/range tests passed but did not cover these contexts. Live audit also finds complete canonical composition alongside62missing translated nutrition aliases and4existing Thai aliases with incomplete macros/unsupported basis; an existing reviewed Thai garlic row is not the one selected by English garlic.
+- root cause: the shared recipe mention regex only prevents Latin/digit embeddings, so short Thai food names can match non-food words. Recipe-admission aliases, nutrition lookup rows and reviewed evidence are different authorities; testing one route did not establish readiness of the others.
+- correct: reproduce phrase-level positive and negative examples before changing code, preserve genuine food detection, and test reviewed vocabulary within cooking/non-food contexts. For every menu audit canonical and generated-language aliases, row owner, all macro fields, basis, evidence and portion separately. Distinguish complete numeric values from qualified sources and supported grams; propose and obtain separate backend/data approval before modifying a new failure pattern or alias rows.
+
 **Search prompt digest fixtures before changing generation guidance (2026-10-20):**
 - what: initial checker/handler regressions passed, but full1023test run found one failure in the personalization test's frozen full-prompt digest after an intentionally added quantity sentence. The necessary related fixture became a fourth backend path and was announced before editing.
 - root cause: initial caller/test inspection did not discover the prompt SHA256 assertion in the personalization suite.
@@ -68,6 +324,8 @@
 
 **Bound diagnosis reads before dispatch (2026-10-20):**
 - what: initial whole-spec and combined source/history reads repeated truncation; broad docs discovery touched denied held-out directory names without reading contents, and guessed optional source paths/globs were absent.
+- recurrence (2026-10-21 localization): whole spec/MEMORY reads and oversized combined excerpts again truncated; subsequent inspection used bounded exact-file excerpts. Read current spec headings first and cap each excerpt before batching; do not repeat whole-file reads as these logs grow.
+- recurrence (2026-10-21 header alignment): whole-spec and combined excerpts exceeded output budgets again; use bounded current-state reads and exact source ranges before executing, even for a small styling request.
 - root cause: set output limits after selecting oversized inputs and reused guessed paths instead of exact-path discovery.
 - correct: read spec current-state sections first, discover exact source paths with narrow rg --files scopes, exclude held-out/private archives and venv from discovery, and cap each requested excerpt before batching. Treat truncated output and absent-path probes as incomplete inspection, never verification.
 

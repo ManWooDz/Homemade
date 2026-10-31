@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Base recipe tags QA — live catalog, synthetic account</title></head>
+<body><div id="root"></div><script type="module">
+// Read only the real catalog; intercept all account data and block account writes.
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from '../src/App.jsx';
+import { AuthProvider } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import '../src/index.css';
+const payload = await fetch('/api/recipes').then(response => response.json());
+if (payload.status !== 'success' || !Array.isArray(payload.data) || payload.data.length !== 9) {
+    throw new Error('Expected the current nine-recipe development catalog');
+}
+const recipes = payload.data;
+const ok = data => Response.json({ status: 'success', data });
+window.fetch = async (input, options = {}) => {
+    const path = new URL(typeof input === 'string' ? input : input.url, location.origin).pathname;
+    if (path === '/api/notifications/sync') return ok({ created_items: [], unread_count: 0 });
+    if ((options.method || 'GET') !== 'GET') throw new Error('Account write blocked by catalog fixture');
+    if (path === '/api/auth/me') return ok({ id: 1, locale: 'th', display_name: 'Synthetic QA', has_avatar: false });
+    if (path === '/api/recipes') return ok(recipes);
+    if (path === '/api/base-favorites') return ok(recipes.map(recipe => recipe.id));
+    if (path === '/api/history' || path === '/api/user-ingredients') return ok([]);
+    if (path === '/api/user-preferences') return ok({});
+    if (path === '/api/notifications') return ok({ items: [], unread_count: 0, next_before_id: null });
+    throw new Error('Unexpected request blocked by catalog fixture: ' + path);
+};
+createRoot(document.getElementById('root')).render(React.createElement(BrowserRouter, null,
+    React.createElement(AuthProvider, null, React.createElement(LocaleProvider, null, React.createElement(App)))));
+</script></body></html>

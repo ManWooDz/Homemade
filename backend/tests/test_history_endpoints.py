@@ -28,6 +28,7 @@ from auth import hash_password
 from nutrition.calculator import NutritionResult
 
 APPROVED = {
+    "estimated_total_time": {"min_minutes": 15, "max_minutes": 20},
     "recipe_name": "Holy Basil Pork",
     "servings": 2,
     "adjusted_ingredients": ["หมูสับ 200 กรัม", "น้ำมัน 1 ช้อนโต๊ะ"],
@@ -165,6 +166,8 @@ class HistoryEndpointTests(HistoryEndpointTestCase):
             res = self.alice.put(url, headers=self.origin)
             self.assertEqual(res.json()["data"], {"is_favorite": True})
         self.assertTrue(self.alice.get("/api/history").json()["data"][0]["is_favorite"])
+        self.assertEqual(self.alice.get("/api/history").json()["data"][0]["recipe_data"]["estimated_total_time"],
+                         APPROVED["estimated_total_time"])
         for _ in range(2):
             res = self.alice.delete(url, headers=self.origin)
             self.assertEqual(res.json()["data"], {"is_favorite": False})
