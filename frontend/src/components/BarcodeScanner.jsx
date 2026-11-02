@@ -4,7 +4,9 @@ import {
     prepareZXingModule,
     Scanner,
 } from "@yudiel/react-qr-scanner";
-import { isValidBarcode } from "../utils/barcodeValidation";
+import { createCameraBarcodeConfirmation, isValidBarcode } from "../utils/barcodeValidation";
+import { BarcodeDetector } from "barcode-detector/ponyfill";
+import { binarizeBarcodeImage } from "../utils/barcodeImage";
 
 // Keep these objects outside the component: the scanner treats changed object
 // identities as new camera settings and would otherwise restart on each render.
@@ -54,6 +56,8 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
     const [codeError, setCodeError] = useState("");
     const manualInput = useRef(null);
     const scanLockedRef = useRef(false);
+    const scannerRef = useRef(null);
+    const confirmCameraRef = useRef(createCameraBarcodeConfirmation());
 
     useEffect(() => {
         // Start downloading/compiling ZXing-C++ while camera permission and
@@ -66,16 +70,17 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
     }, [focusInput, cameraError]);
 
     const handleScan = useCallback(
-        (detectedCodes) => {
+        (detectedCodes, source = "full", capturedFrameId) => {
             if (scanLockedRef.current) return;
-
-            const detected = detectedCodes.find(({ rawValue }) =>
-                isValidBarcode(rawValue),
+            const video = scannerRef.current?.getVideoElement();
+            const frameId = capturedFrameId ?? video?.getVideoPlaybackQuality?.().totalVideoFrames ?? video?.currentTime;
+            const code = confirmCameraRef.current(
+                detectedCodes, source, frameId, performance.now(),
             );
-            if (!detected) return;
+            if (!code) return;
 
             scanLockedRef.current = true;
-            onDetected(detected.rawValue);
+            onDetected(code);
         },
         [onDetected],
     );
@@ -85,6 +90,49 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
             "เปิดกล้องหรือระบบสแกนไม่ได้ คุณยังพิมพ์เลขหรือเพิ่มวัตถุดิบเองได้",
         );
     }, []);
+
+    useEffect(() => {
+        if (cameraError) return;
+        let cancelled = false;
+        let timer;
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) return;
+        const detector = new BarcodeDetector({ formats: RETAIL_FORMATS });
+
+        async function scanFinder() {
+            if (cancelled || scanLockedRef.current) return;
+            try {
+                const video = scannerRef.current?.getVideoElement();
+                if (video?.readyState >= 2 && video.videoWidth && video.videoHeight) {
+                    const frameId = video.getVideoPlaybackQuality?.().totalVideoFrames ?? video.currentTime;
+                    // shortcut: geometry mirrors the 16:9/82%/3:1 finder; update when its layout changes.
+                    const visibleWidth = Math.min(video.videoWidth, video.videoHeight * (16 / 9));
+                    canvas.width = Math.max(1, Math.floor(visibleWidth * 0.82));
+                    canvas.height = Math.max(1, Math.round(canvas.width / 3));
+                    const left = Math.floor((video.videoWidth - canvas.width) / 2);
+                    const top = Math.floor((video.videoHeight - canvas.height) / 2);
+                    canvas.dataset.barcodePass = "raw";
+                    context.drawImage(video, left, top, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+                    let codes = await detector.detect(canvas);
+                    if (cancelled || scanLockedRef.current) return;
+                    if (!codes.some(({ rawValue }) => isValidBarcode(rawValue))) {
+                        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+                        context.putImageData(binarizeBarcodeImage(pixels), 0, 0);
+                        canvas.dataset.barcodePass = "binary-160";
+                        codes = await detector.detect(canvas);
+                    }
+                    if (!cancelled) handleScan(codes, "finder", frameId);
+                }
+            } catch {
+                // The Scanner's whole-frame reader remains available if this pass fails.
+                return;
+            }
+            if (!cancelled && !scanLockedRef.current) timer = setTimeout(scanFinder, 150);
+        }
+        timer = setTimeout(scanFinder, 150);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [cameraError, handleScan]);
 
     const handleManualSubmit = (e) => {
         e.preventDefault();
@@ -103,6 +151,7 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
         <div>
             {!cameraError && <div className="barcode-camera w-full aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3">
                 <Scanner
+                    ref={scannerRef}
                     onScan={handleScan}
                     onError={handleCameraError}
                     constraints={CAMERA_CONSTRAINTS}
@@ -110,6 +159,8 @@ export default function BarcodeScanner({ onDetected, manualCode, onCodeChange, f
                     components={SCANNER_COMPONENTS}
                     styles={SCANNER_STYLES}
                     retryDelay={50}
+                    allowMultiple
+                    scanDelay={150}
                     sound={false}
                 />
             </div>}

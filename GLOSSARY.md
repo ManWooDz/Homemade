@@ -2,6 +2,24 @@
 
 Canonical language for Homemade's recipe, fridge, account and account-recovery domain. Terms here describe product meaning, not implementation details.
 
+## Barcode Ingredient Entry
+
+**Camera Barcode Reading**:
+Obtaining a packaged product's barcode digits from the camera view. Reading the digits does not establish that product information is available to add to the fridge.
+_Avoid_: Product found, completed ingredient addition, manual barcode entry
+
+**Camera Barcode Candidate**:
+A proposed barcode value from the camera that has not yet met Homemade's acceptance checks. It does not establish the packaged product's identity.
+_Avoid_: Confirmed label digits, product match
+
+**Accepted Camera Barcode**:
+A camera candidate that has met Homemade's consistency checks and can be used for product lookup. Acceptance is not independent proof that the digits match the printed label.
+_Avoid_: Guaranteed correct barcode, verified product identity
+
+**Barcode Product Lookup**:
+Finding product information from barcode digits to prefill an ingredient for the account holder's fridge. It can follow camera reading or manual digit entry.
+_Avoid_: Camera reading, automatic stock addition
+
 ## Recipe Discovery
 
 **Recipe Discovery Filter**:

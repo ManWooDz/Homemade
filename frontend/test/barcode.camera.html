@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homemade — ทดสอบกล้องบาร์โค้ด</title></head>
+<body style="margin:0"><div id="root" data-barcode-camera-lab></div><script type="module">
+// Development diagnostic only: real scanning, simulated auth, no product lookup.
+import React, { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { AuthProvider } from '../src/context/AuthContext.jsx';
+import { LocaleProvider } from '../src/context/LocaleContext.jsx';
+import BarcodeScanner from '../src/components/BarcodeScanner.jsx';
+import { isValidBarcode } from '../src/utils/barcodeValidation.js';
+import { BarcodeDetector } from 'barcode-detector/ponyfill';
+import '../src/index.css';
+
+if (!import.meta.env.DEV) throw new Error('Camera diagnostics require the development server');
+// Observe decoder output only in this lab; production does not patch the decoder.
+const observations = [];
+window.__barcodeCameraObservations = observations;
+const originalDetect = BarcodeDetector.prototype.detect;
+BarcodeDetector.prototype.detect = async function (input) {
+    const startedAt = performance.now();
+    const video = input instanceof HTMLVideoElement ? input : document.querySelector('video');
+    const frameId = video?.getVideoPlaybackQuality?.().totalVideoFrames ?? video?.currentTime;
+    const codes = await originalDetect.call(this, input);
+    if (codes.length) {
+        observations.push({ startedAt, durationMs: Math.round(performance.now() - startedAt), reader: input instanceof HTMLVideoElement ? 'full' : 'finder', preprocessing: input.dataset?.barcodePass || 'raw', frameId, codes: codes.map(({ rawValue, format }) => ({ rawValue, format })) });
+        if (observations.length > 32) observations.shift();
+    }
+    return codes;
+};
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input, options) => {
+    const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url, location.href);
+    if (url.origin === location.origin && url.pathname.startsWith('/api/')) {
+        if (url.pathname === '/api/auth/me') return Promise.resolve(Response.json({ data: { id: 0, locale: 'th' } }));
+        return Promise.reject(new Error('Backend requests are blocked in camera diagnostics'));
+    }
+    return originalFetch(input, options);
+};
+
+const h = React.createElement;
+const fields = ['width', 'height', 'frameRate', 'facingMode', 'aspectRatio', 'resizeMode', 'focusMode', 'focusDistance', 'zoom', 'torch'];
+const selected = source => Object.fromEntries(fields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
+const buttonStyle = { minHeight: 44, padding: '8px 12px', border: '1px solid #B93E25', borderRadius: 10, color: '#9F341F', background: 'white', cursor: 'pointer' };
+
+function CameraTrial() {
+    const scanner = useRef(null);
+    const started = useRef(performance.now());
+    const firstFrame = useRef(null);
+    const manual = useRef(false);
+    const captured = useRef(false);
+    const [code, setCode] = useState('');
+    const [detection, setDetection] = useState(null);
+    const [evidence, setEvidence] = useState(null);
+    const [error, setError] = useState('');
+    useEffect(() => () => { if (evidence) URL.revokeObjectURL(evidence.url); }, [evidence]);
+
+    function capture(result = detection, captureReason = 'manual-capture') {
+        try {
+            const video = scanner.current?.querySelector('video');
+            const track = video?.srcObject?.getVideoTracks()[0];
+            if (!video?.videoWidth || !video.videoHeight || video.readyState < 2 || track?.readyState !== 'live') {
+                throw new Error('กล้องยังไม่พร้อมบันทึก รอให้เห็นภาพจากกล้องก่อน');
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            let capabilities = null;
+            try { if (track.getCapabilities) capabilities = selected(track.getCapabilities()); } catch { /* Optional browser capability. */ }
+            const report = {
+                version: 1,
+                capturedAt: new Date().toISOString(),
+                elapsedMs: Math.round(performance.now() - started.current),
+                captureReason,
+                detection: result,
+                observations: observations.filter(item => item.startedAt >= started.current).map(item => ({ ...item, startedAt: Math.round(item.startedAt - started.current) })),
+                settings: selected(track.getSettings()),
+                capabilities,
+                frame: { width: canvas.width, height: canvas.height, png: canvas.toDataURL('image/png') },
+            };
+            const url = URL.createObjectURL(new Blob([JSON.stringify(report)], { type: 'application/json' }));
+            captured.current = true;
+            setEvidence({ url, report });
+            setError('');
+        } catch (problem) {
+            setError(problem.message || 'บันทึกเฟรมไม่ได้ กรุณาลองใหม่');
+        }
+    }
+
+    return h(React.Fragment, null,
+        h('div', {
+            ref: scanner,
+            onPlayingCapture: () => { firstFrame.current ??= performance.now(); },
+            onSubmitCapture: () => { manual.current = isValidBarcode(code.trim()); },
+        }, h(BarcodeScanner, {
+            manualCode: code,
+            onCodeChange: setCode,
+            onDetected: value => {
+                const result = {
+                    code: value,
+                    source: manual.current ? 'manual' : 'camera',
+                    sinceMountMs: Math.round(performance.now() - started.current),
+                    sinceFirstFrameMs: firstFrame.current === null ? null : Math.round(performance.now() - firstFrame.current),
+                };
+                setDetection(result);
+                if (result.source === 'camera' && !captured.current) capture(result, 'camera-result');
+            },
+        })),
+        h('p', { role: 'status', style: { margin: '16px 0' } }, detection
+            ? (detection.source === 'camera' ? `กล้องอ่านได้: ${detection.code} (${detection.sinceFirstFrameMs ?? detection.sinceMountMs} ms)` : `พิมพ์เลข: ${detection.code} — ยังไม่ใช่ผลอ่านจากกล้อง`)
+            : 'ยังไม่ได้เลขจากกล้อง'),
+        (!evidence || detection?.source !== 'camera') && h('button', { type: 'button', onClick: () => capture(), style: buttonStyle }, 'บันทึกภาพขณะอ่านไม่ออก'),
+        error && h('p', { role: 'alert', style: { color: '#9F341F', marginTop: 12 } }, error),
+        evidence && h('div', null,
+            h('p', { style: { marginTop: 16 } }, evidence.report.captureReason === 'camera-result'
+                ? 'เก็บเฟรมเมื่อกล้องอ่านได้แล้ว ดาวน์โหลดได้แม้นำสินค้าออกจากกล้องแล้ว'
+                : 'บันทึกภาพขณะกดปุ่มแล้ว กดลิงก์ด้านล่างเพื่อดาวน์โหลดไฟล์ JSON ซึ่งรวมภาพต้นฉบับ'),
+            h('a', { href: evidence.url, download: 'homemade-barcode-camera.json', style: { ...buttonStyle, display: 'inline-block', margin: '8px 0' } }, 'ดาวน์โหลดหลักฐานกล้อง'),
+            h('pre', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: 12 } }, JSON.stringify({ ...evidence.report, frame: { width: evidence.report.frame.width, height: evidence.report.frame.height, png: '(อยู่ในไฟล์ดาวน์โหลด)' } }, null, 2)),
+        ),
+    );
+}
+
+function Lab() {
+    const [trial, setTrial] = useState(0);
+    return h('main', { style: { maxWidth: 430, margin: 'auto', padding: 20 } },
+        h('h1', { style: { fontSize: 24, fontWeight: 700, marginBottom: 12 } }, 'ทดสอบกล้องบาร์โค้ด'),
+        h('p', { style: { marginBottom: 12 } }, 'ใช้ตัวสแกนเดิม อ่านเลขเท่านั้น ไม่มีการค้นหาสินค้าหรือเพิ่มวัตถุดิบ'),
+        h('p', { style: { marginBottom: 16 } }, 'เวลานับตั้งแต่เริ่มเห็นภาพ รวมเวลาจัดสินค้า ไม่ใช่เวลาประมวลผลล้วน ภาพอยู่ในเครื่องจนกว่าคุณจะส่งไฟล์เอง'),
+        h('p', { style: { marginBottom: 16 } }, 'เมื่อกล้องอ่านได้จะเก็บเฟรมให้ทันที หากยังอ่านไม่ออก ให้ถือสินค้าค้างไว้แล้วกดบันทึกภาพขณะอ่านไม่ออก'),
+        h('button', { type: 'button', style: { ...buttonStyle, marginBottom: 16 }, onClick: () => setTrial(value => value + 1) }, 'เริ่มรอบใหม่'),
+        h(CameraTrial, { key: trial }),
+    );
+}
+createRoot(document.getElementById('root')).render(h(AuthProvider, null, h(LocaleProvider, null, h(Lab))));
+</script></body></html>
