@@ -32,7 +32,7 @@ import NotificationToast from "./components/NotificationToast";
 import Notifications from "./pages/Notifications";
 import { bangkokDate } from "./utils/expiry";
 import { toPresenceIngredients } from "./utils/ingredientPayload";
-import { toUserFacingGenerateError, validateAllergyPreferences } from "./utils/generateError";
+import { toUserFacingFridgeSelectionError, toUserFacingGenerateError, validateAllergyPreferences } from "./utils/generateError";
 import { getTagColor } from "./utils/tagColors";
 import { useAuth } from "./context/AuthContext";
 
@@ -380,6 +380,7 @@ function App() {
             "user-ingredients": "UserIngredients.jsx",
             "add-ingredient": "AddIngredient.jsx",
             "barcode-scan": "BarcodeScanPage.jsx",
+            "barcode-relink": "BarcodeScanPage.jsx",
             "ingredient-detail": "IngredientDetail.jsx",
             "custom-cooking": "CustomCookingPage.jsx",
             favorites: "Favorites.jsx",
@@ -638,12 +639,23 @@ function App() {
             setProfileView("main");
             setCurrentView("profile");
         } else if (tab === "cooking" && [
-            "home", "user-ingredients", "add-ingredient", "barcode-scan",
+            "home", "user-ingredients", "add-ingredient", "barcode-scan", "barcode-relink",
             "ingredient-detail", "favorites", "profile",
         ].includes(currentView)) {
             setSelectedRecipe(null);
             setCurrentView("custom-cooking");
         }
+    };
+
+    const refreshFridgeAfterStaleSelection = async () => {
+        const session = historySessionRef.current;
+        try {
+            const response = await apiFetch("/api/user-ingredients");
+            const result = await response.json();
+            if (session === historySessionRef.current && response.ok && result.status === "success") {
+                setUserIngredients(result.data);
+            }
+        } catch { /* Keep the existing fridge on a transient refresh failure. */ }
     };
 
     const recipeFilterPanel = (<>
@@ -933,7 +945,10 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
-                            setGenerateError(toUserFacingGenerateError(result.message, locale));
+                            const selectionError = toUserFacingFridgeSelectionError(result.code, locale);
+                            if (selectionError) setGenerateError(selectionError);
+                            else setGenerateError(toUserFacingGenerateError(result.message, locale));
+                            if (result.code === "fridge_selection_stale") void refreshFridgeAfterStaleSelection();
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);
@@ -998,10 +1013,20 @@ function App() {
                 ingredient={selectedIngredientDetail}
                 userIngredients={userIngredients}
                 setUserIngredients={setUserIngredients}
-                onUpdated={setSelectedIngredientDetail}
+                onUpdated={(item) => {
+                    setSelectedIngredientDetail(item);
+                    setBarcodePrefill(null);
+                }}
+                barcodeCandidate={barcodePrefill?.ingredientId === selectedIngredientDetail?.id ? barcodePrefill : null}
+                onScanBarcode={() => {
+                    setBarcodePrefill(null);
+                    setCurrentView("barcode-relink");
+                }}
+                onCancelBarcode={() => setBarcodePrefill(null)}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => {
+                    setBarcodePrefill(null);
                     setSelectedIngredientDetail(null);
                     setCurrentView(openedFromNotification ? "notifications" : "user-ingredients");
                 }}
@@ -1013,17 +1038,18 @@ function App() {
         );
     }
 
-    if (currentView === "barcode-scan") {
+    if (currentView === "barcode-scan" || currentView === "barcode-relink") {
+        const relink = currentView === "barcode-relink";
         return (
             <BarcodeScanPage
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
-                onBack={() => setCurrentView("user-ingredients")}
+                onBack={() => setCurrentView(relink ? "ingredient-detail" : "user-ingredients")}
                 onScanned={(data) => {
-                    setBarcodePrefill(data);
-                    setCurrentView("add-ingredient");
+                    setBarcodePrefill(relink ? { ...data, ingredientId: selectedIngredientDetail?.id } : data);
+                    setCurrentView(relink ? "ingredient-detail" : "add-ingredient");
                 }}
-                onAddManually={() => {
+                onAddManually={relink ? undefined : () => {
                     setBarcodePrefill(null);
                     setCurrentView("add-ingredient");
                 }}
@@ -1069,7 +1095,6 @@ function App() {
     if (currentView === "add-ingredient") {
         return (
             <AddIngredient
-                userIngredients={userIngredients}
                 setUserIngredients={setUserIngredients}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
@@ -1130,7 +1155,10 @@ function App() {
                             }
                         } else {
                             console.error("Failed to generate:", result.message);
-                            setGenerateError(toUserFacingGenerateError(result.message, locale));
+                            const selectionError = toUserFacingFridgeSelectionError(result.code, locale);
+                            if (selectionError) setGenerateError(selectionError);
+                            else setGenerateError(toUserFacingGenerateError(result.message, locale));
+                            if (result.code === "fridge_selection_stale") void refreshFridgeAfterStaleSelection();
                         }
                     } catch (err) {
                         console.error("Error generating recipe text:", err);

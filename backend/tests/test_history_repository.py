@@ -189,7 +189,7 @@ class ListHistoryTests(unittest.TestCase):
         rows = {row["id"]: row for row in list_history(self.db, self.alice.id)}
         first, second = rows[self.first], rows[self.second]
 
-        self.assertEqual(first["image"], "http://localhost:8000/images/kaprao.png")
+        self.assertEqual(first["image"], "/images/kaprao.png")
         self.assertEqual(first["rating"], {"stars": 4, "tag": "Tasty", "feedback": "เผ็ดไป 🌶️ → ลดพริก"})
         self.assertTrue(first["is_favorite"])
         self.assertEqual(first["recipe_data"], APPROVED)

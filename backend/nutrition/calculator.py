@@ -2,16 +2,19 @@
 """Generated recipes retain usable estimates with uncertainty reasons.
 The base-seed numeric helper raises for unresolved or invalid inputs;
 neither an exact alias nor a hardcoded zero certifies grounding."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
+import re
 
+from barcode_nutrition import product_contribution
 from nutrition.curated_aliases import ZERO_NUTRITION_CONSTANTS
 from nutrition.evidence import qualify_match
 from nutrition.lookup import MacroValues, match_ingredient
 from nutrition.parser import parse_ingredient_string
 from nutrition.text import normalize_alias
-from nutrition.units import is_nonnegative_finite, resolve_grams_detailed
+from nutrition.units import is_nonnegative_finite, resolve_grams_detailed, resolve_product_quantity
 
 _MACRO_KEYS = ("calories", "protein_g", "carbs_g", "fat_g")
+_RECIPE_VOLUME_SUFFIX = re.compile(r"(?<=\d)\s*([mcd]?l)\s*$", re.I)
 
 
 @dataclass
@@ -19,6 +22,7 @@ class NutritionResult:
     nutrition: dict
     partially_estimated: bool
     partially_estimated_reasons: list[str]
+    ingredient_evidence: list[dict] = field(default_factory=list)
 
 
 def _has_deep_fry(instructions: list[str]) -> bool:
@@ -28,15 +32,19 @@ def _has_deep_fry(instructions: list[str]) -> bool:
     return False
 
 
-def _add_contribution(totals: dict, macros: MacroValues, quantity_g: float) -> None:
-    factor = quantity_g / 100.0
+def _accumulate_macros(totals: dict, macros: MacroValues, factor: float) -> None:
     for key in _MACRO_KEYS:
         value = getattr(macros, key)
         if is_nonnegative_finite(value):
             contribution = value * factor
-            if not is_nonnegative_finite(contribution) or not is_nonnegative_finite(totals[key] + contribution):
+            total = (totals[key] or 0.0) + contribution
+            if not is_nonnegative_finite(contribution) or not is_nonnegative_finite(total):
                 raise ValueError(f"nutrition arithmetic overflow: {key}")
-            totals[key] += contribution
+            totals[key] = total
+
+
+def _add_contribution(totals: dict, macros: MacroValues, quantity_g: float) -> None:
+    _accumulate_macros(totals, macros, quantity_g / 100.0)
 
 
 def _missing_macro_keys(macros: MacroValues) -> list[str]:
@@ -49,34 +57,63 @@ def _check_servings(servings) -> None:
 
 
 def _per_serving_nutrition(totals: dict, servings) -> dict:
-    values = {key: totals[key] / servings for key in _MACRO_KEYS}
-    if not all(is_nonnegative_finite(value) for value in values.values()):
+    values = {key: total / servings if total is not None else None for key, total in totals.items()}
+    if any(value is not None and not is_nonnegative_finite(value) for value in values.values()):
         raise ValueError("per-serving nutrition arithmetic overflow")
-    return {"basis": "per_serving", **{key: round(value, 1) for key, value in values.items()}}
+    return {"basis": "per_serving", **{key: round(value, 1) if value is not None else None
+                                        for key, value in values.items()}}
 
 
 def _zero_nutrition_constant(name: str) -> MacroValues | None:
     return ZERO_NUTRITION_CONSTANTS.get(normalize_alias(name))
 
 
-def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, llm_estimator) -> NutritionResult:
+def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, llm_estimator,
+                             *, fridge_context=None) -> NutritionResult:
     _check_servings(servings)
-    totals = {key: 0.0 for key in _MACRO_KEYS}
+    totals = dict.fromkeys(_MACRO_KEYS, None if fridge_context is not None else 0.0)
     reasons: list[str] = []
-    pending_llm_estimate: list[tuple[str, float]] = []
+    pending_llm_estimate: list[tuple[str, float, dict]] = []
+    ingredient_evidence: list[dict] = []
 
-    parsed = [parse_ingredient_string(raw) for raw in adjusted_ingredients]
-    if not parsed:
+    if not adjusted_ingredients:
         reasons.append("no ingredient evidence: empty ingredient list")
-    for item in parsed:
+    for raw in adjusted_ingredients:
+        binding, fallback = (fridge_context or {}).get(raw, (None, None))
+        volume_suffix = _RECIPE_VOLUME_SUFFIX.search(raw) if binding else None
+        if volume_suffix:
+            item = parse_ingredient_string(raw[:volume_suffix.start()] + " มล.")
+            volume = resolve_product_quantity(item.quantity, volume_suffix[1])
+            item = replace(item, raw=raw, quantity=volume[0] if volume else None)
+        else:
+            item = parse_ingredient_string(raw)
+        trace = {"ingredient": item.name, "raw": raw, "source": "unresolved", "status": "incomplete"}
+        if fridge_context is not None:
+            ingredient_evidence.append(trace)
+        if binding:
+            trace.update(barcode=binding["barcode"], product_name=binding["product_name"])
+            if fallback is None:
+                label, fallback = product_contribution(binding, item.quantity, item.unit)
+                if label:
+                    _accumulate_macros(totals, MacroValues(**label["contribution"]), 1)
+                    trace.update(label, status="calculated")
+                    continue
+        if fallback:
+            trace["reason"] = fallback
+            reasons.append(f"{fallback}: {item.name}")
+
         constant = _zero_nutrition_constant(item.name)
         if constant is not None:
+            trace.update(source="hardcoded_zero", status="estimated")
             reasons.append(f"hardcoded zero composition; identity/source unverified: {item.name}")
             resolution = resolve_grams_detailed(item.quantity, item.unit, None)
             if resolution.grams is None:
+                trace.update(status="incomplete")
                 reasons.append(f"quantity not determined: {item.raw}")
             elif resolution.source_backed is not True:
                 reasons.append(f"gram conversion {resolution.method}; source unverified or estimated: {item.name}")
+            if resolution.grams is not None:
+                trace.update(converted_quantity={"amount": resolution.grams, "unit": "g"}, method=resolution.method)
             continue
 
         if item.parse_status == "unparsed":
@@ -93,7 +130,8 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
             reasons.append(f"gram conversion {resolution.method}; source unverified or estimated: {item.name}")
 
         if match is not None and quantity_g is not None:
-            if not (qualification.identity_verified and qualification.macros_verified):
+            row_is_verified = qualification.identity_verified and qualification.macros_verified
+            if not row_is_verified:
                 reasons.append(f"DB identity/composition source unverified: {item.name}")
             # Portion uncertainty is reported for the selected conversion, not unused units.
             reasons.extend(f"{reason}: {item.name}" for reason in qualification.reasons
@@ -109,25 +147,39 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
                 continue
             _add_contribution(totals, match.macros, quantity_g)
             missing = _missing_macro_keys(match.macros)
+            status = "estimated"
+            if missing:
+                status = "incomplete"
+            elif row_is_verified and resolution.source_backed is True and not fallback:
+                status = "calculated"
+            trace.update(
+                source=match.source, source_ref=match.source_ref, basis={"quantity": 100, "unit": "g"},
+                converted_quantity={"amount": quantity_g, "unit": "g"}, method=resolution.method,
+                status=status,
+            )
             if missing:
                 reasons.append(f"missing or invalid {', '.join(missing)} in DB row {match.source_ref}: {item.name}")
             continue
         if match is None and quantity_g is not None:
-            pending_llm_estimate.append((item.name, quantity_g))
+            trace.update(converted_quantity={"amount": quantity_g, "unit": "g"}, method=resolution.method)
+            pending_llm_estimate.append((item.name, quantity_g, trace))
             continue
         reasons.append(f"quantity or ingredient not resolved: {item.raw}")
 
     if pending_llm_estimate:
-        names = [name for name, _ in pending_llm_estimate]
+        names = [name for name, _, _ in pending_llm_estimate]
         estimates = iter(llm_estimator.estimate(names))
-        for name, quantity_g in pending_llm_estimate:
+        for name, quantity_g, trace in pending_llm_estimate:
             macros = next(estimates, MacroValues(None, None, None, None))
             _add_contribution(totals, macros, quantity_g)
-            if len(_missing_macro_keys(macros)) == len(_MACRO_KEYS):
+            missing = _missing_macro_keys(macros)
+            if len(missing) == len(_MACRO_KEYS):
                 # No key / API error / malformed reply: nothing was actually
                 # estimated, so don't word it as if an estimate happened.
                 reasons.append(f"could not estimate composition (no usable LLM result): {name}")
             else:
+                trace.update(source="llm_estimate", basis={"quantity": 100, "unit": "g"},
+                             status="incomplete" if missing else "estimated")
                 reasons.append(f"LLM_ESTIMATE composition: {name}")
 
     if _has_deep_fry(instructions):
@@ -137,6 +189,7 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
         nutrition=_per_serving_nutrition(totals, servings),
         partially_estimated=len(reasons) > 0,
         partially_estimated_reasons=reasons,
+        ingredient_evidence=ingredient_evidence,
     )
 
 

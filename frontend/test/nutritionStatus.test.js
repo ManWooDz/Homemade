@@ -21,6 +21,21 @@ const { RecipeNutrition, RecipeContent, RecipeDetail, setLocale } = module.expor
 const macros = { basis: "per_serving", calories: 400, carbs_g: 50, protein_g: 20, fat_g: 0 };
 const render = recipe => renderToStaticMarkup(createElement(RecipeNutrition, { recipe }));
 
+test("product label evidence shows its basis, converted quantity, and generic fallback reason", () => {
+    setLocale("en");
+    const html = render({ nutrition: macros, computed_nutrition: { ...macros, protein_g: null }, nutrition_partially_estimated: true, nutrition_ingredient_evidence: [
+        { ingredient: "milk", source: "product_label", status: "calculated", product_name: "Milk A", basis: { quantity: 100, unit: "ml" }, converted_quantity: { amount: 125, unit: "ml" }, method: "reviewed_product_conversion" },
+        { ingredient: "sauce", source: "USDA", status: "estimated", reason: "product_conversion_unavailable" },
+    ] });
+    assert.ok(html.includes("Milk A"));
+    assert.ok(html.includes("Label per 100 mL"));
+    assert.ok(html.includes("Recipe quantity 125 mL"));
+    assert.ok(html.includes("USDA"));
+    assert.ok(html.includes("No verified conversion for this product"));
+    assert.match(html, /<dt>Protein<\/dt><dd[^>]*>—<\/dd>/);
+    assert.ok(!html.includes("No ingredient-level sources or reasons were recorded"));
+});
+
 for (const locale of ["th", "en"]) {
     test(`base-menu time shows an approximate total range and rejects invalid values in ${locale}`, () => {
         setLocale(locale);
@@ -52,6 +67,18 @@ for (const locale of ["th", "en"]) {
         const legacy = render({ nutrition: macros });
         assert.ok(legacy.includes(locale === "en" ? "Calculation method unavailable" : "ไม่ระบุวิธีคำนวณ"));
         assert.ok(!legacy.includes("400g"));
+    });
+
+    test(`calculated nutrition identifies label-only and mixed sources in ${locale}`, () => {
+        setLocale(locale);
+        const recipe = { nutrition: macros, computed_nutrition: macros, nutrition_partially_estimated: false };
+        const product = { ingredient: "milk", source: "product_label", status: "calculated" };
+        const fromLabel = render({ ...recipe, nutrition_ingredient_evidence: [product] });
+        assert.ok(fromLabel.includes(locale === "en" ? "Calculated from product labels" : "คำนวณจากฉลากสินค้า"));
+        assert.ok(fromLabel.includes(locale === "en" ? "Label-based result" : "ผลคำนวณจากฉลากสินค้า"));
+        const mixed = render({ ...recipe, nutrition_ingredient_evidence: [product, { ingredient: "sauce", source: "INMU", status: "calculated" }] });
+        assert.ok(mixed.includes(locale === "en" ? "Calculated from labels and nutrition data" : "คำนวณจากฉลากสินค้าและฐานข้อมูล"));
+        assert.ok(mixed.includes(locale === "en" ? "Result from labels and nutrition data" : "ผลคำนวณจากฉลากสินค้าและฐานข้อมูล"));
     });
 
     test(`missing and invalid nutrition stays unknown, zero stays zero in ${locale}`, () => {

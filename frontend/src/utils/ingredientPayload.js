@@ -1,9 +1,38 @@
+import { normalizeForSearch } from "./thaiText.js";
+import { formatIngredientName } from "./translations.js";
+
 function cleanIngredientName(value) {
   const name = typeof value === "string" ? value.trim() : "";
   if (!name) {
     throw new TypeError("Ingredient name is required");
   }
   return name;
+}
+
+export function selectFridgeIngredient(items, item) {
+  const displayedName = (ingredient) => normalizeForSearch(formatIngredientName(ingredient.name.trim(), "th"));
+  const name = displayedName(item);
+  const selected = {
+    ...item,
+    id: `fridge-${item.id}`,
+    fridge_ingredient_id: item.id,
+    fridge_binding_revision: item.barcode_product?.revision ?? null,
+  };
+  const replaces = (candidate) => candidate.fridge_ingredient_id === item.id || displayedName(candidate) === name;
+  const index = items.findIndex(replaces);
+  if (index === -1) return [...items, selected];
+  return [...items.slice(0, index), selected, ...items.slice(index + 1).filter((candidate) => !replaces(candidate))];
+}
+
+export function isSelectedFridgeIngredient(items, item) {
+  return items.some((selected) => selected.fridge_ingredient_id === item.id
+    && selected.name === item.name && selected.fridge_binding_revision === (item.barcode_product?.revision ?? null));
+}
+
+export function barcodeProductDescription(product) {
+  if (!product) return "";
+  const suffix = product.barcode?.slice(-4);
+  return [product.name, suffix && `…${suffix}`].filter(Boolean).join(" · ");
 }
 
 export function toPresenceIngredients(items = []) {
@@ -17,6 +46,13 @@ export function toPresenceIngredients(items = []) {
     }
 
     const result = { name: cleanIngredientName(item?.name) };
+    if (item.fridge_ingredient_id != null) {
+      return {
+        ...result,
+        fridge_ingredient_id: item.fridge_ingredient_id,
+        fridge_binding_revision: item.fridge_binding_revision ?? null,
+      };
+    }
     if (item?.id !== undefined && item?.id !== null) {
       return { id: item.id, ...result };
     }
@@ -32,6 +68,7 @@ export function toUserIngredientCreate({
   nutritionData,
   quantityAmount,
   quantityUnit,
+  barcodeCode,
 }) {
   // "" from an empty number input/select must become null, not "" or NaN —
   // same 422 trap as expiry_date. Number("") is 0 (a real, wrong value), so
@@ -56,5 +93,6 @@ export function toUserIngredientCreate({
     // if there's no amount, so the UI's own state can't produce that
     // invalid combination on save.
     quantity_unit: parsedAmount == null ? null : quantityUnit || null,
+    ...(barcodeCode ? { barcode_code: barcodeCode } : {}),
   };
 }

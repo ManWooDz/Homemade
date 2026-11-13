@@ -10,6 +10,7 @@ import { OTHER_OPTION, TASTE_OPTIONS } from "../constants/preferenceOptions";
 import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/CookingPreferenceFields";
 import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
 import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
+import { barcodeProductDescription, isSelectedFridgeIngredient, selectFridgeIngredient } from "../utils/ingredientPayload";
 import { expiryBadgeLabel } from "../utils/expiry";
 
 export default function CustomCookingPage({
@@ -30,25 +31,25 @@ export default function CustomCookingPage({
     const [extra, setExtra] = useState("");
   const preferences = useSavedCookingPreferences();
   const preferenceIssue = cookingPreferenceError(preferences.value);
-    const [selectedIngredients, setSelectedIngredients] = useState([]);
+    const [fridgeChoices, setFridgeChoices] = useState([]);
+    const selectedIngredients = fridgeChoices.filter((selected) => userIngredients?.some((ingredient) => (
+        isSelectedFridgeIngredient([selected], ingredient)
+    )));
 
-    const toggleIngredient = (id) => {
-        setSelectedIngredients((prev) =>
-            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-        );
+    const toggleIngredient = (ingredient) => {
+        setFridgeChoices((prev) => isSelectedFridgeIngredient(prev, ingredient)
+            ? prev.filter((item) => item.fridge_ingredient_id !== ingredient.id)
+            : selectFridgeIngredient(prev, ingredient));
     };
 
     const handleGenerateClick = async () => {
         if (submitting.current || selectedIngredients.length === 0 || preferences.status !== "ready" || preferenceIssue) return;
         submitting.current = true;
         setIsSubmitting(true);
-        const selectedObjs = userIngredients.filter((ing) =>
-            selectedIngredients.includes(ing.id),
-        );
         try {
             const error = await onGenerate(
                 generationPreferences(preferences.value, taste === OTHER_OPTION ? tasteOther.trim() || OTHER_OPTION : taste, extra),
-                selectedObjs,
+                selectedIngredients,
             );
             setAllergyError(error || null);
             if (error) allergyInput.current?.focus();
@@ -82,16 +83,18 @@ export default function CustomCookingPage({
                         {userIngredients && userIngredients.length > 0 ? (
                             <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
                                 {userIngredients.map((ing) => {
-                                    const isSelected = selectedIngredients.includes(ing.id);
+                                    const isSelected = isSelectedFridgeIngredient(selectedIngredients, ing);
                                     const expiry = expiryBadgeLabel(ing.expiry_date, locale);
                                     return (
                                         <button key={ing.id} type="button" aria-pressed={isSelected}
-                                            onClick={() => toggleIngredient(ing.id)}
+                                            onClick={() => toggleIngredient(ing)}
                                             className={"min-h-20 w-full min-w-0 grid grid-cols-[2rem_minmax(0,1fr)_1.25rem] items-center gap-x-2 gap-y-1 p-3 rounded-2xl border text-left transition-colors " + (isSelected ? "bg-[#FDECE5] border-[#B93E25]" : "bg-white border-gray-300 hover:border-gray-400 hover:bg-gray-50")}>
                                             {ing.image ? <img src={ing.image} alt="" className="w-8 h-8 rounded-full object-cover shrink-0"
                                                 onError={(event) => { if (event.currentTarget.getAttribute("src") !== logo) event.currentTarget.src = logo; }} />
                                                 : <Refrigerator aria-hidden="true" className="w-8 h-8 text-gray-500 shrink-0" />}
-                                            <span className="min-w-0 text-sm font-semibold text-gray-900 break-words">{ing.name}</span>
+                                            <span className="min-w-0 text-sm font-semibold text-gray-900 break-words">{ing.name}
+                                                {ing.barcode_product && <span className="block text-xs font-normal text-gray-600">{barcodeProductDescription(ing.barcode_product)}</span>}
+                                            </span>
                                             <span aria-hidden="true" className={"w-5 h-5 rounded-full border shrink-0 flex items-center justify-center " + (isSelected ? "bg-[#B93E25] border-[#B93E25] text-white" : "border-gray-400")}>
                                                 {isSelected && <Check className="w-3.5 h-3.5" />}
                                             </span>

@@ -1,7 +1,9 @@
-IMAGE_BASE_URL = "http://localhost:8000/"
-
-
 def public_image_url(path):
-    if path and not path.startswith("http"):
-        return f"{IMAGE_BASE_URL}{path}"
-    return path
+    if not path:
+        return path
+    for prefix in ("http://localhost:8000/", "http://127.0.0.1:8000/"):
+        if path.startswith(prefix):
+            return "/" + path[len(prefix):].lstrip("/")
+    if path.startswith(("http://", "https://", "//", "data:", "blob:")):
+        return path
+    return "/" + path.lstrip("/")

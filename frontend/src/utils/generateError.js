@@ -3,6 +3,16 @@ import { translate } from "./translations.js";
 // Keep known user-facing copy; hide raw provider/developer exceptions.
 const THAI_CHAR = /[฀-๿]/;
 
+export function toUserFacingFridgeSelectionError(code, locale) {
+    if (code === "fridge_selection_stale") {
+        return translate("รายการใน My Fridge เปลี่ยนไป กรุณากลับไปเลือกวัตถุดิบอีกครั้ง", locale);
+    }
+    if (code === "fridge_selection_conflict") {
+        return translate("กรุณาเลือกเพียงหนึ่งรายการสำหรับวัตถุดิบเดียวกัน", locale);
+    }
+    return null;
+}
+
 export function toUserFacingGenerateError(message, locale = "th") {
     if (typeof message !== "string" || !THAI_CHAR.test(message)) return null;
     if (locale !== "en") return message;

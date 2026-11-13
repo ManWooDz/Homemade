@@ -11,6 +11,7 @@ import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/Coo
 import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
 import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
 import { formatIngredientName } from "../utils/translations";
+import { barcodeProductDescription, isSelectedFridgeIngredient, selectFridgeIngredient } from "../utils/ingredientPayload";
 
 export default function CreateRecipe({
   recipe,
@@ -58,13 +59,7 @@ export default function CreateRecipe({
   };
 
   const addFromFridge = (ing) => {
-    // check if already added
-    if (!currentIngredients.find((cur) => cur.name === ing.name)) {
-      setCurrentIngredients([
-        ...currentIngredients,
-        { ...ing, id: Date.now() },
-      ]);
-    }
+    setCurrentIngredients((current) => selectFridgeIngredient(current, ing));
   };
 
   const removeIngredient = (idToRemove) => {
@@ -115,7 +110,10 @@ export default function CreateRecipe({
                 {currentIngredients.map(ing => (
                   <div key={ing.id} className="max-w-full min-h-11 bg-[#FDECE5] border border-[#B93E25] pl-3 rounded-full flex items-center gap-2">
                     <img src={ing.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-                    <span className="block min-w-0 text-sm font-medium text-[#9F351F] wrap-anywhere first-letter:uppercase">{formatIngredientName(ing.name, locale)}</span>
+                    <span className="block min-w-0 py-1 text-sm font-medium text-[#9F351F] wrap-anywhere first-letter:uppercase">
+                      {formatIngredientName(ing.name, locale)}
+                      {ing.fridge_ingredient_id != null && <span className="block text-xs">{barcodeProductDescription(ing.barcode_product) || t("จาก My Fridge")}</span>}
+                    </span>
                     <button type="button" onClick={() => removeIngredient(ing.id)} aria-label={t("นำ {name} ออกจากสูตร", { name: formatIngredientName(ing.name, locale) })}
                       className="group w-11 h-11 shrink-0 rounded-full text-[#9F351F] flex items-center justify-center">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center transition-colors group-hover:bg-[#B93E25] group-hover:text-white group-active:bg-[#9F351F] group-active:text-white">
@@ -132,12 +130,13 @@ export default function CreateRecipe({
                 {userIngredients && userIngredients.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {userIngredients.map(ing => {
-                      const isSelected = currentIngredients.some(c => c.name === ing.name);
-                      return <button key={ing.id} type="button" onClick={() => !isSelected && addFromFridge(ing)} disabled={isSelected}
+                      const isSelected = isSelectedFridgeIngredient(currentIngredients, ing);
+                      return <button key={ing.id} type="button" aria-pressed={isSelected} onClick={() => !isSelected && addFromFridge(ing)} disabled={isSelected}
                         className={`max-w-full min-h-11 px-3 py-2 rounded-xl flex items-center gap-2 text-left text-sm transition-colors ${isSelected ? "bg-gray-200 text-gray-600 cursor-not-allowed" : "bg-white border border-gray-300 text-gray-700 hover:border-[#B93E25] hover:text-[#B93E25]"}`}>
                         <img src={ing.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0"
                           onError={e => (e.target.src = "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150")} />
                         <span className="block min-w-0 wrap-anywhere first-letter:uppercase">{formatIngredientName(ing.name, locale)}
+                          {ing.barcode_product && <span className="block text-xs text-gray-600">{barcodeProductDescription(ing.barcode_product)}</span>}
                           {expiryBadgeLabel(ing.expiry_date, locale) && <span className="block text-xs font-medium text-red-700">{expiryBadgeLabel(ing.expiry_date, locale)}</span>}
                         </span>
                         {!isSelected && <Plus aria-hidden="true" className="w-4 h-4 shrink-0" />}

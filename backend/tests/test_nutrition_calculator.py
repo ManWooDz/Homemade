@@ -39,6 +39,32 @@ class ComputeRecipeNutritionTests(unittest.TestCase):
         self.assertTrue(result.partially_estimated)
         self.assertEqual(result.partially_estimated_reasons, ["DB identity/composition source unverified: กุ้ง"])
 
+    def test_product_label_volume_preserves_the_recipe_unit_and_per_serving_amount(self):
+        label = {"barcode": "8859568700769", "product_name": "Milk A", "sets": [{
+            "label_source": "packaging", "carbohydrate_kind": "total", "basis": {"quantity": 100, "unit": "ml"},
+            "macros": {"calories": 60, "protein_g": 3, "carbs_g": 6, "fat_g": 2},
+        }]}
+        for raw in ("นมจืด 200 mL", "นมจืด 0.2 L", "นมจืด 2 dL", "นมจืด 20 cL"):
+            with self.subTest(raw=raw):
+                result = compute_recipe_nutrition(self.db, [raw], [], 2, self.no_op_estimator,
+                                                  fridge_context={raw: (label, None)})
+                self.assertEqual(result.nutrition["calories"], 60)
+                self.assertFalse(result.partially_estimated)
+                evidence, = result.ingredient_evidence
+                self.assertEqual(evidence["raw"], raw)
+                self.assertEqual(evidence["converted_quantity"], {"amount": 200, "unit": "ml"})
+        self.no_op_estimator.estimate.assert_not_called()
+
+    def test_no_usable_macro_stays_unknown_in_fridge_recipe_subtotal(self):
+        raw = "ผลิตภัณฑ์ทดลอง 50 กรัม"
+        label = {"barcode": "8859568700769", "product_name": "Fixture product", "sets": []}
+        self.no_op_estimator.estimate.return_value = [MacroValues(40, None, None, 0)]
+        result = compute_recipe_nutrition(self.db, [raw], [], 1, self.no_op_estimator,
+                                          fridge_context={raw: (label, None)})
+        self.assertEqual(result.nutrition, {"basis": "per_serving", "calories": 20, "protein_g": None,
+                                            "carbs_g": None, "fat_g": 0})
+        self.assertTrue(result.partially_estimated)
+
     def test_duplicate_ingredient_lines_are_both_summed(self):
         result = compute_recipe_nutrition(self.db, ["กระเทียม 50 กรัม", "กระเทียม 50 กรัม"], ["1. ทำอาหาร"], servings=1, llm_estimator=self.no_op_estimator)
         self.assertEqual(result.nutrition["calories"], 150.0)

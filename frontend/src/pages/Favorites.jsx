@@ -71,7 +71,7 @@ export default function Favorites({
         }
     };
 
-    const HISTORY_PLACEHOLDER = "http://localhost:8000/images/No-image-available.png";
+    const HISTORY_PLACEHOLDER = "/images/No-image-available.png";
 
     return (
         <PageShell lockScroll={filtersOpen}>

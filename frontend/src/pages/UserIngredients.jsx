@@ -270,13 +270,13 @@ export default function UserIngredients({
                                             <img
                                                 src={
                                                     ing.image ||
-                                                    "http://localhost:8000/images/No-image-available.png"
+                                                    "/images/No-image-available.png"
                                                 }
                                                 alt={ing.name}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.src =
-                                                        "http://localhost:8000/images/No-image-available.png";
+                                                        "/images/No-image-available.png";
                                                 }}
                                             />
                                         </div>

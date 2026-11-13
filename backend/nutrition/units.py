@@ -11,13 +11,18 @@ _MASS_UNIT_GRAMS: dict[str, float] = {
     "ขีด": 100.0, "มิลลิกรัม": 0.001, "มก.": 0.001,
 }
 
-GLOBAL_UNIT_GRAMS: dict[str, float] = {
-    **_MASS_UNIT_GRAMS,
+_VOLUME_UNIT_MILLILITERS: dict[str, float] = {
     "มล.": 1.0, "มิลลิลิตร": 1.0, "ลิตร": 1000.0,
     "ถ้วยตวง": 240.0,
     "ช้อนโต๊ะ": 15.0,
     "ช้อนชา": 5.0,
 }
+
+GLOBAL_UNIT_GRAMS = {**_MASS_UNIT_GRAMS, **_VOLUME_UNIT_MILLILITERS}
+_PRODUCT_MASS_UNITS = {
+    **_MASS_UNIT_GRAMS, "g": 1.0, "kg": 1000.0, "mg": 0.001, "μg": 0.000001, "mcg": 0.000001,
+}
+_PRODUCT_VOLUME_UNITS = {**_VOLUME_UNIT_MILLILITERS, "ml": 1.0, "cl": 10.0, "dl": 100.0, "l": 1000.0}
 
 
 @dataclass(frozen=True)
@@ -34,6 +39,18 @@ def is_nonnegative_finite(value) -> bool:
         return isfinite(value) and value >= 0
     except OverflowError:
         return False
+
+
+def resolve_product_quantity(quantity: float | None, unit: str | None) -> tuple[float, str] | None:
+    """Normalize mass or volume without changing the type of measurement."""
+    if not is_nonnegative_finite(quantity) or not isinstance(unit, str):
+        return None
+    unit = unit.strip().casefold()
+    for factors, basis_unit in ((_PRODUCT_MASS_UNITS, "g"), (_PRODUCT_VOLUME_UNITS, "ml")):
+        if unit in factors:
+            amount = quantity * factors[unit]
+            return (amount, basis_unit) if is_nonnegative_finite(amount) else None
+    return None
 
 
 def resolve_grams_detailed(quantity: float | None, unit: str | None, portion_grams: dict | None,

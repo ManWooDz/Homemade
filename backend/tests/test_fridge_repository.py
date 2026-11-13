@@ -13,6 +13,26 @@ from fridge_repository import delete_user_ingredient, insert_user_ingredient, li
 
 
 class FridgeRepositoryTests(unittest.TestCase):
+    def test_barcode_binding_is_private_and_versioned_on_rename(self):
+        snapshot = {"barcode": "8859568700769", "product_name": "Product A", "sets": []}
+        created = insert_user_ingredient(
+            self.db, user_id=self.user_id, name="milk", category="Other", image=None,
+            nutrition_data={"calories": 42}, barcode_binding=snapshot,
+        )
+        product = created["barcode_product"]
+        self.assertEqual((product["barcode"], product["name"], product["active"]),
+                         (snapshot["barcode"], "Product A", True))
+        self.assertEqual(created["nutrition_data"], {"calories": 42})
+        values = {"name": "milk", "category": "Other", "expiry_date": None,
+                  "quantity_amount": 1, "quantity_unit": "ลิตร"}
+        updated = update_user_ingredient(self.db, user_id=self.user_id, ingredient_id=created["id"], values=values)
+        self.assertEqual(updated["barcode_product"], product)
+        values["name"] = "milk alternative"
+        renamed = update_user_ingredient(self.db, user_id=self.user_id, ingredient_id=created["id"], values=values)
+        self.assertFalse(renamed["barcode_product"]["active"])
+        self.assertNotEqual(renamed["barcode_product"]["revision"], product["revision"])
+        self.assertEqual(renamed["nutrition_data"], created["nutrition_data"])
+
     def test_update_preserves_legacy_quantity_and_product_provenance(self):
         row = UserIngredient(user_id=self.user_id, name="egg", category="Other", quantity="legacy", image="original.png", nutrition_data={"calories": 42})
         self.db.add(row)

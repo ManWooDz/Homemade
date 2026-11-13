@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from collections import Counter
 from contextlib import asynccontextmanager
 import logging
 import math
@@ -43,6 +44,7 @@ from auth import (
     verify_password,
 )
 from csrf import verify_same_origin
+from barcode_nutrition import BarcodeNutritionLookupError, load_barcode_binding, product_display_nutrition
 from database.db import get_db, SessionLocal
 from database.models import BaseRecipe, RecipeIngredientImage, RefreshToken, User, UserPreference
 from nutrition.calculator import compute_recipe_nutrition, compute_quantities_nutrition
@@ -50,7 +52,10 @@ from nutrition.llm_fallback import NutritionLLMEstimator
 from email_sender import send_otp_email, validate_email_config
 import otp
 import registration
-from fridge_repository import delete_user_ingredient, insert_user_ingredient, list_user_ingredients, update_user_ingredient
+from fridge_repository import (
+    barcode_binding, delete_user_ingredient, insert_user_ingredient,
+    list_user_ingredients, load_owned_fridge_items, update_user_ingredient,
+)
 from recipe_contracts import ingredient_names, validate_generated_recipe_shape
 from image_urls import public_image_url
 from user_profile import MAX_UPLOAD_BYTES, ProfileValidationError, normalize_avatar, user_payload, validate_display_name
@@ -165,6 +170,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 from recipe_checks import (
     BASIC_INGREDIENTS, BAD_FLAVOR_PAIRS, check_ingredients, check_flavor,
     check_logic, check_nutrition, check_core, ingredient_prompt_guidance,
+    _identity as ingredient_identity, _line as parse_ingredient_declaration,
 )
 from recipe_instructions import (
     FORMAT_ERROR, generation_schema, instruction_prompt,
@@ -383,7 +389,7 @@ async def get_all_recipes(db: Session = Depends(get_db)):
             mapped_ingredients = []
             for ing in recipe.ingredients:
                 img_path = ingredient_map.get(ing.lower().strip())
-                img_url = f"http://localhost:8000/{img_path}" if img_path else "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150"
+                img_url = public_image_url(img_path) if img_path else "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150"
                 mapped_ingredients.append({
                     "name": ing,
                     "image": img_url
@@ -434,14 +440,16 @@ class NutritionData(BaseModel):
 QuantityUnit = Literal[
     "ชิ้น", "กรัม", "กก.", "มล.", "ลิตร", "ขวด", "ถุง", "แพ็ค", "ฟอง", "หัว", "ลูก", "ห่อ",
 ]
+BarcodeCode = Annotated[str, Field(strict=True, pattern=r"^[0-9]{8,14}$")]
 
 
 class UserIngredientCreate(BaseModel):
     name: str
     category: str = "Other"
-    image: str = "http://localhost:8000/images/No-image-available.png"
+    image: str = "/images/No-image-available.png"
     expiry_date: Optional[date] = None
     nutrition_data: Optional[NutritionData] = None
+    barcode_code: BarcodeCode | None = None
     # Real, user-entered quantity — distinct from the legacy `quantity`
     # string column, left untouched/unused. amount is a client-writable
     # system boundary: reject non-positive/NaN/Infinity/absurd values here,
@@ -463,6 +471,7 @@ class UserIngredientUpdate(BaseModel):
     expiry_date: Optional[date]
     quantity_amount: Optional[float] = Field(gt=0, le=100000, allow_inf_nan=False, strict=True)
     quantity_unit: Optional[QuantityUnit]
+    barcode_code: BarcodeCode | None = None
 
     @field_validator("name")
     @classmethod
@@ -479,6 +488,11 @@ class UserIngredientUpdate(BaseModel):
         return self
 
 
+class UserIngredientBarcodeRelink(BaseModel):
+    model_config = {"extra": "forbid"}
+    barcode_code: BarcodeCode
+
+
 # get ingredient images from folder images/ingredients
 @app.get("/api/ingredient-images")
 async def get_ingredient_images():
@@ -488,9 +502,9 @@ async def get_ingredient_images():
         if os.path.exists(images_dir):
             for file in os.listdir(images_dir):
                 if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                    images.append(f"http://localhost:8000/images/ingredients/{file}")
+                    images.append(public_image_url(f"images/ingredients/{file}"))
         
-        fallback = "http://localhost:8000/images/No-image-available.png"
+        fallback = "/images/No-image-available.png"
         return {"status": "success", "data": {"images": images, "fallback": fallback}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -530,7 +544,7 @@ async def upload_ingredient_image(file: UploadFile = File(...)):
         file_path = os.path.join(images_dir, filename)
         with open(file_path, "wb") as f:
             f.write(await file.read())
-        url = f"http://localhost:8000/images/ingredients/{filename}"
+        url = public_image_url(f"images/ingredients/{filename}")
         return {"status": "success", "data": {"image": url}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -647,15 +661,23 @@ async def add_user_ingredient(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    user_id = current_user.id
+    binding = None
+    display_nutrition = ingredient.nutrition_data.model_dump() if ingredient.nutrition_data else None
+    if ingredient.barcode_code is not None:
+        db.close()
+        binding = await _confirm_barcode_product(ingredient.barcode_code)
+        display_nutrition = product_display_nutrition(binding) or display_nutrition
     try:
         created = insert_user_ingredient(
             db,
-            user_id=current_user.id,
+            user_id=user_id,
             name=ingredient.name,
             category=ingredient.category,
             image=ingredient.image,
             expiry_date=ingredient.expiry_date,
-            nutrition_data=ingredient.nutrition_data.model_dump() if ingredient.nutrition_data else None,
+            nutrition_data=display_nutrition,
+            barcode_binding=binding,
             quantity_amount=ingredient.quantity_amount,
             quantity_unit=ingredient.quantity_unit,
         )
@@ -663,16 +685,35 @@ async def add_user_ingredient(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
+async def _confirm_barcode_product(code):
+    try:
+        return await run_in_threadpool(load_barcode_binding, code)
+    except BarcodeNutritionLookupError:
+        raise HTTPException(status_code=502, detail="Could not confirm barcode product") from None
+
+
 @app.put("/api/user-ingredients/{ingredient_id}", dependencies=[Depends(verify_same_origin)])
 async def edit_user_ingredient(
     ingredient_id: int,
-    ingredient: UserIngredientUpdate,
+    ingredient: UserIngredientUpdate | UserIngredientBarcodeRelink,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    user_id = current_user.id
+    if not 1 <= ingredient_id <= 2_147_483_647:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    binding = None
+    if ingredient.barcode_code is not None:
+        if not load_owned_fridge_items(db, user_id, [ingredient_id]):
+            raise HTTPException(status_code=404, detail="Ingredient not found")
+        db.close()
+        binding = await _confirm_barcode_product(ingredient.barcode_code)
+    values = ingredient.model_dump(exclude={"barcode_code"}) if isinstance(ingredient, UserIngredientUpdate) else None
     try:
         updated = update_user_ingredient(
-            db, user_id=current_user.id, ingredient_id=ingredient_id, values=ingredient.model_dump()
+            db, user_id=user_id, ingredient_id=ingredient_id, values=values,
+            new_binding=binding, barcode_nutrition_data=product_display_nutrition(binding) if binding else None,
         )
     except Exception:
         db.rollback()
@@ -1134,6 +1175,44 @@ class GenerateRecipeTextRequest(BaseModel):
     ingredients: List[Any]
     preferences: Dict[str, str]
 
+
+def _selected_fridge_bindings(db, user_id, items, names):
+    selected = [(index, item) for index, item in enumerate(items)
+                if isinstance(item, dict) and "fridge_ingredient_id" in item]
+    if not selected:
+        return {}, None
+    ids = [item["fridge_ingredient_id"] for _, item in selected]
+    if any(type(item_id) is not int or not 1 <= item_id <= 2_147_483_647 for item_id in ids):
+        return {}, "fridge_selection_stale"
+    try:
+        owned = {
+            item_id: (row.name.strip(), barcode_binding(row), bool(row.nutrition_data))
+            for item_id, row in load_owned_fridge_items(db, user_id, ids).items()
+        }
+    finally:
+        db.close()
+    identities = [ingredient_identity(name) for name in names]
+    counts = Counter(identities)
+    bindings = {}
+    for index, item in selected:
+        snapshot = owned.get(item["fridge_ingredient_id"])
+        if snapshot is None or snapshot[0] != names[index]:
+            return {}, "fridge_selection_stale"
+        _, binding, has_display_nutrition = snapshot
+        if item.get("fridge_binding_revision") != (binding["revision"] if binding else None):
+            return {}, "fridge_selection_stale"
+        identity = identities[index]
+        if counts[identity] != 1:
+            return {}, "fridge_selection_conflict"
+        reason = None
+        if binding and not binding["active"]:
+            reason = "product_relink_required"
+        elif binding is None and has_display_nutrition:
+            reason = "product_legacy_basis"
+        bindings[identity] = (binding, reason)
+    return bindings, None
+
+
 # generate recipe text from base recipe and user ingredients
 @app.post("/api/generate-recipe-text", dependencies=[Depends(verify_same_origin)])
 async def generate_recipe_text(
@@ -1144,6 +1223,7 @@ async def generate_recipe_text(
     # get_current_user's lookup began a transaction on this Session; end it now
     # so no connection sits idle-in-transaction across the LLM calls. The
     # Session is reused later by the history write (a fresh transaction).
+    user_id = current_user.id
     db.close()
     try:
         user_prefs = request.preferences
@@ -1158,6 +1238,16 @@ async def generate_recipe_text(
             return preference_error
         ingredients_list_for_llm = ingredient_names(request.ingredients)
         ingredients_name_only = [name.lower() for name in ingredients_list_for_llm]
+        fridge_bindings, fridge_error = _selected_fridge_bindings(
+            db, user_id, request.ingredients, ingredients_list_for_llm,
+        )
+        if fridge_error:
+            message = (
+                "มีวัตถุดิบชื่อเดียวกัน กรุณาเลือกแหล่งเดียวต่อวัตถุดิบ"
+                if fridge_error == "fridge_selection_conflict"
+                else "รายการใน My Fridge เปลี่ยนไป กรุณาเลือกวัตถุดิบอีกครั้ง"
+            )
+            return {"status": "error", "code": fridge_error, "message": message}
         
         base_recipe = request.recipe
         
@@ -1216,22 +1306,33 @@ async def generate_recipe_text(
         # recipe that already passed validation.
         llm_estimated_nutrition = final_output.get("nutrition")
         try:
+            adjusted_ingredients = final_output.get("adjusted_ingredients", [])
+            nutrition_options = {}
+            if fridge_bindings:
+                nutrition_options["fridge_context"] = {
+                    raw: fridge_bindings[identity]
+                    for raw in adjusted_ingredients
+                    if (identity := parse_ingredient_declaration(raw, ingredients_list_for_llm)[0]) in fridge_bindings
+                }
             # Named nutrition_db so it never shadows the request-scoped `db`
             # parameter that save_generate_history uses below.
             nutrition_db = SessionLocal()
             try:
                 nutrition_result = compute_recipe_nutrition(
                     db=nutrition_db,
-                    adjusted_ingredients=final_output.get("adjusted_ingredients", []),
+                    adjusted_ingredients=adjusted_ingredients,
                     instructions=final_output.get("instructions", []),
                     servings=final_output.get("servings", 1),
                     llm_estimator=NutritionLLMEstimator(),
+                    **nutrition_options,
                 )
             finally:
                 nutrition_db.close()
 
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
             final_output["computed_nutrition"] = nutrition_result.nutrition
+            if nutrition_result.ingredient_evidence:
+                final_output["nutrition_ingredient_evidence"] = nutrition_result.ingredient_evidence
             if nutrition_result.partially_estimated:
                 # `nutrition` keeps the LLM's original guess -- do not
                 # overwrite it with a partially-estimated computed value

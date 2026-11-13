@@ -45,7 +45,7 @@ export default function BarcodeScanPage({
             if (controller.signal.aborted) return;
             if (!response.ok) throw new Error("Barcode lookup failed");
             if (result.status === "success" && typeof result.data?.name === "string" && result.data.name.trim()) {
-                onScanned(result.data);
+                onScanned({ ...result.data, barcode_code: code });
             } else {
                 setErrorMessage(toUserFacingBarcodeError(result.message));
                 setPhase("error");
@@ -131,14 +131,14 @@ export default function BarcodeScanPage({
                             focusInput={Boolean(barcode)}
                         />
                     )}
-                    <button
+                    {onAddManually && <button
                         type="button"
                         onClick={() => {
                             lookup.current?.abort();
                             onAddManually();
                         }}
                         className="mt-6 w-full min-h-11 px-4 py-3 border border-[#B93E25] rounded-full text-sm font-bold text-[#B93E25] hover:bg-[#FDECE5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B93E25] transition"
-                    >{t("เพิ่มวัตถุดิบเอง")}</button>
+                    >{t("เพิ่มวัตถุดิบเอง")}</button>}
                 </main>
 
                 <BottomMenu activeTab={activeTab} setActiveTab={(tab) => {

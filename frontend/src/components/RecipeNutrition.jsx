@@ -16,17 +16,45 @@ const BASE_REASONS = {
     derived_macros: "สารอาหารบางค่าได้จากการคำนวณเพิ่มเติมในชุดข้อมูล",
     constant_unverified: "วัตถุดิบบางรายการใช้ค่าคงที่ที่ยังไม่ยืนยันแหล่งข้อมูล",
 };
+const INGREDIENT_SOURCES = {
+    product_label: "ฉลากสินค้า", llm_estimate: "ค่าประมาณจาก AI", unresolved: "ยังหาแหล่งข้อมูลไม่ได้",
+    hardcoded_zero: "ค่าคงที่โดยประมาณ", INMU: "INMU", USDA: "USDA",
+};
+const INGREDIENT_STATUSES = { calculated: "คำนวณแล้ว", estimated: "ยังมีค่าประมาณ", incomplete: "ข้อมูลไม่ครบ" };
+const PRODUCT_REASONS = {
+    product_label_unavailable: "ไม่มีข้อมูลฉลากที่ใช้คำนวณได้",
+    product_label_incomplete: "ข้อมูลสารอาหารบนฉลากไม่ครบ",
+    product_quantity_unresolved: "ปริมาณในสูตรไม่ชัดเจนพอที่จะใช้ข้อมูลฉลาก",
+    product_conversion_unavailable: "ไม่มีหลักฐานแปลงหน่วยของสินค้านี้",
+    product_label_conflict: "ข้อมูลฉลากของสินค้านี้ขัดกัน",
+    product_legacy_basis: "ข้อมูลบาร์โค้ดเดิมไม่ได้ระบุฐานปริมาณชัดเจน",
+    product_relink_required: "ต้องสแกนยืนยันสินค้านี้อีกครั้ง",
+};
+const quantityLabel = (unit, locale) => unit === "ml" ? (locale === "en" ? "mL" : "มล.") : (locale === "en" ? "g" : "กรัม");
 
 export default function RecipeNutrition({ recipe, compact = false }) {
     const { t, locale } = useLocale();
     const nutrition = recipe.nutrition;
     const computed = recipe.computed_nutrition;
     const estimate = recipe.llm_estimated_nutrition;
+    const ingredientEvidence = Array.isArray(recipe.nutrition_ingredient_evidence)
+        ? recipe.nutrition_ingredient_evidence.filter((item) => item && typeof item === "object") : [];
     const baseCalculation = recipe.nutrition_origin === "base_calculation";
     const unavailable = baseCalculation && !computed;
     const partial = recipe.nutrition_partially_estimated === true;
     const calculated = recipe.nutrition_partially_estimated === false && computed && MACROS.every(([key]) => hasValue(computed[key]));
-    const status = unavailable ? "ยังคำนวณไม่ได้" : calculated ? "คำนวณจากฐานข้อมูล" : baseCalculation ? "คำนวณแล้ว แต่ข้อมูลยังมีข้อจำกัด" : partial ? "ยังมีค่าประมาณ" : "ไม่ระบุวิธีคำนวณ";
+    const hasProductLabel = ingredientEvidence.some(({ source }) => source === "product_label");
+    const hasOtherSource = ingredientEvidence.some(({ source }) => source !== "product_label");
+    let calculatedStatus = "คำนวณจากฐานข้อมูล";
+    let calculatedTitle = "ผลคำนวณจากฐานข้อมูล";
+    if (hasProductLabel && hasOtherSource) {
+        calculatedStatus = "คำนวณจากฉลากสินค้าและฐานข้อมูล";
+        calculatedTitle = "ผลคำนวณจากฉลากสินค้าและฐานข้อมูล";
+    } else if (hasProductLabel) {
+        calculatedStatus = "คำนวณจากฉลากสินค้า";
+        calculatedTitle = "ผลคำนวณจากฉลากสินค้า";
+    }
+    const status = unavailable ? "ยังคำนวณไม่ได้" : calculated ? calculatedStatus : baseCalculation ? "คำนวณแล้ว แต่ข้อมูลยังมีข้อจำกัด" : partial ? "ยังมีค่าประมาณ" : "ไม่ระบุวิธีคำนวณ";
     const format = (value, unit) => hasValue(value)
         ? `${new Intl.NumberFormat(locale === "en" ? "en-US" : "th-TH", { maximumFractionDigits: 1 }).format(value)} ${t(unit)}`
         : "—";
@@ -70,7 +98,7 @@ export default function RecipeNutrition({ recipe, compact = false }) {
             <details className="group mt-4 border-t border-gray-200 pt-2">
                 <summary className="min-h-11 flex items-center justify-between gap-2 cursor-pointer text-sm font-semibold text-gray-900 rounded-lg focus-visible:outline-2 focus-visible:outline-[#EF5A3A]">{t("ดูรายละเอียดการคำนวณ")}<ChevronDown aria-hidden="true" className="w-4 h-4 shrink-0 group-open:rotate-180" /></summary>
                 <div className="pb-2 text-sm text-gray-700 space-y-4">
-                    {[ [computed, partial || !calculated ? "ผลคำนวณที่ยังไม่ยืนยันความครบถ้วน" : "ผลคำนวณจากฐานข้อมูล"], [estimate, "ค่าประมาณจาก AI"] ].filter(([data]) => data).map(([data, title]) => (
+                    {[ [computed, calculated ? calculatedTitle : "ผลคำนวณที่ยังไม่ยืนยันความครบถ้วน"], [estimate, "ค่าประมาณจาก AI"] ].filter(([data]) => data).map(([data, title]) => (
                         <div key={title}>
                             <h4 className="font-semibold text-gray-900">{t(title)}</h4>
                             <p className="mb-2">{basis(data)}</p>
@@ -81,7 +109,27 @@ export default function RecipeNutrition({ recipe, compact = false }) {
                     {baseCalculation ? <>
                         {Array.isArray(recipe.nutrition_calculation_reasons) && recipe.nutrition_calculation_reasons.length > 0 && <ul className="list-disc pl-5 space-y-1">{[...new Set(recipe.nutrition_calculation_reasons)].filter(code => Object.hasOwn(BASE_REASONS, code)).map(code => <li key={code}>{t(BASE_REASONS[code])}</li>)}</ul>}
                         <p>{t("เป็นผลรวมสารอาหารจากวัตถุดิบ ยังไม่ปรับการสูญเสียจากการปรุงหรือการดูดซับน้ำมัน")}</p>
-                    </> : <p>{t("ระบบไม่ได้บันทึกเหตุผลหรือแหล่งข้อมูลรายวัตถุดิบไว้ในรายการนี้")}</p>}
+                    </> : ingredientEvidence.length ? <div>
+                        <h4 className="font-semibold text-gray-900">{t("แหล่งข้อมูลรายวัตถุดิบ")}</h4>
+                        <ul className="divide-y divide-gray-200">
+                            {ingredientEvidence.map((item, index) => <li key={index} className="py-2 wrap-anywhere">
+                                <p className="font-medium text-gray-900">{item.raw || item.ingredient}</p>
+                                <p>{t(Object.hasOwn(INGREDIENT_SOURCES, item.source) ? INGREDIENT_SOURCES[item.source] : "แหล่งข้อมูลทั่วไป")}
+                                    {Object.hasOwn(INGREDIENT_STATUSES, item.status) && ` · ${t(INGREDIENT_STATUSES[item.status])}`}</p>
+                                {typeof item.source_ref === "string" && <p>{item.source_ref}</p>}
+                                {item.product_name && <p>{item.product_name}</p>}
+                                {item.source === "product_label" && <>
+                                    {item.label_source === "manufacturer" && <p>{t("ข้อมูลจากผู้ผลิต")}</p>}
+                                    {hasValue(item.basis?.quantity) && <p>{t("ฉลากต่อ {quantity}", { quantity: `${item.basis.quantity} ${quantityLabel(item.basis.unit, locale)}` })}</p>}
+                                    {hasValue(item.converted_quantity?.amount) && <p>{t("ปริมาณในสูตร {quantity}", { quantity: `${item.converted_quantity.amount} ${quantityLabel(item.converted_quantity.unit, locale)}` })}</p>}
+                                    {item.method === "reviewed_product_conversion" && <p>{t("แปลงหน่วยตามหลักฐานของสินค้า")}</p>}
+                                    {typeof item.conversion_evidence?.source_url === "string" && item.conversion_evidence.source_url.startsWith("https://") &&
+                                        <a href={item.conversion_evidence.source_url} target="_blank" rel="noreferrer" className="underline underline-offset-2">{t("แหล่งอ้างอิงการแปลงหน่วย")}</a>}
+                                </>}
+                                {Object.hasOwn(PRODUCT_REASONS, item.reason) && <p>{t(PRODUCT_REASONS[item.reason])}</p>}
+                            </li>)}
+                        </ul>
+                    </div> : <p>{t("ระบบไม่ได้บันทึกเหตุผลหรือแหล่งข้อมูลรายวัตถุดิบไว้ในรายการนี้")}</p>}
                 </div>
             </details>
         </section>

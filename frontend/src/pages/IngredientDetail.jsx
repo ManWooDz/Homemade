@@ -1,13 +1,14 @@
 import PageShell from "../components/PageShell";
 import { useLocale } from "../context/LocaleContext";
 import { useState, useRef } from "react";
-import { ChevronLeft, Trash2, PenLine } from "lucide-react";
+import { Barcode, ChevronLeft, Trash2, PenLine } from "lucide-react";
 import logo from "../assets/HomeMade_Logo.png";
 import BottomMenu from "../components/bottomMenu";
 import NutritionBox from "../components/NutritionBox";
 import IngredientEditor from "../components/IngredientEditor";
 import { expiryBadgeLabel, sortByExpiry } from "../utils/expiry";
 import { useAuth } from "../context/AuthContext";
+import { barcodeProductDescription } from "../utils/ingredientPayload";
 
 export default function IngredientDetail({
     ingredient,
@@ -16,6 +17,9 @@ export default function IngredientDetail({
     onBack,
     onDeleted,
     onUpdated,
+    barcodeCandidate,
+    onScanBarcode,
+    onCancelBarcode,
     activeTab,
     setActiveTab,
 }) {
@@ -26,7 +30,9 @@ export default function IngredientDetail({
     const [editing, setEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [barcodeError, setBarcodeError] = useState("");
     const editButton = useRef(null);
+    const relinkPending = useRef(false);
 
     if (!ingredient) {
         onBack();
@@ -34,6 +40,34 @@ export default function IngredientDetail({
     }
 
     const badge = expiryBadgeLabel(ingredient.expiry_date, locale);
+
+    const confirmBarcode = async () => {
+        if (relinkPending.current) return;
+        relinkPending.current = true;
+        setIsSaving(true);
+        setBarcodeError("");
+        const linkError = "ยืนยันข้อมูลสินค้าจากบาร์โค้ดไม่สำเร็จ ลองอีกครั้ง";
+        try {
+            const response = await apiFetch(`/api/user-ingredients/${ingredient.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ barcode_code: barcodeCandidate.barcode_code }),
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== "success" || result.data?.id !== ingredient.id) {
+                setBarcodeError(response.status === 404 ? "ไม่พบวัตถุดิบนี้ กลับไปโหลดตู้เย็นใหม่" : linkError);
+                return;
+            }
+            setUserIngredients(items => items.map(item => item.id === result.data.id ? { ...result.data, selected: item.selected } : item));
+            onUpdated(result.data);
+            setSaved(true);
+        } catch {
+            setBarcodeError(linkError);
+        } finally {
+            relinkPending.current = false;
+            setIsSaving(false);
+        }
+    };
 
     const handleDelete = async () => {
         if (!window.confirm(t('ลบ "{name}" ออกจากตู้เย็นของฉัน?', { name: ingredient.name }))) {
@@ -89,13 +123,13 @@ export default function IngredientDetail({
                             <img
                                 src={
                                     ingredient.image ||
-                                    "http://localhost:8000/images/No-image-available.png"
+                                    "/images/No-image-available.png"
                                 }
                                 alt={ingredient.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                     e.target.src =
-                                        "http://localhost:8000/images/No-image-available.png";
+                                        "/images/No-image-available.png";
                                 }}
                             />
                         </div>
@@ -149,7 +183,7 @@ export default function IngredientDetail({
                     </dl>}
 
                     {saved && <p role="status" className="mt-4 text-sm text-gray-700">{t("บันทึกวัตถุดิบแล้ว")}</p>}
-                    {!editing && <button
+                    {!editing && !barcodeCandidate && <button
                         ref={editButton}
                         onClick={() => { setEditing(true); setSaved(false); setDeleteError(""); }}
                         disabled={isDeleting}
@@ -160,13 +194,33 @@ export default function IngredientDetail({
                         <NutritionBox nutrition={ingredient.nutrition_data} />
                     </section>}
 
+                    {!editing && ingredient.barcode_product && <p className="mt-3 text-sm text-gray-700 wrap-anywhere">
+                        {barcodeProductDescription(ingredient.barcode_product)}
+                        {ingredient.barcode_product.active === false && <span className="block">{t("สแกนบาร์โค้ดอีกครั้งเพื่อใช้ข้อมูลฉลากกับสูตร")}</span>}
+                    </p>}
+
+                    {barcodeCandidate ? <section className="mt-6 rounded-2xl border border-gray-200 p-4" aria-labelledby="confirm-ingredient-barcode">
+                        <h3 id="confirm-ingredient-barcode" className="font-semibold text-gray-900">{t("ยืนยันสินค้าสำหรับวัตถุดิบนี้")}</h3>
+                        <p className="mt-2 text-sm text-gray-700 wrap-anywhere">{t("สินค้า {name} · บาร์โค้ด {barcode}", { name: barcodeCandidate.name, barcode: barcodeCandidate.barcode_code })}</p>
+                        {barcodeError && <p role="alert" className="mt-2 text-sm text-red-700">{t(barcodeError)}</p>}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button type="button" onClick={confirmBarcode} disabled={isSaving}
+                                className="min-h-11 rounded-full bg-[#B93E25] px-4 text-sm font-semibold text-white disabled:opacity-50">{t(isSaving ? "กำลังบันทึก..." : "ยืนยัน")}</button>
+                            <button type="button" onClick={onCancelBarcode} disabled={isSaving}
+                                className="min-h-11 rounded-full border border-gray-300 px-4 text-sm font-semibold text-gray-700 disabled:opacity-50">{t("ยกเลิก")}</button>
+                        </div>
+                    </section> : !editing && onScanBarcode && <button type="button" onClick={onScanBarcode} disabled={isDeleting}
+                        className="mt-4 min-h-11 w-full flex items-center justify-center gap-2 rounded-full border border-[#B93E25] px-4 text-sm font-semibold text-[#9F351F] disabled:opacity-50">
+                        <Barcode aria-hidden="true" className="w-5 h-5" />{t("สแกนเพื่อผูกบาร์โค้ด")}
+                    </button>}
+
                     {deleteError && (
                         <p role="alert" className="text-sm text-red-700 mt-4 text-center">
                             {t(deleteError)}
                         </p>
                     )}
 
-                    {!editing && <button
+                    {!editing && !barcodeCandidate && <button
                         onClick={handleDelete}
                         disabled={isDeleting}
                         className="w-full mt-6 min-h-11 flex items-center justify-center gap-2 rounded-full text-red-700 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"

@@ -13,7 +13,6 @@ import { QUANTITY_UNITS, ENGLISH_QUANTITY_LABELS } from "../utils/quantityUnits"
 import { useAuth } from "../context/AuthContext";
 
 export default function AddIngredient({
-    userIngredients,
     setUserIngredients,
     onBack,
     activeTab,
@@ -35,7 +34,7 @@ export default function AddIngredient({
     // later rendering <img src="">. Seed with the same static fallback path
     // the backend itself defaults to (UserIngredientCreate.image).
     const [selectedImage, setSelectedImage] = useState(
-        prefill?.image || "http://localhost:8000/images/No-image-available.png",
+        prefill?.image || "/images/No-image-available.png",
     );
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -43,6 +42,8 @@ export default function AddIngredient({
     const [quantityAmount, setQuantityAmount] = useState("");
     const [quantityUnit, setQuantityUnit] = useState("");
     const [saveError, setSaveError] = useState("");
+    const [confirmedName, setConfirmedName] = useState(null);
+    const [barcodeLinkFailed, setBarcodeLinkFailed] = useState(false);
     const fileInputRef = useRef(null);
     const [cropSource, setCropSource] = useState("");
     const [uploadError, setUploadError] = useState("");
@@ -154,8 +155,13 @@ export default function AddIngredient({
         }
     };
 
-    const handleSave = async () => {
+    const barcodeCode = prefill?.barcode_code;
+    const renamedProduct = barcodeCode && name.trim() !== prefill.name.trim();
+    const needsConfirmation = renamedProduct && confirmedName !== name.trim();
+
+    const handleSave = async (withoutBarcode = false) => {
         if (!name.trim() || isSaving || isUploading || cropSource) return;
+        if (needsConfirmation && !withoutBarcode) return;
         setSaveError("");
         // Backend rejects amount <= 0 or > 100000 with a 422 that retrying
         // never fixes -- min="0" on the input still lets someone type 0,
@@ -181,21 +187,25 @@ export default function AddIngredient({
                             category,
                             image: selectedImage,
                             expiryDate,
-                            nutritionData: prefill?.nutrition_data || null,
+                            nutritionData: withoutBarcode ? null : prefill?.nutrition_data,
                             quantityAmount,
                             quantityUnit,
+                            barcodeCode: withoutBarcode ? null : barcodeCode,
                         }),
                     ),
                 },
             );
             const result = await response.json();
-            if (result.status === "success") {
+            if (response.ok && result.status === "success") {
                 // sorted here too — the list only gets re-fetched (and thus
                 // re-sorted server-side) on page load, not on every append
                 setUserIngredients(
-                    sortByExpiry([...userIngredients, result.data]),
+                    (current) => sortByExpiry([...current, result.data]),
                 );
                 onBack(); // Return to previous screen (My Fridge)
+            } else if (!withoutBarcode && barcodeCode && response.status === 502) {
+                setBarcodeLinkFailed(true);
+                setSaveError("ยืนยันข้อมูลสินค้าจากบาร์โค้ดไม่สำเร็จ ลองอีกครั้งหรือบันทึกโดยไม่ผูกบาร์โค้ด");
             } else {
                 console.error("Failed to add ingredient", result.message);
                 setSaveError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
@@ -215,8 +225,9 @@ export default function AddIngredient({
                 <div className="shrink-0 pt-5 pb-6 px-6 flex items-center justify-center relative z-20">
                     <button
                         onClick={cropSource ? closeCrop : onBack}
+                        disabled={isSaving}
                         aria-label={t("กลับ")}
-                        className="page-header-back w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md"
+                        className="page-header-back w-11 h-11 bg-[#EF5A3A] text-white rounded-full flex items-center justify-center shadow-md disabled:opacity-50"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -415,6 +426,14 @@ export default function AddIngredient({
 
                         {/* Nutrition (read-only, from Open Food Facts scan) */}
                         <NutritionBox nutrition={prefill?.nutrition_data} />
+                        {barcodeCode && <p className="text-sm text-gray-700 wrap-anywhere">
+                            {t("สินค้า {name} · บาร์โค้ด {barcode}", { name: prefill.name, barcode: barcodeCode })}
+                        </p>}
+                        {renamedProduct && <label className="flex items-start gap-2 text-sm text-gray-700">
+                            <input type="checkbox" checked={!needsConfirmation}
+                                onChange={(event) => setConfirmedName(event.target.checked ? name.trim() : null)} />
+                            {t("ฉันเปลี่ยนชื่อที่แสดงและยืนยันว่ายังเป็นสินค้าที่สแกน")}
+                        </label>}
                     </div>
 
                 </main>
@@ -427,16 +446,21 @@ export default function AddIngredient({
                     )}
 
                     <button
-                        onClick={handleSave}
-                        disabled={!name.trim() || isSaving || isUploading}
+                        onClick={() => handleSave()}
+                        disabled={!name.trim() || isSaving || isUploading || needsConfirmation}
                         className="w-full min-h-12 bg-[#B93E25] text-white py-3 px-4 rounded-full text-base font-semibold hover:bg-[#9F351F] disabled:opacity-50 transition-colors flex justify-center items-center"
                     >
                         {isSaving ? t("Saving...") : t("Add to My Fridge")}
                     </button>
+                    {(barcodeLinkFailed || needsConfirmation) && <button type="button" onClick={() => handleSave(true)}
+                        disabled={!name.trim() || isSaving || isUploading}
+                        className="mt-2 min-h-11 w-full rounded-full text-sm font-medium text-[#9F351F] disabled:opacity-50">
+                        {t("บันทึกโดยไม่ผูกบาร์โค้ด")}
+                    </button>}
                 </div>
 
                 {/* === Bottom Navigation === */}
-                <BottomMenu activeTab={activeTab} setActiveTab={setActiveTab} />
+                <BottomMenu activeTab={activeTab} setActiveTab={(tab) => { if (!isSaving) setActiveTab(tab); }} />
 
         </PageShell>
     );

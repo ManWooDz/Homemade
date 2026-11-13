@@ -1,6 +1,6 @@
 import unittest
 
-from nutrition.units import GLOBAL_UNIT_GRAMS, resolve_grams, resolve_grams_detailed
+from nutrition.units import GLOBAL_UNIT_GRAMS, resolve_grams, resolve_grams_detailed, resolve_product_quantity
 
 
 class ResolveGramsTests(unittest.TestCase):
@@ -109,6 +109,28 @@ class ResolveGramsTests(unittest.TestCase):
         for unit, portions in ((True, None), ([], None), ("", None), ("กรัม", []), ("กรัม", "bad")):
             with self.subTest(unit=unit, portions=portions):
                 self.assertIsNone(resolve_grams(2, unit, portions))
+
+
+class ProductQuantityTests(unittest.TestCase):
+    def test_product_quantities_keep_mass_and_volume_distinct(self):
+        for quantity, unit, expected in (
+            (0.13, "กก.", (130, "g")),
+            (0.5, "ลิตร", (500, "ml")),
+            (2, "ช้อนโต๊ะ", (30, "ml")),
+            (2, "ช้อนชา", (10, "ml")),
+            (1, "ถ้วยตวง", (240, "ml")),
+            (250, "mL", (250, "ml")),
+            (2, "mg", (0.002, "g")),
+            (0, "กรัม", (0, "g")),
+            (2, "ฟอง", None),
+            (2, "ถ้วย", None),
+            (float("inf"), "กรัม", None),
+            (1e308, "กก.", None),
+            (True, "g", None),
+            (2, [], None),
+        ):
+            with self.subTest(quantity=quantity, unit=unit):
+                self.assertEqual(resolve_product_quantity(quantity, unit), expected)
 
 
 if __name__ == "__main__":
