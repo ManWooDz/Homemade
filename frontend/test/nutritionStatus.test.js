@@ -100,6 +100,15 @@ test("the actual shared recipe body displays partial status for cooking/history 
     assert.ok(html.includes("View calculation details"));
 });
 
+test("ordinary recipe evidence discloses the raw potato weight assumption", () => {
+    setLocale("en");
+    const html = render({ nutrition: macros, computed_nutrition: macros, nutrition_partially_estimated: true,
+        nutrition_ingredient_evidence: [{ ingredient: "potato", source: "INMU", source_ref: "B11",
+            status: "estimated", reason: "assumed_raw_potato_weight" }] });
+    assert.ok(html.includes("B11"));
+    assert.ok(html.includes("Uses raw potato data and assumes the potato was weighed before cooking"));
+});
+
 for (const locale of ["th", "en"]) {
     test(`base calculations use fresh values and never claim an AI estimate in ${locale}`, () => {
         setLocale(locale);

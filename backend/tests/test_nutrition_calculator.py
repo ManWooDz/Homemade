@@ -39,6 +39,33 @@ class ComputeRecipeNutritionTests(unittest.TestCase):
         self.assertTrue(result.partially_estimated)
         self.assertEqual(result.partially_estimated_reasons, ["DB identity/composition source unverified: กุ้ง"])
 
+    def test_ordinary_recipe_keeps_its_numeric_policy_and_reports_per_item_evidence(self):
+        result = compute_recipe_nutrition(self.db, ["กุ้ง 2 dL", "อะโวคาโด 1 ลูก"], [], 2, self.no_op_estimator)
+        self.assertEqual(result.nutrition["calories"], 90)
+        shrimp, avocado = result.ingredient_evidence
+        self.assertEqual((shrimp["source"], shrimp["method"], shrimp["reason"]),
+                         ("INMU", "water_density_approximation", "quantity_conversion_unverified"))
+        self.assertEqual(shrimp["converted_quantity"], {"amount": 200, "unit": "g"})
+        self.assertEqual((avocado["status"], avocado["reason"]), ("incomplete", "quantity_unresolved"))
+
+    def test_generic_potato_uses_curated_raw_alias_with_explicit_assumption(self):
+        import json
+        from pathlib import Path
+        from nutrition.curated_aliases import apply_curated_aliases
+
+        potato = self._add("มันฝรั่ง, ดิบ", "มันฝรั่ง, ดิบ", source_ref="B11",
+                           calories=70, protein_g=2.5, carbs_g=14.6, fat_g=0.2)
+        manifest = Path(__file__).resolve().parents[1] / "nutrition" / "data" / "curated_aliases.json"
+        rows = [row for row in json.loads(manifest.read_text(encoding="utf-8")) if row["food_code"] == "B11"]
+        self.assertEqual({row["alias"] for row in rows}, {"มันฝรั่ง", "potato"})
+        apply_curated_aliases(self.db, rows)
+        result = compute_recipe_nutrition(self.db, ["มันฝรั่ง 400 กรัม"], [], 2, self.no_op_estimator)
+        self.assertEqual(result.nutrition["calories"], 140)
+        self.assertTrue(result.partially_estimated)
+        evidence, = result.ingredient_evidence
+        self.assertEqual((evidence["source_ref"], evidence["reason"]), (potato.source_ref, "assumed_raw_potato_weight"))
+        self.no_op_estimator.estimate.assert_not_called()
+
     def test_product_label_volume_preserves_the_recipe_unit_and_per_serving_amount(self):
         label = {"barcode": "8859568700769", "product_name": "Milk A", "sets": [{
             "label_source": "packaging", "carbohydrate_kind": "total", "basis": {"quantity": 100, "unit": "ml"},

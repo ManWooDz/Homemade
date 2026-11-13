@@ -13,6 +13,7 @@ _MASS_UNIT_GRAMS: dict[str, float] = {
 
 _VOLUME_UNIT_MILLILITERS: dict[str, float] = {
     "มล.": 1.0, "มิลลิลิตร": 1.0, "ลิตร": 1000.0,
+    "cl": 10.0, "dl": 100.0,
     "ถ้วยตวง": 240.0,
     "ช้อนโต๊ะ": 15.0,
     "ช้อนชา": 5.0,
@@ -22,7 +23,7 @@ GLOBAL_UNIT_GRAMS = {**_MASS_UNIT_GRAMS, **_VOLUME_UNIT_MILLILITERS}
 _PRODUCT_MASS_UNITS = {
     **_MASS_UNIT_GRAMS, "g": 1.0, "kg": 1000.0, "mg": 0.001, "μg": 0.000001, "mcg": 0.000001,
 }
-_PRODUCT_VOLUME_UNITS = {**_VOLUME_UNIT_MILLILITERS, "ml": 1.0, "cl": 10.0, "dl": 100.0, "l": 1000.0}
+_PRODUCT_VOLUME_UNITS = {**_VOLUME_UNIT_MILLILITERS, "ml": 1.0, "l": 1000.0}
 
 
 @dataclass(frozen=True)

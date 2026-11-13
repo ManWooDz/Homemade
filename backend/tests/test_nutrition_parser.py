@@ -21,6 +21,12 @@ class ParseIngredientStringTests(unittest.TestCase):
         self.assertEqual(result.quantity, 30.0)
         self.assertEqual(result.unit, "มล.")
 
+    def test_latin_volume_units(self):
+        for suffix, unit in (("mL", "มล."), ("cL", "cl"), ("dL", "dl"), ("L", "ลิตร")):
+            with self.subTest(suffix=suffix):
+                item = parse_ingredient_string(f"น้ำ 0.2 {suffix}")
+                self.assertEqual((item.name, item.quantity, item.unit, item.parse_status), ("น้ำ", 0.2, unit, "ok"))
+
     def test_decimal_quantity(self):
         self.assertEqual(parse_ingredient_string("น้ำมัน 1.5 ช้อนโต๊ะ").quantity, 1.5)
 
@@ -134,7 +140,7 @@ class ParseIngredientStringTests(unittest.TestCase):
                 self.assertEqual(result.parse_status, "unparsed")
 
     def test_unrequested_ascii_units_stay_unparsed(self):
-        for unit in ("G", "KG", "Mg", "ml", "lb", "grams"):
+        for unit in ("G", "KG", "Mg", "fl oz", "lb", "grams"):
             with self.subTest(unit=unit):
                 self.assertEqual(parse_ingredient_string(f"sample 200{unit}").parse_status, "unparsed")
 

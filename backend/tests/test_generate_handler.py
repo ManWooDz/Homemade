@@ -178,6 +178,22 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(generator.call_count, 2)
                 self.assertTrue(generator.call_args.kwargs["feedback"].startswith(prefix))
 
+    async def test_retry_feedback_is_preserved_without_logging_request_or_rejected_text(self):
+        request = self.make_request()
+        request.preferences["extra"] = "private-free-text"
+        request.recipe["name"] = "private-base-name"
+        request.ingredients.append({"name": "private-selected-food"})
+        invalid = deepcopy(VALID_RECIPE)
+        invalid["adjusted_ingredients"].append("private-rejected-food 5 กรัม")
+        with patch("main.call_agentic_llm", side_effect=[invalid, deepcopy(VALID_RECIPE)]) as generator, \
+                patch("builtins.print") as print_log:
+            response = await call_handler(request)
+        self.assertEqual(response["status"], "success")
+        self.assertIn("private-rejected-food", generator.call_args.kwargs["feedback"])
+        logged = str(print_log.call_args_list)
+        for private in ("private-free-text", "private-base-name", "private-selected-food", "private-rejected-food"):
+            self.assertNotIn(private, logged)
+
     async def test_unresolved_identity_stops_after_three_and_does_not_save(self):
         invalid = deepcopy(VALID_RECIPE)
         invalid["adjusted_ingredients"].append("กุ้ง 100 กรัม")
@@ -208,8 +224,7 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         request, candidate = self.basil_egg_case()
         self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
         with patch("main.call_agentic_llm", return_value=candidate) as generator, \
-             patch("nutrition.calculator.match_ingredient", return_value=synthetic_match(alias="หมูสับ")) as lookup, \
-             patch("builtins.print") as print_log:
+             patch("nutrition.calculator.match_ingredient", return_value=synthetic_match(alias="หมูสับ")) as lookup:
             response = await call_handler(request)
         self.assertEqual(response["status"], "success")
         generator.assert_called_once()
@@ -219,7 +234,8 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["nutrition"], candidate["nutrition"])
         self.assertIn("computed_nutrition", data)
         self.assertNotIn("พริกขี้หนู", [call.args[1] for call in lookup.call_args_list])
-        self.assertTrue(any("quantity not determined: พริกขี้หนู 5-7 เม็ด" in str(call) for call in print_log.call_args_list))
+        pepper = next(item for item in data["nutrition_ingredient_evidence"] if item["raw"] == "พริกขี้หนู 5-7 เม็ด")
+        self.assertEqual(pepper["reason"], "quantity_unresolved")
         self.mock_save_history.assert_called_once()
 
     async def test_missing_egg_feedback_can_be_corrected_without_exhaustion(self):
@@ -424,16 +440,15 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_real_calculator_provenance_reaches_existing_partial_api_branch(self):
         self.mock_compute_nutrition.side_effect = compute_recipe_nutrition
         for basis, derivation, expected_reason, expected_calories in (
-            ("100g", None, "source unverified", 107.5),
-            ("100g", {"proxy": "synthetic substitute"}, "proxy composition", 107.5),
-            ("100g", {"energy_kcal": "atwater"}, "project-filled energy_kcal (atwater)", 107.5),
-            ("100ml", None, "unsupported macro basis", 0),
+            ("100g", None, "source_unverified", 107.5),
+            ("100g", {"proxy": "synthetic substitute"}, "proxy_composition", 107.5),
+            ("100g", {"energy_kcal": "atwater"}, "derived_macros", 107.5),
+            ("100ml", None, "unsupported_nutrition_basis", 0),
         ):
             with self.subTest(basis=basis, derivation=derivation):
                 match = NutritionMatch(1, MacroValues(100, 5, 10, 1), "INMU", "synthetic", derivation, None, basis)
                 with patch("nutrition.calculator.match_ingredient", return_value=match), \
-                        patch("main.call_agentic_llm", return_value=deepcopy(VALID_RECIPE)), \
-                        patch("builtins.print") as print_log:
+                        patch("main.call_agentic_llm", return_value=deepcopy(VALID_RECIPE)):
                     response = await call_handler(self.make_request())
                 data = response["data"]
                 self.assertEqual(response["status"], "success")
@@ -441,7 +456,9 @@ class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(data["nutrition"], VALID_RECIPE["nutrition"])
                 self.assertEqual(data["llm_estimated_nutrition"], VALID_RECIPE["nutrition"])
                 self.assertEqual(data["computed_nutrition"]["calories"], expected_calories)
-                self.assertTrue(any(expected_reason in str(call) for call in print_log.call_args_list))
+                self.assertIn(expected_reason, [item.get("reason") for item in data["nutrition_ingredient_evidence"]])
+                history = self.mock_save_history.call_args.args[3]
+                self.assertEqual(history["nutrition_ingredient_evidence"], data["nutrition_ingredient_evidence"])
 
     async def test_engine_failure_keeps_llm_guess_and_flags_instead_of_erroring(self):
         self.mock_compute_nutrition.side_effect = RuntimeError("db exploded")

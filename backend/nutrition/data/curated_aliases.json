@@ -1,6 +1,12 @@
 [
   {"alias": "กุ้ง", "food_code": "G4", "note": "กุ้งก้ามกราม, สด -- fresh, raw default"},
   {"alias": "กระเทียม", "food_code": "N2", "note": "กระเทียม, สด -- fresh, raw default"},
+  {"alias": "มันฝรั่ง", "food_code": "B11", "note": "Potato, raw -- assumes the quantity is weighed before cooking"},
+  {"alias": "potato", "food_code": "B11", "note": "Potato, raw -- assumes the quantity is weighed before cooking"},
+  {"alias": "หมูสับ", "food_code": "2514745", "note": "USDA Pork, ground, raw -- assumes the quantity is weighed before cooking"},
+  {"alias": "เนื้อหมูบด", "food_code": "2514745", "note": "USDA Pork, ground, raw -- assumes the quantity is weighed before cooking"},
+  {"alias": "เต้าหู้แข็ง", "food_code": "172475", "note": "USDA Tofu, raw, firm, prepared with calcium sulfate -- approximate composition for firm tofu"},
+  {"alias": "แครอท", "food_code": "170393", "note": "USDA Carrots, raw -- assumes the quantity is weighed before cooking"},
   {"alias": "กะปิ", "food_code": "N43", "note": "กะปิกุ้ง, คุณภาพดี"},
   {"alias": "ไข่ไก่", "food_code": "H19", "note": "ไข่ไก่, ทั้งฟอง, ดิบ (2001-2010); portion ฟอง=50 g from a user-supplied standard home-cooking unit-conversion reference (not a USDA/INMU citation)", "portion_grams": {"ฟอง": 50.0}},
   {"alias": "ข้าวสวย", "food_code": "A11", "note": "ข้าวเจ้า, สุก -- cooked form is what this name means"},

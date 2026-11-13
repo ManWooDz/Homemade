@@ -10,8 +10,9 @@ _RANGE_RE = re.compile(r"\d+\s*-\s*\d+")
 _NUMERIC_COMMA_RE = re.compile(r"\d\s*,\s*\d")
 _BAD_AMOUNT_PREFIX_RE = re.compile(r"(?:[+\-−–/]\s*|\d[.,]\s*|(?:^|\s)\d+(?:\.\d+)?[eE][+\-]?\s*)$")
 _MASS_SUFFIXES = {"g": "กรัม", "kg": "กิโลกรัม", "mg": "มิลลิกรัม"}
+_VOLUME_SUFFIXES = {"ml": "มล.", "cl": "cl", "dl": "dl", "l": "ลิตร"}
 _QUANTITY_UNIT_RE = re.compile(
-    r"^(?P<name>.+?)\s+(?P<quantity>\d+/\d+|\d+(?:\.\d+)?)\s*(?P<unit>kg|mg|g|[ก-๙\.]+)\s*$"
+    r"^(?P<name>.+?)\s+(?P<quantity>\d+/\d+|\d+(?:\.\d+)?)\s*(?P<unit>kg|mg|g|(?i:[mcd]?l)|[ก-๙\.]+)\s*$"
 )
 
 
@@ -71,4 +72,5 @@ def parse_ingredient_string(raw: str) -> ParsedIngredient:
         return ParsedIngredient(raw=raw, name=core_text, quantity=None, unit=None, parse_status="unparsed")
 
     unit = match.group("unit")
-    return ParsedIngredient(raw=raw, name=name, quantity=quantity, unit=_MASS_SUFFIXES.get(unit, unit), parse_status="ok")
+    unit = _VOLUME_SUFFIXES.get(unit.lower(), _MASS_SUFFIXES.get(unit, unit))
+    return ParsedIngredient(raw=raw, name=name, quantity=quantity, unit=unit, parse_status="ok")

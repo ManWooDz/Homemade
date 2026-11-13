@@ -979,7 +979,7 @@ def save_generate_history(db, user, request, final_output):
             db.rollback()
         except Exception:
             pass
-        _print_safe(f"[History] could not save generate history: {e!r}")
+        _print_safe(f"[History] could not save generate history: {type(e).__name__}")
         return None
 
 
@@ -1136,13 +1136,14 @@ def run_generation_with_validation(generate_fn, ingredients, ingredients_name_on
 
         if isinstance(recipe, dict) and "error" in recipe:
             attempts_log.append({"attempt": attempt, "status": "error", "reason": recipe["error"]})
+            print("Recipe generation failed: provider_error")
             return recipe, attempts_log
 
         result = validate_recipe(recipe, ingredients_name_only, user_prefs, resolved_blocks=resolved_blocks)
         if result["status"] == "fail":
             feedback = result["reason"]
             attempts_log.append({"attempt": attempt, "status": "fail", "reason": feedback})
-            _print_safe(f"Recipe rejected: {feedback}")
+            print("Recipe rejected: validation_failed")
         else:
             attempts_log.append({"attempt": attempt, "status": "pass", "reason": None})
             print("Recipe approved")
@@ -1251,9 +1252,7 @@ async def generate_recipe_text(
         
         base_recipe = request.recipe
         
-        print(f"\n[1] Text Request | Prefs: {user_prefs}")
-        print(f"[2] Text Ingredients: {ingredients_list_for_llm}")
-        print(f"[3] Base Recipe: {base_recipe.get('name', 'Unknown')}")
+        print(f"[Recipe] generation started; ingredients={len(ingredients_list_for_llm)}")
 
         resolved_blocks = resolve_blocks_for_request(user_prefs)
         if not allergy_blocks_ready(user_prefs, resolved_blocks):
@@ -1340,7 +1339,7 @@ async def generate_recipe_text(
                 # as fully grounded"). The computed value is still exposed
                 # separately as `computed_nutrition`.
                 final_output["nutrition_partially_estimated"] = True
-                print(f"[Nutrition Engine] partially estimated: {nutrition_result.partially_estimated_reasons}")
+                print(f"[Nutrition Engine] partially_estimated; reasons={len(nutrition_result.partially_estimated_reasons)}")
             else:
                 # Sanity bound on the COMPUTED result -- log and flag only,
                 # never retried (a computation bug is not the LLM's mistake
@@ -1350,13 +1349,13 @@ async def generate_recipe_text(
                 # leave `nutrition` as the LLM's guess.
                 computed_calories = nutrition_result.nutrition.get("calories", 0)
                 if computed_calories < 0 or computed_calories > 3000:
-                    print(f"[Nutrition Engine] sanity check failed on computed result: {nutrition_result.nutrition}")
+                    print("[Nutrition Engine] sanity_check_failed")
                     final_output["nutrition_partially_estimated"] = True
                 else:
                     final_output["nutrition"] = nutrition_result.nutrition
                     final_output["nutrition_partially_estimated"] = False
         except Exception as e:
-            print(f"[Nutrition Engine] failed, keeping LLM's original guess: {e}")
+            print(f"[Nutrition Engine] calculation_failed: {type(e).__name__}")
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition
             final_output["nutrition_partially_estimated"] = True
 

@@ -21,7 +21,15 @@ const INGREDIENT_SOURCES = {
     hardcoded_zero: "ค่าคงที่โดยประมาณ", INMU: "INMU", USDA: "USDA",
 };
 const INGREDIENT_STATUSES = { calculated: "คำนวณแล้ว", estimated: "ยังมีค่าประมาณ", incomplete: "ข้อมูลไม่ครบ" };
-const PRODUCT_REASONS = {
+const INGREDIENT_REASONS = {
+    ...BASE_REASONS,
+    assumed_raw_potato_weight: "ใช้ข้อมูลมันฝรั่งดิบโดยสมมติว่าชั่งก่อนปรุง",
+    quantity_unresolved: "ยังแปลงปริมาณในสูตรเป็นหน่วยที่ใช้คำนวณไม่ได้",
+    quantity_conversion_unverified: "ใช้การแปลงปริมาณโดยประมาณ",
+    unsupported_nutrition_basis: "ฐานปริมาณของแหล่งข้อมูลยังใช้คำนวณรายการนี้ไม่ได้",
+    macro_incomplete: "ข้อมูลสารอาหารหลักไม่ครบ",
+    composition_unavailable: "ยังไม่มีค่าประมาณโภชนาการที่ใช้ได้",
+    composition_estimated: "ใช้ค่าโภชนาการที่ AI ประมาณจากวัตถุดิบ",
     product_label_unavailable: "ไม่มีข้อมูลฉลากที่ใช้คำนวณได้",
     product_label_incomplete: "ข้อมูลสารอาหารบนฉลากไม่ครบ",
     product_quantity_unresolved: "ปริมาณในสูตรไม่ชัดเจนพอที่จะใช้ข้อมูลฉลาก",
@@ -126,7 +134,7 @@ export default function RecipeNutrition({ recipe, compact = false }) {
                                     {typeof item.conversion_evidence?.source_url === "string" && item.conversion_evidence.source_url.startsWith("https://") &&
                                         <a href={item.conversion_evidence.source_url} target="_blank" rel="noreferrer" className="underline underline-offset-2">{t("แหล่งอ้างอิงการแปลงหน่วย")}</a>}
                                 </>}
-                                {Object.hasOwn(PRODUCT_REASONS, item.reason) && <p>{t(PRODUCT_REASONS[item.reason])}</p>}
+                                {Object.hasOwn(INGREDIENT_REASONS, item.reason) && <p>{t(INGREDIENT_REASONS[item.reason])}</p>}
                             </li>)}
                         </ul>
                     </div> : <p>{t("ระบบไม่ได้บันทึกเหตุผลหรือแหล่งข้อมูลรายวัตถุดิบไว้ในรายการนี้")}</p>}
