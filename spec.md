@@ -1,5 +1,16 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Source review ชาชู/ราเมน (2026-11-18 Bangkok)
+
+- หลังอนุมัติ เพิ่มสอง proxy notes และ staged metadata-only backfill ใน `seed_usda.py` แล้ว คง current-row counters, note เดิม, reviewed/malformed metadata และรอ validation ทั้ง batch ก่อนเขียน เทสต์ Red จาก missing flags แล้ว Green seed/importer 24/24 และ calculator 49/49 guard 0; source-based SQLite proof ผ่านพร้อม label precedence
+- PostgreSQL เพิ่มเฉพาะ derivation.proxy ใน row 1015/1016 หลังตรวจ bindings/fingerprint ซ้ำ และอ่านยืนยันด้วย read-only session ใหม่ เปลี่ยนเพียงสอง keys ที่อนุมัติ ตัวเลข/source/portions/aliases เดิมทุกแถวคงอยู่ Alias count 2,069 คงเดิม fingerprint หลัง metadata `f0fdc7010f63e3e1412abea27612265b776a6d921142b796b3afc091f53f0fc1` หลักฐาน `tmp/chashu-ramen-proxy-live-20261118.json` ทั้งฐาน/สูตรที่ resolve ได้แสดง proxy_composition และฉลากยังมาก่อน ไม่มี Gemini calls
+- การแก้รอบนี้เป็นการแจ้งที่มาและรักษา marker ไม่ใช่ source replacement; ค่าโภชนาการยังเป็น proxy และข้อจำกัด parser วงเล็บยังค้างแยก ไม่ลดจำนวนรายการ source review ที่ค้างจากการติด marker อย่างเดียว
+- Verification source จริง: backend offline ทั้งชุด 1,142 รายการ ผ่าน 1,140 ข้าม 2 guard 0 ใน 129.804s exit 0 (`tmp/proxy-backend-final-20261118.log`) diff whitespace check ผ่าน อัปเดตคำอธิบายเหตุผลเดิมใน data contract แล้ว ไม่มี frontend/API shape/schema ใหม่ งาน proxy metadata รอบนี้เสร็จตามร่าง เตรียมส่งมอบ source/tests/notes ผ่าน commit/push
+- ผู้ใช้ให้ทำต่อ ตรวจ row 1016/USDA 167812 (หมูสามชั้นดิบ) และ row 1015/171177 (dry ramen soup) แบบ read-only ยังไม่มี proxy marker และไม่ protected; alias count 2,069/fingerprint nutrition rows ตรงกับชุดก่อน ค้น USDA จำกัดสี่คำค้นและอ่านทางเลือกสองแถวเพิ่ม พบตัวเลือก FNDDS ที่ยังเป็นส่วนผสมคนละแบบ จึงยังไม่มีหลักฐานพอให้เปลี่ยนตัวเลขเป็นแหล่งตรงทันที
+- เสนอเพิ่มสอง proxy notes ใน seed และเติมเฉพาะ marker ที่ขาดเมื่อ import current USDA rows แบบไม่แตะ numeric/portion/aliases โดยสงวน reviewed metadata/note เดิมและเตรียม updates ก่อนเขียนหลัง validation ทั้ง batch พร้อมเพิ่ม derivation.proxy เฉพาะสองแถวใน PostgreSQL การทดลอง SQLite ยืนยันค่าฐานเดิมคงอยู่ แต่เพิ่มเหตุผล proxy_composition และฉลากยังมาก่อน ยังไม่ถือว่าแก้ความคลาดเคลื่อนเชิงตัวเลขหรือปิด source replacement
+- ร่าง backend/DB และหลักฐานอยู่ `docs/chashu-ramen-source-review-2026-11-18.md`, `tmp/chashu-ramen-proxy-preview-20261118.json`, `tmp/chashu-ramen-proxy-preflight-20261118.json` ยังไม่แก้ backend/DB รอบนี้ รออนุมัติ; พบ parser ชื่อ canonical มีวงเล็บเป็นข้อจำกัดแยก ใช้ explicit-quantity helper ตรวจฐานโดยไม่อ้างว่าทดสอบ free-text ชาชูผ่าน
+- Baseline รอบ source review: seed/importer 18/18 และ calculator 48/48 guard 0; ส่งคำขออนุมัติแผนที่ระบุชัดว่าเป็น proxy disclosure/metadata repair โดยยังไม่แก้ความคลาดเคลื่อนเชิงตัวเลข
+
 ## ทบทวน nutrition alias ที่เหลือ 36 ชื่อ (2026-11-18 Bangkok)
 
 - ผู้ใช้อนุมัติ backend/DB ของสิบชื่อแล้ว เพิ่มใน source manifest และ PostgreSQL สำเร็จ (2,059 → 2,069) ตรวจ snapshot/เจ้าของก่อนเขียน และ read-only session ใหม่หลัง commit ยืนยันทั้งสิบ mapping ถูกต้อง Alias เดิม 2,059 แถวและ nutrition rows ทุกแถวไม่เปลี่ยน fingerprint ยังคง `e4be07b28be6b3ac11afa4fba24b7307277ccbae3372cb5d7a5889646aca1a06` ไม่มี provider call จากตัวคำนวณหรือการแก้ History เก่า

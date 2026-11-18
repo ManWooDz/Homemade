@@ -1,5 +1,10 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Keep canonical seed quantities separate from free-text parser assumptions (2026-11-18):**
+- what happened: the first chashu source-preview assertion failed because `pork belly (chashu) 60 กรัม` is unparsed by the current free-text grammar, before the intended metadata comparison.
+- root cause: treated a canonical seed name with parentheses as a supported generated ingredient line instead of using the explicit quantities already stored for the base recipe.
+- correct behavior: inspect parser output at the failing boundary, use `compute_quantities_nutrition` for seed gram records, and test generated text with supported syntax separately. Record the parenthesized-name parser limitation as separate scope; do not bypass it and claim end-to-end text coverage.
+
 **Bound live previews and filter candidates by every alias owner (2026-11-18):**
 - what happened: a read-only nutrition preview waited on the stopped PostgreSQL container without a connection timeout; the source-review precondition then caught an already-owned ต้นหอม alias in a manually selected candidate list before any API call or write.
 - root cause: database readiness and each candidate's actual alias-owner state were assumed from earlier session context rather than rechecked.

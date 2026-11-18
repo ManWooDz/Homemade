@@ -54,6 +54,8 @@ USDA_FDC_IDS: dict[str, int] = {
 }
 
 USDA_PROXY_NOTES: dict[str, str] = {
+    "pork belly (chashu)": "raw pork belly used for cooked, seasoned chashu; cooking and seasoning are not modeled",
+    "ramen noodles": "dry instant ramen soup used for generic ramen noodles; fresh/cooked noodle state and seasoning can differ",
     "cherry tomatoes": "grape tomatoes, raw",
     "tonkotsu broth": "generic soup broth",
     "soft-boiled egg": "hard-boiled whole egg",
@@ -188,11 +190,17 @@ def _row_is_current(row: IngredientNutrition, fdc_id: int) -> bool:
 def import_usda(db, session, api_key: str, food_ids: dict[str, int]) -> dict:
     imported = refreshed = skipped_existing = 0
     pending: list[tuple[str, int, IngredientNutrition | None]] = []
+    proxy_metadata_updates: list[tuple[IngredientNutrition, dict]] = []
 
     for ingredient_name, fdc_id in food_ids.items():
         existing = db.query(IngredientNutrition).filter_by(ingredient_name=ingredient_name).first()
         if existing:
             if _row_is_current(existing, fdc_id):
+                derivation = existing.derivation
+                if (ingredient_name in USDA_PROXY_NOTES and not has_reviewed_metadata(existing)
+                        and (derivation is None or isinstance(derivation, dict))
+                        and "proxy" not in (derivation or {})):
+                    proxy_metadata_updates.append((existing, {**(derivation or {}), "proxy": USDA_PROXY_NOTES[ingredient_name]}))
                 skipped_existing += 1
             elif existing.source == "USDA":
                 if has_reviewed_metadata(existing):
@@ -220,6 +228,10 @@ def import_usda(db, session, api_key: str, food_ids: dict[str, int]) -> dict:
     for ingredient_name, fdc_id, existing in pending:
         detail = details[fdc_id]
         prepared.append((ingredient_name, fdc_id, existing, detail, _required_macros(detail)))
+
+    # Defer metadata repairs until every pending row has passed validation.
+    for row, derivation in proxy_metadata_updates:
+        row.derivation = derivation
 
     for ingredient_name, fdc_id, existing, detail, macros in prepared:
         print(f"  USDA pinned: '{ingredient_name}' -> '{detail.get('description')}' (fdcId={fdc_id})")

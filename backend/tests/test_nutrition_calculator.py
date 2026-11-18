@@ -6,12 +6,40 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from database.models import Base, IngredientNutrition, IngredientNutritionAlias
-from nutrition.calculator import compute_from_quantities, compute_recipe_nutrition
+from nutrition.calculator import compute_from_quantities, compute_quantities_nutrition, compute_recipe_nutrition
 from nutrition.lookup import MacroValues, NutritionMatch
+from nutrition.seed_usda import USDA_PROXY_NOTES
 from test_nutrition_evidence import synthetic_match
 
 
 class ComputeRecipeNutritionTests(unittest.TestCase):
+    def test_chashu_ramen_proxy_reasons_preserve_totals_and_product_label_precedence(self):
+        for name, source_ref in [("ramen noodles", "171177"), ("pork belly (chashu)", "167812")]:
+            self.assertIn(name, USDA_PROXY_NOTES)
+            row = self._add(name, name, calories=100, protein_g=10, carbs_g=12, fat_g=2)
+            row.source, row.source_ref = "USDA", source_ref
+            row.derivation = {"proxy": USDA_PROXY_NOTES[name]}
+        self.db.commit()
+        base = compute_quantities_nutrition(self.db, [
+            {"name": "ramen noodles", "quantity_g": 100},
+            {"name": "pork belly (chashu)", "quantity_g": 100}], 1)
+        self.assertEqual(base.nutrition["calories"], 200)
+        self.assertIn("proxy_composition", base.partially_estimated_reasons)
+        raw = "ramen noodles 100 กรัม"
+        generated = compute_recipe_nutrition(self.db, [raw], [], 1, self.no_op_estimator)
+        self.assertEqual(generated.nutrition["calories"], 100)
+        self.assertEqual(generated.protein_status, "estimated")
+        self.assertEqual(generated.ingredient_evidence[0]["reason"], "proxy_composition")
+        label = {"barcode": "8859568700769", "product_name": "Synthetic fixture", "sets": [{
+            "label_source": "packaging", "carbohydrate_kind": "total", "basis": {"quantity": 100, "unit": "g"},
+            "macros": {"calories": 60, "protein_g": 3, "carbs_g": 6, "fat_g": 2}}]}
+        selected = compute_recipe_nutrition(self.db, [raw], [], 1, self.no_op_estimator, fridge_context={raw: (label, None)})
+        self.assertEqual(selected.nutrition["calories"], 60)
+        self.assertEqual(selected.protein_status, "calculated")
+        self.assertEqual(selected.ingredient_evidence[0]["source"], "product_label")
+        self.assertFalse(selected.partially_estimated)
+        self.no_op_estimator.estimate.assert_not_called()
+
     def test_protein_completeness_is_independent_of_other_macros_and_subtotals(self):
         self._add("fixture incomplete calories", "เต้าหู้", protein_g=20, carbs_g=1, fat_g=1)
         for lines, status, protein in (

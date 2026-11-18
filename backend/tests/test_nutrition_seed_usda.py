@@ -82,6 +82,85 @@ class ImportUsdaTests(unittest.TestCase):
     def tearDown(self):
         self.db.close()
 
+    def _current_ramen(self, derivation):
+        row = IngredientNutrition(ingredient_name="ramen noodles", unit_basis="100g", calories=85.0,
+                                  protein_g=20.1, carbs_g=0.2, fat_g=0.5, source="USDA", source_ref="171177",
+                                  portion_grams={"ถ้วย": 55.0}, derivation=deepcopy(derivation))
+        self.db.add(row)
+        self.db.flush()
+        self.db.add(IngredientNutritionAlias(alias="ramen noodles", ingredient_nutrition_id=row.id))
+        self.db.commit()
+        return row
+
+    def test_fresh_chashu_and_ramen_imports_disclose_preparation_mismatch(self):
+        for name, fdc_id, expected in [("pork belly (chashu)", 167812, "raw pork belly"),
+                                       ("ramen noodles", 171177, "dry instant ramen soup")]:
+            with self.subTest(name=name):
+                detail = {**deepcopy(_DETAIL_RESPONSE), "fdcId": fdc_id, "description": "synthetic source"}
+                import_usda(self.db, _fake_session([detail]), "fake-key", {name: fdc_id})
+                row = self.db.query(IngredientNutrition).filter_by(ingredient_name=name).one()
+                self.assertIn(expected, row.derivation.get("proxy", ""))
+                self.assertEqual(row.calories, 85.0)
+                self.assertEqual(row.source_ref, str(fdc_id))
+
+    def test_current_proxy_backfill_preserves_other_fields_and_is_idempotent_without_api(self):
+        row = self._current_ramen({"usda_description": "synthetic source", "retained": "custom metadata"})
+        before = _snapshot(self.db)
+        session = _fake_session([])
+        result = import_usda(self.db, session, "fake-key", {"ramen noodles": 171177})
+        self.assertEqual(result, {"imported": 0, "refreshed": 0, "skipped_existing": 1})
+        self.assertIn("dry instant ramen soup", row.derivation.get("proxy", ""))
+        after = _snapshot(self.db)
+        after[0][0]["derivation"].pop("proxy")
+        self.assertEqual(after, before)
+        repaired = _snapshot(self.db)
+        import_usda(self.db, session, "fake-key", {"ramen noodles": 171177})
+        self.assertEqual(_snapshot(self.db), repaired)
+        session.get.assert_not_called()
+
+    def test_current_proxy_backfill_accepts_empty_metadata(self):
+        row = self._current_ramen(None)
+        session = _fake_session([])
+        import_usda(self.db, session, "fake-key", {"ramen noodles": 171177})
+        self.assertIn("dry instant ramen soup", (row.derivation or {}).get("proxy", ""))
+        self.assertEqual(set(row.derivation), {"proxy"})
+        session.get.assert_not_called()
+
+    def test_proxy_backfill_preserves_existing_notes_review_markers_and_malformed_metadata(self):
+        row = self._current_ramen({})
+        for metadata in ({"proxy": "retain custom note"}, {"proxy": None}, *_REVIEW_METADATA, "legacy", ["legacy"]):
+            with self.subTest(metadata=metadata):
+                row.derivation = deepcopy(metadata)
+                self.db.commit()
+                before = _snapshot(self.db)
+                session = _fake_session([])
+                import_usda(self.db, session, "fake-key", {"ramen noodles": 171177})
+                self.assertEqual(_snapshot(self.db), before)
+                session.get.assert_not_called()
+
+    def test_proxy_metadata_waits_for_entire_batch_macro_validation(self):
+        self._current_ramen({"usda_description": "synthetic source"})
+        before = _snapshot(self.db)
+        broken = deepcopy(_DETAIL_RESPONSE)
+        broken["foodNutrients"] = [entry for entry in broken["foodNutrients"] if entry["nutrient"]["name"] != "Protein"]
+        with self.assertRaisesRegex(ValueError, "missing required macros"):
+            import_usda(self.db, _fake_session([broken]), "fake-key", {"ramen noodles": 171177, "new food": 12345})
+        self.db.commit()
+        self.assertEqual(_snapshot(self.db), before)
+
+    def test_proxy_metadata_waits_for_protected_refresh_preflight(self):
+        self._current_ramen({"usda_description": "synthetic source"})
+        self.db.add(IngredientNutrition(ingredient_name="reviewed food", source="USDA", source_ref="stale",
+                                       derivation={"nutrition_evidence": None}))
+        self.db.commit()
+        before = _snapshot(self.db)
+        session = _fake_session([])
+        with self.assertRaisesRegex(ValueError, "protected"):
+            import_usda(self.db, session, "fake-key", {"ramen noodles": 171177, "reviewed food": 12345})
+        self.db.commit()
+        self.assertEqual(_snapshot(self.db), before)
+        session.get.assert_not_called()
+
     def test_imports_matched_food_using_kcal_not_kj(self):
         result = import_usda(self.db, _fake_session([_DETAIL_RESPONSE]), "fake-key", {"shrimp": 12345})
         row = self.db.query(IngredientNutrition).filter_by(ingredient_name="shrimp").one()
