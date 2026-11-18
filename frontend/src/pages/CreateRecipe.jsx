@@ -9,7 +9,8 @@ import { expiryBadgeLabel } from "../utils/expiry";
 import { OTHER_OPTION, TASTE_OPTIONS } from "../constants/preferenceOptions";
 import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/CookingPreferenceFields";
 import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
-import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
+import { cookingPreferenceError, generationPreferences, parseProteinTarget } from "../utils/cookingPreferences.js";
+import ProteinTargetField from "../components/ProteinTargetField";
 import { formatIngredientName } from "../utils/translations";
 import { barcodeProductDescription, isSelectedFridgeIngredient, selectFridgeIngredient } from "../utils/ingredientPayload";
 
@@ -30,6 +31,8 @@ export default function CreateRecipe({
   const submitting = useRef(false);
   const allergyInput = useRef(null);
   const [extra, setExtra] = useState("");
+  const [proteinTarget, setProteinTarget] = useState("");
+  const proteinTargetValue = parseProteinTarget(proteinTarget);
   const preferences = useSavedCookingPreferences();
   const preferenceIssue = cookingPreferenceError(preferences.value);
 
@@ -42,13 +45,14 @@ export default function CreateRecipe({
   }, [selectedIngredients]);
 
   const handleGenerateClick = async () => {
-    if (submitting.current || preferences.status !== "ready" || preferenceIssue) return;
+    if (submitting.current || preferences.status !== "ready" || preferenceIssue || proteinTargetValue === undefined) return;
     submitting.current = true;
     setIsSubmitting(true);
     try {
       const error = await onGenerate(
         generationPreferences(preferences.value, taste === OTHER_OPTION ? tasteOther.trim() || OTHER_OPTION : taste, extra),
         currentIngredients,
+        proteinTargetValue,
       );
       setAllergyError(error || null);
       if (error) allergyInput.current?.focus();
@@ -162,6 +166,9 @@ export default function CreateRecipe({
               allergyError={allergyError} allergyInput={allergyInput} onAllergyEdit={() => setAllergyError(null)} />
 
             <div>
+              <ProteinTargetField value={proteinTarget} onChange={setProteinTarget} invalid={proteinTargetValue === undefined} />
+            </div>
+            <div>
               <label htmlFor="create-recipe-extra" className="block text-lg font-bold text-gray-900 mb-3">{t("ความต้องการอื่นๆ (ถ้ามี)")}</label>
               <textarea id="create-recipe-extra" rows={4} placeholder={t("เช่น สิ่งที่ต้องระวัง")} value={extra} onChange={e => setExtra(e.target.value)}
                 className="w-full min-w-0 border border-gray-300 bg-white rounded-2xl p-4 text-gray-900 placeholder:text-gray-500 text-base resize-y" />
@@ -173,7 +180,7 @@ export default function CreateRecipe({
           <PreferenceLoadStatus status={preferences.status} retry={preferences.retry} />
           {preferences.status === "ready" && preferenceIssue && <p role="status" className="mb-3 text-sm text-gray-700">{t(preferenceIssue)}</p>}
           {allergyError && <p id="allergy-error" role="alert" className="text-sm leading-relaxed text-red-700 mb-3 break-words">{t(allergyError)}</p>}
-          <button type="button" onClick={handleGenerateClick} disabled={isSubmitting || preferences.status !== "ready" || Boolean(preferenceIssue)} aria-busy={isSubmitting}
+          <button type="button" onClick={handleGenerateClick} disabled={isSubmitting || preferences.status !== "ready" || Boolean(preferenceIssue) || proteinTargetValue === undefined} aria-busy={isSubmitting}
             className="w-full min-h-12 px-4 py-3 bg-[#B93E25] text-white rounded-full text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#9F351F] disabled:opacity-50 transition-colors">
             <ChefHat aria-hidden="true" className="w-5 h-5 shrink-0" />
             {isSubmitting ? t("กำลังตรวจสอบอาการแพ้…") : t("สร้างเมนูอาหารกันเลย")}

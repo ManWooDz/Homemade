@@ -9,7 +9,8 @@ import { OptionChips } from "../components/OptionPicker";
 import { OTHER_OPTION, TASTE_OPTIONS } from "../constants/preferenceOptions";
 import CookingPreferenceFields, { PreferenceLoadStatus } from "../components/CookingPreferenceFields";
 import useSavedCookingPreferences from "../hooks/useSavedCookingPreferences";
-import { cookingPreferenceError, generationPreferences } from "../utils/cookingPreferences.js";
+import { cookingPreferenceError, generationPreferences, parseProteinTarget } from "../utils/cookingPreferences.js";
+import ProteinTargetField from "../components/ProteinTargetField";
 import { barcodeProductDescription, isSelectedFridgeIngredient, selectFridgeIngredient } from "../utils/ingredientPayload";
 import { expiryBadgeLabel } from "../utils/expiry";
 
@@ -29,6 +30,8 @@ export default function CustomCookingPage({
     const submitting = useRef(false);
     const allergyInput = useRef(null);
     const [extra, setExtra] = useState("");
+    const [proteinTarget, setProteinTarget] = useState("");
+    const proteinTargetValue = parseProteinTarget(proteinTarget);
   const preferences = useSavedCookingPreferences();
   const preferenceIssue = cookingPreferenceError(preferences.value);
     const [fridgeChoices, setFridgeChoices] = useState([]);
@@ -43,13 +46,14 @@ export default function CustomCookingPage({
     };
 
     const handleGenerateClick = async () => {
-        if (submitting.current || selectedIngredients.length === 0 || preferences.status !== "ready" || preferenceIssue) return;
+        if (submitting.current || selectedIngredients.length === 0 || preferences.status !== "ready" || preferenceIssue || proteinTargetValue === undefined) return;
         submitting.current = true;
         setIsSubmitting(true);
         try {
             const error = await onGenerate(
                 generationPreferences(preferences.value, taste === OTHER_OPTION ? tasteOther.trim() || OTHER_OPTION : taste, extra),
                 selectedIngredients,
+                proteinTargetValue,
             );
             setAllergyError(error || null);
             if (error) allergyInput.current?.focus();
@@ -127,6 +131,7 @@ export default function CustomCookingPage({
                         <CookingPreferenceFields value={preferences.value} onChange={preferences.edit}
               allergyError={allergyError} allergyInput={allergyInput} onAllergyEdit={() => setAllergyError(null)} />
 
+                        <ProteinTargetField value={proteinTarget} onChange={setProteinTarget} invalid={proteinTargetValue === undefined} />
                         <div>
                             <label htmlFor="cooking-extra" className="block text-lg font-semibold text-gray-900">{t("ความต้องการอื่นๆ (ถ้ามี)")}</label>
                             <textarea id="cooking-extra" rows={4} value={extra} onChange={(event) => setExtra(event.target.value)}
@@ -143,7 +148,7 @@ export default function CustomCookingPage({
           <PreferenceLoadStatus status={preferences.status} retry={preferences.retry} />
           {preferences.status === "ready" && preferenceIssue && <p role="status" className="mb-3 text-sm text-gray-700">{t(preferenceIssue)}</p>}
           {allergyError && <p id="allergy-error" role="alert" className="mb-3 text-sm text-red-700 break-words">{t(allergyError)}</p>}
-                    <button type="button" onClick={handleGenerateClick} disabled={selectedIngredients.length === 0 || isSubmitting || preferences.status !== "ready" || Boolean(preferenceIssue)}
+                    <button type="button" onClick={handleGenerateClick} disabled={selectedIngredients.length === 0 || isSubmitting || preferences.status !== "ready" || Boolean(preferenceIssue) || proteinTargetValue === undefined}
                         aria-busy={isSubmitting}
                         className="w-full min-h-12 px-4 py-3 bg-[#B93E25] text-white rounded-full text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#9D341F] disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors">
                         <ChefHat aria-hidden="true" className="w-5 h-5 shrink-0" />

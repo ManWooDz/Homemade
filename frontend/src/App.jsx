@@ -903,7 +903,7 @@ function App() {
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
                 onBack={() => setCurrentView("recipe-detail")}
-                onGenerate={async (preferences, updatedIngredients) => {
+                onGenerate={async (preferences, updatedIngredients, proteinTarget) => {
                     const preferenceError = await validateAllergyPreferences(apiFetch, preferences);
                     if (preferenceError) return preferenceError;
                     setCurrentView("cooking-page");
@@ -920,7 +920,8 @@ function App() {
                                 ingredients: toPresenceIngredients(
                                     updatedIngredients || selectedIngredients,
                                 ),
-                                preferences
+                                preferences,
+                                ...(proteinTarget != null && { protein_target_g_per_serving: proteinTarget }),
                             })
                         });
                         const result = await response.json();
@@ -1115,7 +1116,7 @@ function App() {
                     setCurrentView("home");
                     setActiveTab("home");
                 }}
-                onGenerate={async (preferences, selectedIngredients) => {
+                onGenerate={async (preferences, selectedIngredients, proteinTarget) => {
                     const preferenceError = await validateAllergyPreferences(apiFetch, preferences);
                     if (preferenceError) return preferenceError;
                     setCurrentView("cooking-page");
@@ -1130,7 +1131,8 @@ function App() {
                             body: JSON.stringify({
                                 recipe: { name: "Custom Recipe from Fridge" },
                                 ingredients: toPresenceIngredients(selectedIngredients),
-                                preferences
+                                preferences,
+                                ...(proteinTarget != null && { protein_target_g_per_serving: proteinTarget }),
                             })
                         });
                         const result = await response.json();

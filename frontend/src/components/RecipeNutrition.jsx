@@ -45,6 +45,7 @@ export default function RecipeNutrition({ recipe, compact = false }) {
     const nutrition = recipe.nutrition;
     const computed = recipe.computed_nutrition;
     const estimate = recipe.llm_estimated_nutrition;
+    const target = recipe.protein_target_result;
     const ingredientEvidence = Array.isArray(recipe.nutrition_ingredient_evidence)
         ? recipe.nutrition_ingredient_evidence.filter((item) => item && typeof item === "object") : [];
     const baseCalculation = recipe.nutrition_origin === "base_calculation";
@@ -67,10 +68,19 @@ export default function RecipeNutrition({ recipe, compact = false }) {
         ? `${new Intl.NumberFormat(locale === "en" ? "en-US" : "th-TH", { maximumFractionDigits: 1 }).format(value)} ${t(unit)}`
         : "—";
     const basis = (data) => data?.basis === "per_serving" ? t("ต่อ 1 ที่") : t("ไม่ระบุฐานปริมาณ");
+    const canCompareProtein = (target?.status === "calculated" || target?.status === "estimated")
+        && hasValue(target.computed_g_per_serving) && Number.isFinite(target.difference_g_per_serving);
 
     return (
         <section className="recipe-nutrition mb-6" aria-label={t("Nutrition")}>
             <h3 className="text-xl font-bold text-gray-900 mb-3">{t("Nutrition")}</h3>
+            {hasValue(target?.target_g_per_serving) && <div className="mb-4 rounded-2xl border border-gray-200 p-4 text-sm text-gray-700">
+                <p className="font-semibold text-gray-900">{t("เป้าโปรตีนต่อเสิร์ฟ: {amount}", { amount: format(target.target_g_per_serving, "g") })}</p>
+                {canCompareProtein ? <>
+                    <p>{t(target.status === "estimated" ? "โปรตีนโดยประมาณ: {amount}" : "โปรตีนที่คำนวณได้: {amount}", { amount: format(target.computed_g_per_serving, "g") })}</p>
+                    <p>{t(target.difference_g_per_serving > 0 ? "สูงกว่าเป้า {amount}" : target.difference_g_per_serving < 0 ? "ต่ำกว่าเป้า {amount}" : "ส่วนต่างจากเป้า {amount}", { amount: format(Math.abs(target.difference_g_per_serving), "g") })}</p>
+                </> : <p>{t("ข้อมูลโปรตีนไม่พอสำหรับเปรียบเทียบ")}</p>}
+            </div>}
             <div className="mb-4 rounded-2xl border border-gray-200 p-4 text-sm text-gray-700">
                 <p className="font-semibold text-gray-900">{t(status)}</p>
                 <p className="mt-1">{t(baseCalculation

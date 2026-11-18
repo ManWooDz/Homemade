@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { setImmediate } from "node:timers";
 import { ALLERGY_OPTIONS, ALLERGY_NONE, DIETARY_NONE, OTHER_OPTION, EQUIPMENT_NONE, TASTE_OPTIONS } from "../src/constants/preferenceOptions.js";
-import { emptyCookingPreferences, readCookingPreferences, serializeCookingPreferences, classifyRestriction, toggleCookingChoice, cookingPreferenceError, generationPreferences, loadCookingPreferences, mergeUntouchedPreferences, orderedPreferenceSaver } from "../src/utils/cookingPreferences.js";
+import { emptyCookingPreferences, readCookingPreferences, serializeCookingPreferences, classifyRestriction, toggleCookingChoice, cookingPreferenceError, generationPreferences, parseProteinTarget, loadCookingPreferences, mergeUntouchedPreferences, orderedPreferenceSaver } from "../src/utils/cookingPreferences.js";
 import { translate } from "../src/utils/translations.js";
 
 test("all ten groups round-trip and stay distinct from dietary guidance and taste", () => {
@@ -115,21 +115,36 @@ test("Profile snapshots save in order even after failure, with no concurrent sta
 });
 
 const parse = createRequire(import.meta.url)("@babel/parser").parse;
+test("optional protein target accepts one decimal and rejects invalid input", () => {
+    assert.equal(parseProteinTarget(" "), null);
+    assert.equal(parseProteinTarget("25.1"), 25.1);
+    assert.equal(parseProteinTarget("25,1"), 25.1);
+    for (const value of ["0", "-1", "25.15", "25.00", "1e2", "1,000", "Infinity"]) {
+        assert.equal(parseProteinTarget(value), undefined);
+    }
+});
+
 for (const page of ["CreateRecipe", "CustomCookingPage"]) {
     test(`${page} blocks until defaults/classification are ready and sends only request overrides`, async () => {
         const source = readFileSync(new URL(`../src/pages/${page}.jsx`, import.meta.url), "utf8");
         const component = parse(source, { sourceType: "module", plugins: ["jsx"] }).program.body.find(node => node.type === "ExportDefaultDeclaration").declaration;
         const handler = component.body.body.flatMap(node => node.declarations || []).find(node => node.id.name === "handleGenerateClick").init;
         const account = readCookingPreferences({ dietary_restrictions: ["แพ้ไข่", "ทาน Vegan"], equipment: ["หม้อ"] });
-        for (const [status, issue, count] of [["loading", null, 0], ["error", null, 0], ["ready", "unclassified", 0], ["ready", null, 1]]) {
+        for (const [status, issue, count, proteinTargetValue] of [["loading", null, 0, null], ["error", null, 0, null],
+            ["ready", "unclassified", 0, null], ["ready", null, 0, undefined], ["ready", null, 1, null], ["ready", null, 1, 25.1]]) {
             const calls = [];
             const context = { submitting: { current: false }, preferences: { status, value: { ...account, allergies: [ALLERGY_NONE] } }, preferenceIssue: issue,
                 selectedIngredients: [1], userIngredients: [{ id: 1, name: "ผัก" }], currentIngredients: [{ id: 1, name: "ผัก" }],
                 setIsSubmitting: () => {}, setAllergyError: () => {}, allergyInput: { current: null }, onGenerate: async (...args) => { calls.push(args); return null; },
-                taste: "ไม่เผ็ด", tasteOther: "", extra: "note", OTHER_OPTION, generationPreferences };
+                taste: "ไม่เผ็ด", tasteOther: "", extra: "note", OTHER_OPTION, generationPreferences, proteinTargetValue };
             await new Function(...Object.keys(context), `return ${source.slice(handler.start, handler.end)}`)(...Object.values(context))();
             assert.equal(calls.length, count);
-            if (count) { assert.equal(calls[0][0].allergies, ALLERGY_NONE); assert.match(calls[0][0].extra, /Vegan/); }
+            if (count) {
+                assert.equal(calls[0][0].allergies, ALLERGY_NONE);
+                assert.match(calls[0][0].extra, /Vegan/);
+                assert.equal(calls[0][2], proteinTargetValue);
+                assert.equal(calls[0][0].protein_target_g_per_serving, undefined);
+            }
             assert.deepEqual(account.allergies, ["แพ้ไข่"]);
         }
     });

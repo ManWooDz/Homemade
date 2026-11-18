@@ -3,6 +3,7 @@
 The base-seed numeric helper raises for unresolved or invalid inputs;
 neither an exact alias nor a hardcoded zero certifies grounding."""
 from dataclasses import dataclass, field
+from typing import Literal
 
 from barcode_nutrition import product_contribution
 from nutrition.curated_aliases import ZERO_NUTRITION_CONSTANTS
@@ -21,6 +22,7 @@ class NutritionResult:
     partially_estimated: bool
     partially_estimated_reasons: list[str]
     ingredient_evidence: list[dict] = field(default_factory=list)
+    protein_status: Literal["calculated", "estimated", "insufficient_data"] = "insufficient_data"
 
 
 def _has_deep_fry(instructions: list[str]) -> bool:
@@ -73,6 +75,8 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
     reasons: list[str] = []
     pending_llm_estimate: list[tuple[str, float, dict]] = []
     ingredient_evidence: list[dict] = []
+    protein_contributors = 0
+    protein_estimated = False
 
     if not adjusted_ingredients:
         reasons.append("no ingredient evidence: empty ingredient list")
@@ -88,6 +92,7 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
                 if label:
                     _accumulate_macros(totals, MacroValues(**label["contribution"]), 1)
                     trace.update(label, status="calculated")
+                    protein_contributors += 1
                     continue
         if fallback:
             trace["reason"] = fallback
@@ -95,6 +100,8 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
 
         constant = _zero_nutrition_constant(item.name)
         if constant is not None:
+            protein_contributors += 1
+            protein_estimated = True
             trace.update(source="hardcoded_zero", status="estimated")
             trace.setdefault("reason", "constant_unverified")
             reasons.append(f"hardcoded zero composition; identity/source unverified: {item.name}")
@@ -149,6 +156,12 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
                 continue
             _add_contribution(totals, match.macros, quantity_g)
             missing = _missing_macro_keys(match.macros)
+            if "protein_g" not in missing:
+                protein_contributors += 1
+                protein_estimated |= (
+                    not row_is_verified or resolution.source_backed is not True or bool(fallback)
+                    or generic_potato or "proxy" in derivation
+                )
             status = "estimated"
             if missing:
                 status = "incomplete"
@@ -187,6 +200,9 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
             macros = next(estimates, MacroValues(None, None, None, None))
             _add_contribution(totals, macros, quantity_g)
             missing = _missing_macro_keys(macros)
+            if "protein_g" not in missing:
+                protein_contributors += 1
+                protein_estimated = True
             if len(missing) == len(_MACRO_KEYS):
                 # No key / API error / malformed reply: nothing was actually
                 # estimated, so don't word it as if an estimate happened.
@@ -201,11 +217,18 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
     if _has_deep_fry(instructions):
         reasons.append("deep-fry (ทอด): oil absorption not modeled, fat/kcal may be overcounted")
 
+    nutrition = _per_serving_nutrition(totals, servings)
+    protein_status = "insufficient_data"
+    if ingredient_evidence and protein_contributors == len(ingredient_evidence):
+        # Some fridge-only zero contributors leave the legacy subtotal unset.
+        if nutrition["protein_g"] is not None:
+            protein_status = "estimated" if protein_estimated else "calculated"
     return NutritionResult(
-        nutrition=_per_serving_nutrition(totals, servings),
+        nutrition=nutrition,
         partially_estimated=len(reasons) > 0,
         partially_estimated_reasons=reasons,
         ingredient_evidence=ingredient_evidence,
+        protein_status=protein_status,
     )
 
 

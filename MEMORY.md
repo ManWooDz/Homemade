@@ -1,5 +1,74 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Check reference-family additions against accepted dish contexts (2026-11-18):**
+- what happened: the process-only reference proposal passed its focused new cases, but the existing backend suite caught a rejection of Pork steak made with minced pork.
+- root cause: adding generic steak and masking pork steak imposed a meat-cut assumption on an existing dish-name rule.
+- correct behavior: run the existing recipe-context regressions against proposed vocabulary before source edits; remove a speculative reference or mask that narrows an accepted dish context unless that behavior change is explicitly reviewed. Preserve the original fixture and failed evidence.
+
+**Capture live-generation validation evidence before retrying (2026-11-18):**
+- what happened: the first protein-target live request exhausted three generation attempts but its receipt had only provider usage, so a separate diagnostic call was needed to recover a rejection reason. Later responses exposed a false title rejection for firm tofu.
+- root cause: the smoke harness measured the external provider boundary without observing the existing `attempts_log` returned by the validation runner.
+- correct behavior: capture the runner's attempt status/reason and dedicated synthetic recipe responses in local receipts on the first live request; inspect or replay them offline before spending another provider request. Preserve failed receipts and keep source validators intact during diagnosis.
+
+- 2026-11-18 recurrence of bounded-read/path lesson: resumed inspection guessed two module paths and requested combined excerpts that truncated. Discover exact files using `rg --files`, read only the named symbols, and cap requested source lines before running the command.
+
+- 2026-11-14 · การเพิ่มเป้าโปรตีนทำให้เทสต์ handler สองฟอร์มล้ม เพราะ fixture ที่ดึง handler ออกจาก component ไม่มีตัวแปร `proteinTargetValue` ที่เพิ่มใน scope ให้ค้น fixture ที่รัน handler ด้วย context จำลองและเพิ่มกรณีค่าเว้นว่าง ค่าผิด และค่าถูกก่อนตรวจชุดเต็ม
+
+- 2026-11-14 · preview alias มันฝรั่งครั้งแรกอ่าน `updated_at` ที่ไม่มีในตาราง จึงล้มก่อนเห็น snapshot สาเหตุคือเดาคอลัมน์ตาม convention ให้ใช้ schema ที่ตรวจแล้วหรือ `to_jsonb(row)` สำหรับสร้าง hash และยืนยัน read-only transaction ใหม่ก่อนรายงานผล
+- 2026-11-14 · รอบ regression แรกหลังเพิ่ม mL ล้มเพราะ assertion เดิมยังจัด `ml` เป็นหน่วยที่ต้องปฏิเสธ ให้ค้นทั้ง positive และ negative fixtures ของค่าที่เปลี่ยน เปลี่ยนกรณีที่เข้าข้อกำหนดใหม่โดยคงตัวอย่างหน่วยนอกขอบเขตไว้
+
+- 2026-11-14 · การไล่ Nutrition Engine ใช้ Bash brace expansion ใน PowerShell จึงอ่าน source ไม่สำเร็จ สาเหตุคือใช้ไวยากรณ์ข้าม shell ให้ระบุ path แยกแต่ละไฟล์แล้วรันซ้ำก่อนใช้ผลค้นหา
+
+**Preserve calculation units and session boundaries when adding recipe evidence (2026-11-13):**
+- what happened: the first fridge nutrition integration changed a grams-based helper to take a scaling factor and added a session close to legacy generation requests. The nutrition activation and personalization suites caught both. The History integration fixture also tried an item GET before switching to the existing list endpoint. Default-sandbox HTTP verification stalled on Windows loopback; the guarded host run supplied the real results.
+- root cause: missed a caller outside the immediate calculator and treated a no-selection branch as if it had opened a transaction. Assumed a History route instead of reading its contract.
+- correct behavior: search all source and test callers before changing the units of a helper, keep existing gram semantics behind an explicit scaled accumulator, close a new read transaction only when the branch queried, and bind API assertions to the implemented routes. Keep provider/persistent DB guards on Windows host test runs.
+
+**Bound diagnosis reads and bind every path to its command cwd (2026-11-04 recurrence):**
+- what happened: nutrition-log diagnosis requested whole project records and oversized combined excerpts, producing truncation; guessed module paths and root-relative reads from backend cwd also failed. Narrow source reads and offline calculator checks subsequently supplied the evidence.
+- what happened (2026-11-12): the post-exam status review again truncated a whole-spec read and combined excerpts; a Windows path glob also failed. Narrow heading/line searches and the fresh frontend summary supplied the status evidence.
+- root cause: output limits were mistaken for bounded input, and path discovery/cwd checks were skipped.
+- correct behavior: read current spec excerpts and targeted lessons first; discover exact module paths from imports or scoped rg before reading, calculate each path relative to the command workdir, and cap aggregate requested excerpts before execution. Never count truncated reads or failed path probes as complete evidence.
+
+**Keep ngrok credentials setup proportional to the user's request (2026-11-04):**
+- what happened: prepared an interactive credential window, but user hit a window problem and asked to only add a key in env. Initial download DNS, an incomplete test venv and guessed repository path also failed; existing complete venv and reviewed host download subsequently worked.
+- root cause: added orchestration before establishing the user's preferred credential path and assumed conventional module/runtime locations.
+- correct behavior: add NGROK_AUTHTOKEN to the existing approved local env, let the user fill it, and pass it only in the agent environment. Discover caller paths and use verified complete dependencies; stop dependent download actions on first failure. Verify the actual ngrok public URL/routing and exact Origin policy; do not equate a running tunnel with authenticated or physical-camera acceptance. If automatic review rejects public exposure, report it and obtain the requested specific authorization before retrying.
+
+**Use PowerShell literal paths and the verified Node runtime (2026-11-04 ngrok setup):**
+- what happened: a read-only search used Bash brace expansion and failed at PowerShell parsing; eslint.cmd later failed because the ambient Node shim had no active version. No install or backend mutation occurred. Explicit file arguments and the already installed bundled node.exe completed the checks.
+- root cause: assumed shell expansion and executable-shim readiness rather than the observed PowerShell/runtime environment.
+- correct behavior: pass explicit PowerShell file paths, use the verified existing Node executable for direct JS tooling when the ambient shim fails, and retain first attempts as failures. Never install Node, change global versions or treat tool-launch failure as a source lint result.
+
+**Bound config-task context reads (2026-11-04 recurrence):**
+- what happened: initial full spec/MEMORY reads and a later combined source read exceeded output budgets during the exam-day Gemini config task; a literal .env wildcard also failed in PowerShell. No secret file values were printed.
+- root cause: requested unbounded project records and too many source excerpts; assumed shell wildcard behavior.
+- correct behavior: read small current spec/MEMORY excerpts and exact source symbols, discover env paths with rg --files --hidden, and inspect secret configuration through presence/selection assertions only. Never treat truncated output as a complete read.
+
+
+**Clear individual translate when freezing fixed screenshot layers (2026-11-03):**
+- what happened: Add Ingredient's fixed controls were missing in a transformed iframe capture. Static native-style copies initially shifted left by half their width because clearing transform left Tailwind's separate translate property active. A0.1pxbounds assertion also rejected valid430.2pxsubpixel bounds. The initial virtual canvas camera failed; static replacement succeeded. Combined source reads again exceeded output bounds.
+- root cause: fixed compositing and individual CSS transforms were treated as ordinary layout; exact integer bounds and virtual-camera initialization were assumed. Excess source was requested before bounding it.
+- correct behavior: for stills only, copy native fixed controls at measured bounds, clear both transform and translate on the copied root, then verify the complete image and use1pxrounding tolerance. Keep production components unchanged. Prefer the user-authorized static illustration over virtual-camera debugging when the task is presentation imagery; label lookup/nutrition as synthetic. Read only the exact source sections needed and never count truncated output as complete evidence.
+
+**Bound demo-planning reads before requesting output (2026-11-03 recurrence):**
+- what happened: full spec/MEMORY reads and subsequent overlarge aggregate source excerpts were truncated while preparing the demo speaking plan; usable screen/nutrition evidence was recovered with narrower excerpts.
+- root cause: output caps were used as if they bounded the requested source, repeating the existing large-read failure.
+- correct behavior: request only a small current spec range and targeted source symbols, budget the combined output before calling tools, and narrow each follow-up; never treat truncated output as a complete read.
+
+**Count nested PDF outline entries recursively (2026-11-03):**
+- what happened: the first PDF text/outline check failed at an assertion requiring14top-level outline entries, although the generated guide contained all14sections below its document heading. Recursive inspection found71outline entries and passed; the PDF did not need changing.
+- what happened: a later post-move verifier mistyped the copied SHA256 as65hex characters and failed; the move command's computed before/after hashes had already matched. Correcting the verifier to the original64-character hash passed with unchanged Markdown/PDF.
+- what happened: exact raw extracted-string comparisons missed function names because PDF extraction inserts whitespace or returns compatibility ligatures. NFKC and whitespace normalization found all107names without changing the PDF; visual renders already showed the names intact.
+- root cause: the verification assumed PdfReader.outline was a flat list rather than a nested hierarchy of headings.
+- root cause: manually transcribing a hash introduced an extra character in the verifier, separate from document generation or the move.
+- correct behavior: traverse nested outline lists recursively, verify expected section titles as well as text/page content, and render every page before accepting a PDF. Normalize extraction whitespace/compatibility characters for text-presence checks while retaining visual glyph checks. Capture hashes in machine-readable receipts and validate64hex characters before comparison. Preserve failed checks as verifier failures rather than rewriting a valid document to fit an assumption or typo.
+
+**Bound aggregate source reads while documenting the demo (2026-11-02 recurrence):**
+- what happened: whole spec/MEMORY reads and several multi-file source reads exceeded output budgets; searches also assumed absent frontend/services and frontend/api directories. Narrower discovered source paths and handler inventories supplied the usable evidence for the guide.
+- root cause: repeated existing bounded-read guidance failure; output caps truncate results rather than making an overlarge read complete, and multiple individually bounded reads can still exceed a combined tool budget.
+- correct behavior: discover actual paths first, start with current spec sections and relevant lessons, request small source ranges or symbol inventories within the total output budget, and read missing ranges separately before documenting behavior. Never treat a truncated result as complete evidence.
+
 **Count every returned barcode when evaluating image preprocessing (2026-11-01):**
 - what happened: exploratory tighter strips and grayscale/contrast variants reproduced stable wrong checksum-valid numbers on retained bottle frames. Some thresholds returned the expected code together with a wrong code; merely finding the expected value in the output would have mislabeled those cases successful. These variants were rejected, not deployed. Binary160passed the retained three-frame cohort and exact browser checks, but only for one physical product.
 - root cause: cropping/binarization can change decoder output without improving label fidelity; positive-only metrics and repeated tests of the same frame hide incorrect extra results and limited coverage.

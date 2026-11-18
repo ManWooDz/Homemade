@@ -2,6 +2,7 @@ import unittest
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
+from pydantic import ValidationError
 
 from main import (
     GenerateRecipeTextRequest,
@@ -54,6 +55,39 @@ async def call_handler(request):
 
 
 class GenerateRecipeHandlerTests(unittest.IsolatedAsyncioTestCase):
+    def test_protein_target_validation(self):
+        body = self.make_request().model_dump()
+        for value in ("25", True, 0, -1, float("inf"), float("nan"), 25.15):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                GenerateRecipeTextRequest(**{**body, "protein_target_g_per_serving": value})
+        for value in (None, 25, 25.1):
+            self.assertEqual(GenerateRecipeTextRequest(**{**body, "protein_target_g_per_serving": value}).protein_target_g_per_serving, value)
+
+    async def test_protein_target_uses_engine_status_and_is_saved_without_extra_retry(self):
+        request = GenerateRecipeTextRequest(**{**self.make_request().model_dump(), "protein_target_g_per_serving": 25})
+        for status, expected in (("estimated", (26.7, 1.7)), ("insufficient_data", (None, None)),
+                                 ("calculated", (26.7, 1.7)), ("sanity_failed", (None, None)),
+                                 ("engine_failed", (None, None))):
+            with self.subTest(status=status):
+                self.mock_compute_nutrition.side_effect = None
+                self.mock_compute_nutrition.return_value = NutritionResult(
+                    {**_STUB_NUTRITION_RESULT.nutrition, "protein_g": 26.7,
+                     "calories": 3001 if status == "sanity_failed" else 100}, True, [],
+                    protein_status="estimated" if status == "sanity_failed" else status,
+                )
+                if status == "engine_failed":
+                    self.mock_compute_nutrition.side_effect = RuntimeError("fixture failure")
+                with patch("main.call_agentic_llm", return_value=deepcopy(VALID_RECIPE)) as generator:
+                    response = await call_handler(request)
+                generator.assert_called_once()
+                self.assertIn("25", str(generator.call_args.args[1]))
+                self.assertNotIn("protein_target_g_per_serving", request.preferences)
+                result = response["data"]["protein_target_result"]
+                self.assertEqual(result, {"target_g_per_serving": 25, "computed_g_per_serving": expected[0],
+                                          "difference_g_per_serving": expected[1],
+                                          "status": "insufficient_data" if status.endswith("_failed") else status})
+                self.assertEqual(self.mock_save_history.call_args.args[3]["protein_target_result"], result)
+
     def setUp(self):
         personalization_patcher = patch(
             "main.get_personalization_for_request",

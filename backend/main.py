@@ -1175,6 +1175,14 @@ class GenerateRecipeTextRequest(BaseModel):
     recipe: Dict[str, Any]
     ingredients: List[Any]
     preferences: Dict[str, str]
+    protein_target_g_per_serving: Annotated[float, Field(strict=True, gt=0, allow_inf_nan=False)] | None = None
+
+    @field_validator("protein_target_g_per_serving")
+    @classmethod
+    def _protein_target_precision(cls, value):
+        if value is not None and round(value, 1) != value:
+            raise ValueError("Protein target must have at most one decimal place")
+        return value
 
 
 def _selected_fridge_bindings(db, user_id, items, names):
@@ -1270,6 +1278,9 @@ async def generate_recipe_text(
             resolved_blocks=resolved_blocks,
         )
         llm_prefs = build_llm_prefs(user_prefs, resolved_blocks)
+        protein_target = request.protein_target_g_per_serving
+        if protein_target is not None:
+            llm_prefs = {**llm_prefs, "เป้าหมายโปรตีน": f"พยายามให้ได้ {protein_target} กรัมต่อหนึ่งเสิร์ฟ"}
         if personalization is not None:
             llm_prefs = {
                 **llm_prefs,
@@ -1304,6 +1315,15 @@ async def generate_recipe_text(
         # falls back to the LLM's own guess instead of discarding a
         # recipe that already passed validation.
         llm_estimated_nutrition = final_output.get("nutrition")
+        target_result = None
+        if protein_target is not None:
+            target_result = {
+                "target_g_per_serving": protein_target,
+                "computed_g_per_serving": None,
+                "difference_g_per_serving": None,
+                "status": "insufficient_data",
+            }
+            final_output["protein_target_result"] = target_result
         try:
             adjusted_ingredients = final_output.get("adjusted_ingredients", [])
             nutrition_options = {}
@@ -1354,6 +1374,17 @@ async def generate_recipe_text(
                 else:
                     final_output["nutrition"] = nutrition_result.nutrition
                     final_output["nutrition_partially_estimated"] = False
+            if target_result is not None and nutrition_result.protein_status != "insufficient_data":
+                computed = nutrition_result.nutrition
+                calories = computed.get("calories")
+                protein = computed.get("protein_g")
+                if (computed.get("basis") == "per_serving" and protein is not None
+                        and (calories is None or 0 <= calories <= 3000)):
+                    target_result.update(
+                        computed_g_per_serving=protein,
+                        difference_g_per_serving=round(protein - protein_target, 1),
+                        status=nutrition_result.protein_status,
+                    )
         except Exception as e:
             print(f"[Nutrition Engine] calculation_failed: {type(e).__name__}")
             final_output["llm_estimated_nutrition"] = llm_estimated_nutrition

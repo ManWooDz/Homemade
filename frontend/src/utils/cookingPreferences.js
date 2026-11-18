@@ -73,6 +73,13 @@ export function cookingPreferenceError(model) {
     return null;
 }
 
+export function parseProteinTarget(value) {
+    const text = value.trim();
+    if (!text) return null;
+    const amount = Number(text.replace(",", "."));
+    return /^\d+(?:[.,]\d)?$/.test(text) && Number.isFinite(amount) && amount > 0 ? amount : undefined;
+}
+
 export function generationPreferences(model, taste, extra) {
     const resolve = (key, other) => model[key].flatMap(value => value === OTHER_OPTION ? strings(model[other]) : [value]);
     const diet = resolve("dietary", "dietaryOther").filter(value => value !== DIETARY_NONE);

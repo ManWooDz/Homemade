@@ -12,6 +12,17 @@ from test_nutrition_evidence import synthetic_match
 
 
 class ComputeRecipeNutritionTests(unittest.TestCase):
+    def test_protein_completeness_is_independent_of_other_macros_and_subtotals(self):
+        self._add("fixture incomplete calories", "เต้าหู้", protein_g=20, carbs_g=1, fat_g=1)
+        for lines, status, protein in (
+            (["เต้าหู้ 100 กรัม", "น้ำเปล่า"], "estimated", 10),
+            (["เต้าหู้ 100 กรัม", "อะโวคาโด 1 ลูก"], "insufficient_data", 10),
+        ):
+            with self.subTest(lines=lines):
+                result = compute_recipe_nutrition(self.db, lines, [], 2, self.no_op_estimator)
+                self.assertEqual(result.nutrition["protein_g"], protein)
+                self.assertEqual(result.protein_status, status)
+
     def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine, tables=[IngredientNutrition.__table__, IngredientNutritionAlias.__table__])

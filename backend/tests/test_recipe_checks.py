@@ -22,6 +22,34 @@ def recipe(**changes):
     return dict(deepcopy(BASE), **changes)
 
 
+ADDITIONAL_REFERENCES = {
+    "cherry tomatoes": ("tomato", "tomatoes", "มะเขือเทศ"),
+    "red onion": ("onion", "onions", "หอมใหญ่", "หอมหัวใหญ่"),
+    "purple cabbage": ("cabbage", "กะหล่ำปลี"),
+    "feta cheese": ("feta", "cheese", "ชีส"),
+    "kalamata olives": ("olive", "olives", "มะกอก"),
+    "nori seaweed": ("nori", "seaweed", "สาหร่าย"),
+    "ramen noodles": ("ramen", "noodle", "noodles", "เส้นบะหมี่"),
+    "rice noodles": ("noodle", "noodles", "เส้นก๋วยเตี๋ยว"),
+    "tonkotsu broth": ("broth", "น้ำซุป"),
+    "green onion": ("scallion", "scallions", "spring onion", "spring onions"),
+    "cilantro": ("coriander leaves",),
+    "mushrooms": ("mushroom",),
+    "peanuts": ("peanut",),
+    "bean sprouts": ("bean sprout",),
+    "pumpkin seeds": ("pumpkin seed",),
+    "holy basil leaves": ("holy basil",),
+    "pork belly (chashu)": ("chashu", "chashu pork"),
+    "soft-boiled egg": ("boiled egg", "ไข่ต้ม"),
+    "tamarind paste": ("tamarind", "มะขามเปียก"),
+    "balsamic vinaigrette": ("balsamic dressing", "vinaigrette", "dressing", "น้ำสลัด"),
+    "sesame dressing": ("dressing", "น้ำสลัด"),
+    "มันฝรั่ง": ("potato", "potatoes"),
+    "มายองเนส": ("mayonnaise", "mayo"),
+    "ไข่ไก่": ("chicken egg",),
+}
+
+
 class IngredientTests(unittest.TestCase):
     def test_catalog_exactly_matches_55_seed_names_without_importing_seed(self):
         source = Path(__file__).resolve().parents[1] / "database/seed_postgres.py"
@@ -112,6 +140,67 @@ class IngredientTests(unittest.TestCase):
 
 
 class CookingTests(unittest.TestCase):
+    def test_additional_references_require_declared_food_without_admitting_substitutions(self):
+        for declared, references in ADDITIONAL_REFERENCES.items():
+            for reference in references:
+                with self.subTest(declared=declared, reference=reference):
+                    present = recipe(adjusted_ingredients=[declared + " 10 กรัม"],
+                                     recipe_name=reference, instructions=["Boil " + reference + "."])
+                    self.assertEqual(check_core(present, [declared]), (True, "OK"))
+                    self.assertEqual(check_logic(present), (True, "OK"))
+                    missing = recipe(adjusted_ingredients=["quinoa 10 กรัม"],
+                                     recipe_name=reference, instructions=["Boil " + reference + "."])
+                    self.assertIn("Missing named ingredient", check_core(missing, [declared])[1])
+                    self.assertIn("Undeclared ingredient", check_logic(missing)[1])
+                    replacement = recipe(adjusted_ingredients=[reference + " 10 กรัม"])
+                    self.assertFalse(check_ingredients(replacement, [declared])[0])
+
+    def test_related_food_names_do_not_refer_to_a_different_declared_type(self):
+        for declared, different in [
+            ("cherry tomatoes", "sun-dried tomatoes"), ("cherry tomatoes", "มะเขือเทศตากแห้ง"),
+            ("red onion", "white onion"), ("red onion", "หอมหัวใหญ่ขาว"),
+            ("purple cabbage", "green cabbage"), ("purple cabbage", "กะหล่ำปลีเขียว"),
+            ("feta cheese", "cheddar cheese"), ("feta cheese", "ชีสเชดดาร์"),
+            ("kalamata olives", "green olives"), ("kalamata olives", "มะกอกเขียว"),
+            ("nori seaweed", "wakame seaweed"), ("nori seaweed", "สาหร่ายวากาเมะ"),
+            ("ramen noodles", "egg noodles"), ("rice noodles", "เส้นก๋วยเตี๋ยวบุก"),
+            ("tonkotsu broth", "chicken broth"), ("tonkotsu broth", "น้ำซุปไก่"),
+            ("green onion", "red onion"), ("cilantro", "coriander seeds"),
+            ("mushrooms", "mushroom sauce"), ("peanuts", "peanut butter"),
+            ("bean sprouts", "alfalfa sprouts"), ("pumpkin seeds", "sunflower seeds"),
+            ("holy basil leaves", "thai basil"), ("beef steak", "pork steak"),
+            ("pork belly (chashu)", "chicken chashu"), ("soft-boiled egg", "egg noodles"),
+            ("tamarind paste", "มะขามเปียกปรุงรส"), ("balsamic vinaigrette", "balsamic vinegar"),
+            ("sesame dressing", "sesame oil"), ("มันฝรั่ง", "sweet potato"),
+            ("มายองเนส", "vegan mayonnaise"), ("ไข่ไก่", "ไข่เป็ด"),
+        ]:
+            with self.subTest(declared=declared, different=different):
+                candidate = recipe(adjusted_ingredients=[declared + " 10 กรัม"],
+                                   recipe_name=different, instructions=["Boil " + different + "."])
+                self.assertFalse(check_core(candidate, [declared])[0])
+                self.assertFalse(check_logic(candidate)[0])
+                explicit = recipe(adjusted_ingredients=[different + " 10 กรัม"],
+                                  recipe_name=different, instructions=["Boil " + different + "."])
+                self.assertEqual(check_core(explicit, [different]), (True, "OK"))
+                self.assertEqual(check_logic(explicit), (True, "OK"))
+                self.assertEqual(check_ingredients(explicit, [different]), (True, "OK"))
+
+    def test_shared_noodle_and_dressing_references_are_ambiguous_but_full_names_work(self):
+        for names, references in [
+            (["ramen noodles", "rice noodles"], ("noodle", "noodles")),
+            (["balsamic vinaigrette", "sesame dressing"], ("dressing", "น้ำสลัด")),
+        ]:
+            for reference in references:
+                with self.subTest(names=names, reference=reference):
+                    candidate = recipe(adjusted_ingredients=[name + " 10 กรัม" for name in names],
+                                       recipe_name=reference, instructions=["Boil " + reference + "."])
+                    self.assertIn("Ambiguous named ingredient", check_core(candidate, names)[1])
+                    self.assertIn("Ambiguous ingredient", check_logic(candidate)[1])
+            explicit = recipe(adjusted_ingredients=[name + " 10 กรัม" for name in names],
+                              recipe_name=" and ".join(names), instructions=["Boil " + name + "." for name in names])
+            self.assertEqual(check_core(explicit, names), (True, "OK"))
+            self.assertEqual(check_logic(explicit), (True, "OK"))
+
     def test_reviewed_directional_step_and_title_references(self):
         references = {
             "minced pork": ("pork", "หมู", "เนื้อหมู"),
@@ -126,6 +215,7 @@ class CookingTests(unittest.TestCase):
             "olive oil": ("oil", "น้ำมัน"),
             "vegetable oil": ("oil", "น้ำมัน"),
             "cow milk": ("milk", "นม"),
+            "เต้าหู้แข็ง": ("tofu", "เต้าหู้"),
             "pork": ("หมู", "เนื้อหมู"), "chicken": ("ไก่",), "beef": ("เนื้อวัว",),
         }
         for declared, short_names in references.items():
@@ -135,6 +225,22 @@ class CookingTests(unittest.TestCase):
                                        instructions=["Boil " + short + "."], recipe_name=short)
                     self.assertEqual(check_logic(candidate), (True, "OK"))
                     self.assertEqual(check_core(candidate, [declared]), (True, "OK"))
+
+    def test_firm_tofu_references_require_declared_tofu_and_do_not_admit_substitutes(self):
+        for short in ("tofu", "เต้าหู้"):
+            missing = recipe(recipe_name=short, instructions=["Boil " + short + "."])
+            self.assertIn("Missing named ingredient", check_core(missing, ["เต้าหู้แข็ง"])[1])
+            self.assertIn("Undeclared ingredient", check_logic(missing)[1])
+        for selected, declared in [("เต้าหู้แข็ง", "เต้าหู้อ่อน"), ("เต้าหู้แข็ง", "tofu"),
+                                   ("tofu", "เต้าหู้แข็ง")]:
+            candidate = recipe(adjusted_ingredients=[declared + " 100 กรัม"])
+            self.assertFalse(check_ingredients(candidate, [selected])[0])
+
+    def test_firm_tofu_full_name_stays_distinct_when_generic_tofu_is_also_declared(self):
+        candidate = recipe(recipe_name="เต้าหู้แข็ง", adjusted_ingredients=["เต้าหู้แข็ง 100 กรัม", "เต้าหู้ 50 กรัม"],
+                           instructions=["Boil เต้าหู้แข็ง.", "Boil เต้าหู้."])
+        self.assertEqual(check_logic(candidate), (True, "OK"))
+        self.assertEqual(check_core(candidate, []), (True, "OK"))
 
     def test_chicken_egg_must_be_declared_and_generic_egg_must_be_unambiguous(self):
         missing = recipe(instructions=["ต้มไข่ให้สุก"])

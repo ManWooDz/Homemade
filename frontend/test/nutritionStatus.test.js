@@ -21,6 +21,19 @@ const { RecipeNutrition, RecipeContent, RecipeDetail, setLocale } = module.expor
 const macros = { basis: "per_serving", calories: 400, carbs_g: 50, protein_g: 20, fat_g: 0 };
 const render = recipe => renderToStaticMarkup(createElement(RecipeNutrition, { recipe }));
 
+test("protein target compares the saved engine result and hides incomplete subtotals", () => {
+    setLocale("en");
+    const target = { target_g_per_serving: 25, computed_g_per_serving: 26.7,
+        difference_g_per_serving: 1.7, status: "estimated" };
+    const html = render({ nutrition: macros, protein_target_result: target });
+    assert.match(html, /Protein target per serving: 25 g/);
+    assert.match(html, /Estimated protein: 26\.7 g/);
+    assert.match(html, /1\.7 g above target/);
+    const unknown = render({ nutrition: macros, protein_target_result: { ...target, status: "insufficient_data" } });
+    assert.match(unknown, /Not enough protein data to compare/);
+    assert.doesNotMatch(unknown, /26\.7 g|above target/);
+});
+
 test("product label evidence shows its basis, converted quantity, and generic fallback reason", () => {
     setLocale("en");
     const html = render({ nutrition: macros, computed_nutrition: { ...macros, protein_g: null }, nutrition_partially_estimated: true, nutrition_ingredient_evidence: [

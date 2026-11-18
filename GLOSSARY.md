@@ -48,6 +48,10 @@ _Avoid_: Original recipe with a fixed protein, unchanged base recipe
 An ingredient explicitly included in the generated recipe's ingredient list. Every ingredient used in the cooking instructions, including permitted pantry seasonings, must be declared; pantry permission does not make that declaration implicit.
 _Avoid_: Ingredient mentioned only in a step, implicit pantry addition
 
+**Selected Fridge Ingredient**:
+A specific item the account holder selects from My Fridge for a recipe. Items with the same ingredient name can represent different products.
+_Avoid_: Ingredient matched by name, fridge stock amount
+
 **Flavor Compatibility**:
 The suitability of ingredients for use together in a recipe. It concerns ingredient combinations rather than a guarantee of how much a particular person will enjoy the dish.
 _Avoid_: Guaranteed deliciousness, universal bad-flavor word pair
@@ -131,6 +135,14 @@ A statement that a particular allergen is absent from a particular ingredient. T
 _Avoid_: Allergen-free proof, recipe-wide exemption
 
 ## Nutrition Grounding
+
+**Per-Serving Nutrient Target**:
+A desired numerical amount of a nutrient for one serving of a recipe.
+_Avoid_: Whole-recipe nutrient total, ingredient amount
+
+**Product Label Nutrition**:
+Nutrient values for a specific packaged product, attributed to its packaging or manufacturer and tied to a stated reference quantity and unit.
+_Avoid_: Generic ingredient nutrition, estimated product composition
 
 **Nutrition Proxy**:
 A different food whose composition is used to approximate the composition of the requested ingredient.
