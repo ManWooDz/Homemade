@@ -1,5 +1,14 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## ทบทวน nutrition alias ที่เหลือ 36 ชื่อ (2026-11-18 Bangkok)
+
+- ผู้ใช้อนุมัติ backend/DB ของสิบชื่อแล้ว เพิ่มใน source manifest และ PostgreSQL สำเร็จ (2,059 → 2,069) ตรวจ snapshot/เจ้าของก่อนเขียน และ read-only session ใหม่หลัง commit ยืนยันทั้งสิบ mapping ถูกต้อง Alias เดิม 2,059 แถวและ nutrition rows ทุกแถวไม่เปลี่ยน fingerprint ยังคง `e4be07b28be6b3ac11afa4fba24b7307277ccbae3372cb5d7a5889646aca1a06` ไม่มี provider call จากตัวคำนวณหรือการแก้ History เก่า
+- ตรวจ manifest จริงผ่าน SQLite importer/lookup/calculator/idempotency และ negative controls เจ็ดชื่อ; importer regression 12/12 guard 0 สูตรตัวอย่างก่อน/หลัง commit ตรงกัน 196.5 kcal โปรตีน 7.5 g ต่อเสิร์ฟแบบ estimated หลักฐาน `tmp/nutrition-alias-batch2-manifest-20261118.json` และ `tmp/nutrition-alias-batch2-live-20261118.json` งานสิบชื่อนี้เสร็จตามร่างและส่ง Git ตามคำสั่งส่งมอบต่อเนื่อง
+- สถานะล่าสุด: English catalog match 55/55, ชื่อไทยหลักไม่มี alias 29/55 ประกอบด้วยเกลือที่มีค่าคงที่แล้ว 1 และอีก 28 ชื่อที่ต้องทบทวนชนิด/สภาพ/แบรนด์ รายละเอียดครบใน ledger ด้านล่าง งานถัดไปเป็น source review โดยเฉพาะชาชู→หมูดิบและราเมน→ซุปแห้ง ก่อนเสนอ backend/data change แยก ไม่เพิ่ม alias เพื่อปิดตัวเลขอย่างเดียว
+- ผู้ใช้ให้ทำต่อ ตรวจ PostgreSQL แบบ read-only (alias 2,059, nutrition fingerprint ตรงกับชุดก่อน) และ USDA 35 แถวผ่าน API สอง requests คำอธิบาย/สี่ macro ตรงกับฐานทั้งหมด แยกครบ 36 ชื่อหลักเป็นชุดพร้อมเสนอ 7 กลุ่ม/10 aliases, เกลือ 1 ชื่อที่ใช้ค่าคงที่อยู่แล้ว, และอีก 28 ชื่อที่ต้องทบทวนชนิด/สภาพ/แบรนด์หรือ proxy ไม่ขยาย alias ตาม English lookup อัตโนมัติ
+- ชุดเสนอ: ชีสเฟตา/เฟตาชีส น้ำมะนาว ถั่วลิสง กะหล่ำปลีม่วง หอมหัวใหญ่แดง/หอมหัวใหญ่สีแดง พริกหวานเหลือง/พริกหวานสีเหลือง และน้ำสลัดงา ตรวจ SQLite ด้วย importer/lookup/calculator จริงแล้วตรง row ID/source_ref ทั้งสิบ แถวสารอาหารไม่เปลี่ยน เรียกซ้ำไม่เพิ่มแถว และชื่อผิดชนิดเจ็ดชื่อไม่ match สูตรตัวอย่าง 196.5 kcal โปรตีน 7.5 g ต่อเสิร์ฟแบบ estimated ไม่มี LLM fallback
+- ร่าง/ledger ครบ 36 ชื่อและแผน manifest + PostgreSQL 2,059 → 2,069 อยู่ `docs/nutrition-alias-remaining-review-2026-11-18.md` หลักฐาน `tmp/nutrition-alias-remaining-review-20261118.json` กับ `tmp/nutrition-alias-batch2-sqlite-20261118.json` ยังไม่แก้ backend/DB ชุดใหม่ รออนุมัติ ส่วน source mismatch เช่นชาชู→หมูดิบและราเมน→ซุปแห้งต้องทบทวนแยก ไม่ถือว่าแก้แล้วจากการนับ aliases
+
 ## เพิ่ม nutrition alias ภาษาไทย 7 ชื่อ (2026-11-18 Bangkok)
 
 - หลังผู้ใช้อนุมัติ manifest และ PostgreSQL เพิ่มพริกไทยดำ ผักชี เคล/ผักเคล น้ำมันมะกอก ผักปวยเล้ง/ปวยเล้งใน `backend/nutrition/data/curated_aliases.json` และ insert เฉพาะ alias ใหม่ 7 แถวบนฐาน `homemade` แล้ว (2,052 → 2,059) ยืนยัน target/container เดิม ตรวจ source snapshot/เจ้าของใน transaction ก่อนเขียน และอ่านซ้ำด้วย read-only session ใหม่หลัง commit
