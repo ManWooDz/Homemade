@@ -8,11 +8,44 @@ from sqlalchemy.orm import Session
 from database.models import Base, IngredientNutrition, IngredientNutritionAlias
 from nutrition.calculator import compute_from_quantities, compute_quantities_nutrition, compute_recipe_nutrition
 from nutrition.lookup import MacroValues, NutritionMatch
+from nutrition.curated_aliases import apply_curated_aliases
 from nutrition.seed_usda import USDA_PROXY_NOTES
 from test_nutrition_evidence import synthetic_match
 
 
 class ComputeRecipeNutritionTests(unittest.TestCase):
+    def test_with_peel_cucumber_manifest_uses_one_source_for_names_and_portions_and_prefers_labels(self):
+        import json
+        from pathlib import Path
+        legacy = self._add("cucumber", "cucumber", calories=10, protein_g=.59, carbs_g=2.16, fat_g=.16)
+        legacy.source, legacy.source_ref = "USDA", "169225"
+        whole = self._add("cucumber, with peel, raw", "cucumber, with peel, raw", calories=15, protein_g=.65, carbs_g=3.63, fat_g=.11)
+        whole.source, whole.source_ref, whole.portion_grams = "USDA", "168409", {"ถ้วย": 104}
+        self.db.commit()
+        path = Path(__file__).resolve().parents[1] / "nutrition/data/curated_aliases.json"
+        entries = [entry for entry in json.loads(path.read_text(encoding="utf-8")) if entry["alias"] in {"cucumber", "แตงกวา"}]
+        self.assertEqual(len(entries), 2)
+        apply_curated_aliases(self.db, entries)
+        for name in ("cucumber", "แตงกวา"):
+            result = compute_recipe_nutrition(self.db, [name + " 100 กรัม"], [], 1, self.no_op_estimator)
+            self.assertEqual(result.nutrition["calories"], 15)
+            self.assertEqual(result.ingredient_evidence[0]["source_ref"], "168409")
+            self.assertEqual(result.protein_status, "estimated")
+        cup = compute_recipe_nutrition(self.db, ["แตงกวา 1 ถ้วย"], [], 1, self.no_op_estimator)
+        self.assertEqual(cup.nutrition["calories"], 15.6)
+        self.assertEqual(cup.ingredient_evidence[0]["converted_quantity"], {"amount": 104, "unit": "g"})
+        self.assertTrue(cup.partially_estimated)
+        count = compute_recipe_nutrition(self.db, ["แตงกวา 1 ลูก"], [], 1, self.no_op_estimator)
+        self.assertEqual(count.protein_status, "insufficient_data")
+        raw = "แตงกวา 100 กรัม"
+        label = {"barcode": "8859568700769", "product_name": "Synthetic cucumber fixture", "sets": [{
+            "label_source": "packaging", "carbohydrate_kind": "total", "basis": {"quantity": 100, "unit": "g"},
+            "macros": {"calories": 20, "protein_g": 1, "carbs_g": 3, "fat_g": 0}}]}
+        selected = compute_recipe_nutrition(self.db, [raw], [], 1, self.no_op_estimator, fridge_context={raw: (label, None)})
+        self.assertEqual(selected.nutrition["calories"], 20)
+        self.assertEqual(selected.ingredient_evidence[0]["source"], "product_label")
+        self.no_op_estimator.estimate.assert_not_called()
+
     def test_literal_chashu_name_resolves_quantity_without_losing_proxy_or_label_precedence(self):
         name = "pork belly (chashu)"
         row = self._add(name, name, calories=100, protein_g=10, carbs_g=12, fat_g=2)

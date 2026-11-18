@@ -1,5 +1,15 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Source review แตงกวา (2026-11-18 Bangkok)
+
+- ผู้ใช้อนุมัติค่าเริ่มต้นดิบมีเปลือกแล้ว เพิ่ม pinned source key/curated aliases พร้อม regression แล้ว PostgreSQL เพิ่ม row 1053/USDA 168409 แยกแถวเดิม, เพิ่ม source-key/Thai aliases สองแถว และ remap generic `cucumber` จาก 1005 → 1053 เท่านั้น Alias count 2,071 ชื่อไทยหลักขาด 28/55 (ยังรวมเกลือที่มี constant) English match 55/55
+- ก่อน/หลัง commit และ read-only session ใหม่ยืนยัน nutrition rows เก่าทุกคอลัมน์และ aliases เดิมนอก owner remap คงเดิม รวม peeled 1005/INMU252; fingerprint ใหม่ nutrition `fd36cc5fb0e73903b999e017f82e25aa465e99099ef53042bd707bcb60baba8e` / aliases `8e362ec6f7a6fe63b59d1630cc2acb4441e4bdd40c12875d93ded9a2cc4a50d7` 100 g ได้ 15 kcal/ถ้วย 104 g ได้ 15.6 แบบ estimated ฉลากมาก่อนและหน่วยลูกไร้ portion ยัง insufficient ไม่มี provider calls
+- Runtime สูตรตั้งต้นจากปริมาณเดิม Fresh Power Salad 186.6 → 189.1 kcal/เสิร์ฟ (+2.5), Greek Salad 368.6 → 371.6 (+3) เปลี่ยนตาม source cucumber ใหม่ ไม่แก้ stored recipe/History snapshots รายละเอียดและหลักฐาน `docs/cucumber-source-correction-2026-11-18.md`, `tmp/cucumber-source-live-20261118.json`
+- Source manifest/SQLite/importer repeat ผ่าน; scoped 88 tests และ backend offline ทั้งชุด 1,148 รายการ ผ่าน 1,146 ข้าม 2 guard 0 ใน 107.875s exit 0 (`tmp/cucumber-source-backend-final-20261118.log`) อัปเดต data contract ตาม raw-with-peel default แล้ว เตรียม commit/push สี่ไฟล์ backend/tests และ spec ตามร่าง งานแตงกวาชุดนี้เสร็จตามขอบเขต รายการ source review อื่นยังคงอยู่
+- ผู้ใช้ให้ทำต่อจาก source backlog ตรวจ INMU D34 และฐานจริงพบ calories/carbs ยัง null เว็บ primary INMU เข้าถึงไม่ได้ในรอบนี้ จึงไม่เติม/เลือกแถวไม่ครบแทนแถวเดิม ตรวจ USDA แตงกวาสาม records ผ่าน API พบ peeled 169225 เดิม, with-peel SR Legacy 168409 และ Foundation 2346406 ครบสี่ macro โดย SR Legacy มี portion ถ้วยจาก record เดียวกัน
+- ร่างเสนอให้ generic cucumber/แตงกวา หมายถึงน้ำหนักส่วนที่กินได้ของดิบมีเปลือกก่อนปรุง เพิ่ม pinned source key ใหม่ 168409 แยกแถวเดิม และ curated aliases สองชื่อ (English remap + Thai new) ตัวเลขส่วนแตงกวาเปลี่ยน 10 → 15 kcal/100 g แถวเก่า/INMUคงเดิม สูตรปัจจุบันที่ได้รับผลคือ Fresh Power Salad 50 g (+2.5 kcal ส่วนแตงกวา) กับ Greek Salad 60 g (+3 kcal)
+- SQLite preview ผ่าน importer/lookup/calculator/idempotency/seed-repeat และ label precedence แล้ว คง old rows ทุกคอลัมน์และฉลากมาก่อน ไม่มี provider/DB writes ร่างสี่ไฟล์ backend และ live new-row/alias plan 2,069 → 2,071 อยู่ `docs/cucumber-source-correction-2026-11-18.md` หลักฐาน `tmp/cucumber-source-sqlite-preview-20261118.json` ยังไม่แก้ backend/DB รออนุมัติสมมติฐานกับร่างนี้
+
 ## Parser ชื่อ canonical ที่มีวงเล็บ (2026-11-18 Bangkok)
 
 - หลังผู้ใช้อนุมัติ แก้ parser ให้ยกเว้นเฉพาะชื่อเต็ม `pork belly (chashu)` พร้อม quantity/unit โดยเทียบ casefold และเก็บ raw/name เดิม เพิ่ม regression parser/calculator/embeddings: Red ล้ม canonical 8 subcases + caller 2 cases ตามปัญหาเดิม จากนั้น Green 25/25, 50/50, 18/18 guard 0 คงหมายเหตุ/ปริมาณผิดรูปและ huge-number controls ไม่ให้ parser เดา

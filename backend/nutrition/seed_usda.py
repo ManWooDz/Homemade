@@ -31,6 +31,8 @@ USDA_FDC_IDS: dict[str, int] = {
     "kale": 168421, "quinoa": 168917, "avocado": 171706,
     "cherry tomatoes": 321360, "pumpkin seeds": 2515380,
     "spinach": 168462, "cucumber": 169225, "bell pepper": 170427,
+    # Retain the peeled legacy row; curated generic cucumber aliases use this separate source.
+    "cucumber, with peel, raw": 168409,
     "red onion": 790577, "feta cheese": 173420,
     "balsamic vinaigrette": 2102544, "purple cabbage": 2346408,
     "carrot": 170393, "edamame": 168411,

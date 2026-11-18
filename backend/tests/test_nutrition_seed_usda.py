@@ -1,4 +1,6 @@
 from copy import deepcopy
+import json
+from pathlib import Path
 import unittest
 from unittest.mock import MagicMock
 
@@ -8,7 +10,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from database.models import Base, IngredientNutrition, IngredientNutritionAlias
-from nutrition.seed_usda import backfill_portions, fetch_foods, import_usda
+from nutrition.seed_usda import USDA_FDC_IDS, backfill_portions, fetch_foods, import_usda
+from nutrition.curated_aliases import apply_curated_aliases
+from nutrition.lookup import match_ingredient
 
 _DETAIL_RESPONSE = {
     "fdcId": 12345, "description": "Shrimp, raw",
@@ -81,6 +85,45 @@ class ImportUsdaTests(unittest.TestCase):
 
     def tearDown(self):
         self.db.close()
+
+    def test_with_peel_source_and_manifest_preserve_legacy_row_and_reimported_alias(self):
+        name = "cucumber, with peel, raw"
+        self.assertEqual(USDA_FDC_IDS.get(name), 168409)
+        self.assertEqual(USDA_FDC_IDS["cucumber"], 169225)
+        path = Path(__file__).resolve().parents[1] / "nutrition/data/curated_aliases.json"
+        entries = [entry for entry in json.loads(path.read_text(encoding="utf-8")) if entry["alias"] in {"cucumber", "แตงกวา"}]
+        self.assertEqual({entry["alias"]: entry["food_code"] for entry in entries}, {"cucumber": "168409", "แตงกวา": "168409"})
+        legacy = IngredientNutrition(ingredient_name="cucumber", unit_basis="100g", calories=10,
+                                     protein_g=.59, carbs_g=2.16, fat_g=.16, source="USDA", source_ref="169225",
+                                     portion_grams={"ถ้วย": 133}, derivation={"usda_description": "Cucumber, peeled, raw"})
+        self.db.add(legacy)
+        self.db.flush()
+        self.db.add(IngredientNutritionAlias(alias="cucumber", ingredient_nutrition_id=legacy.id))
+        self.db.commit()
+        before = _snapshot(self.db)[0][0]
+        detail = {**deepcopy(_DETAIL_RESPONSE), "fdcId": 168409, "description": "Cucumber, with peel, raw",
+                  "foodPortions": [{"gramWeight": 104, "amount": 1, "modifier": "cup, slices"}]}
+        for entry in detail["foodNutrients"]:
+            entry["amount"] = {"Energy": 15, "Protein": .65, "Carbohydrate, by difference": 3.63,
+                               "Total lipid (fat)": .11}[entry["nutrient"]["name"]]
+        result = import_usda(self.db, _fake_session([detail]), "fake-key", {name: USDA_FDC_IDS[name]})
+        self.assertEqual(result["imported"], 1)
+        apply_curated_aliases(self.db, entries)
+        english = match_ingredient(self.db, "cucumber")
+        thai = match_ingredient(self.db, "แตงกวา")
+        self.assertEqual((english.source_ref, thai.source_ref), ("168409", "168409"))
+        self.assertEqual(english.ingredient_nutrition_id, thai.ingredient_nutrition_id)
+        self.assertNotEqual(english.ingredient_nutrition_id, legacy.id)
+        self.assertEqual(english.portion_grams, {"ถ้วย": 104})
+        self.assertEqual(_snapshot(self.db)[0][0], before)
+        all_rows = _snapshot(self.db)
+        session = _fake_session([])
+        result = import_usda(self.db, session, "fake-key", {"cucumber": 169225, name: 168409})
+        self.assertEqual(result, {"imported": 0, "refreshed": 0, "skipped_existing": 2})
+        self.assertEqual(_snapshot(self.db), all_rows)
+        session.get.assert_not_called()
+        apply_curated_aliases(self.db, entries)
+        self.assertEqual(_snapshot(self.db), all_rows)
 
     def _current_ramen(self, derivation):
         row = IngredientNutrition(ingredient_name="ramen noodles", unit_basis="100g", calories=85.0,

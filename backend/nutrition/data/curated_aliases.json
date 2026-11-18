@@ -24,6 +24,8 @@
   {"alias": "พริกหวานเหลือง", "food_code": "169383", "note": "USDA Peppers, sweet, yellow, raw -- yellow only, assumes weight before cooking"},
   {"alias": "พริกหวานสีเหลือง", "food_code": "169383", "note": "USDA Peppers, sweet, yellow, raw -- yellow only, assumes weight before cooking"},
   {"alias": "น้ำสลัดงา", "food_code": "171006", "note": "USDA Salad dressing, sesame seed dressing, regular -- generic composition; recipes and product labels can differ"},
+  {"alias": "cucumber", "food_code": "168409", "note": "USDA Cucumber, with peel, raw -- assumes edible input weight before cooking; peeled source is retained separately"},
+  {"alias": "แตงกวา", "food_code": "168409", "note": "USDA Cucumber, with peel, raw -- assumes edible input weight before cooking; peeled source is retained separately"},
   {"alias": "กะปิ", "food_code": "N43", "note": "กะปิกุ้ง, คุณภาพดี"},
   {"alias": "ไข่ไก่", "food_code": "H19", "note": "ไข่ไก่, ทั้งฟอง, ดิบ (2001-2010); portion ฟอง=50 g from a user-supplied standard home-cooking unit-conversion reference (not a USDA/INMU citation)", "portion_grams": {"ฟอง": 50.0}},
   {"alias": "ข้าวสวย", "food_code": "A11", "note": "ข้าวเจ้า, สุก -- cooked form is what this name means"},
