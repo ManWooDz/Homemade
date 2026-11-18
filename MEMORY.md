@@ -1,5 +1,10 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Bound live previews and filter candidates by every alias owner (2026-11-18):**
+- what happened: a read-only nutrition preview waited on the stopped PostgreSQL container without a connection timeout; the source-review precondition then caught an already-owned ต้นหอม alias in a manually selected candidate list before any API call or write.
+- root cause: database readiness and each candidate's actual alias-owner state were assumed from earlier session context rather than rechecked.
+- correct behavior: verify the named container is healthy, use a bounded process-only connection timeout, inspect every proposed alias owner, and retain existing owners before source API requests or write plans. Abort the candidate batch on an unexpected owner; never silently remap it.
+
 **Check reference-family additions against accepted dish contexts (2026-11-18):**
 - what happened: the process-only reference proposal passed its focused new cases, but the existing backend suite caught a rejection of Pork steak made with minced pork.
 - root cause: adding generic steak and masking pork steak imposed a meat-cut assumption on an existing dish-name rule.

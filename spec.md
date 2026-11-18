@@ -1,7 +1,17 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## เพิ่ม nutrition alias ภาษาไทย 7 ชื่อ (2026-11-18 Bangkok)
+
+- หลังผู้ใช้อนุมัติ manifest และ PostgreSQL เพิ่มพริกไทยดำ ผักชี เคล/ผักเคล น้ำมันมะกอก ผักปวยเล้ง/ปวยเล้งใน `backend/nutrition/data/curated_aliases.json` และ insert เฉพาะ alias ใหม่ 7 แถวบนฐาน `homemade` แล้ว (2,052 → 2,059) ยืนยัน target/container เดิม ตรวจ source snapshot/เจ้าของใน transaction ก่อนเขียน และอ่านซ้ำด้วย read-only session ใหม่หลัง commit
+- แถวสารอาหารทุกแถวและ alias เดิมทั้งหมดไม่เปลี่ยน ลายนิ้วมือ nutrition rows ก่อน/หลังตรงกัน `e4be07b28be6b3ac11afa4fba24b7307277ccbae3372cb5d7a5889646aca1a06`; lookup ทั้งเจ็ดตรง source_ref ที่อนุมัติ และชื่อควบคุมต่างชนิด/ต้นหอม INMU คงเดิม สูตรตัวอย่างก่อน commit และ session ใหม่ได้ 61.1 kcal โปรตีน 1.6 g ต่อเสิร์ฟแบบ estimated ไม่มี LLM fallback รายละเอียด `docs/nutrition-thai-alias-batch-2026-11-18.md` หลักฐาน `tmp/nutrition-thai-alias-live-20261118.json`
+- ตรวจ source manifest จริงด้วย SQLite/importer/lookup/calculator และ idempotency ผ่าน เทสต์ importer 12/12 guard 0 ชื่ออังกฤษยัง match 55/55 ชื่อไทยหลักที่ขาดลด 41 → 36 จาก 55 งานชุดนี้เสร็จตามขอบเขต เตรียม commit/push manifest และ notes ตามคำสั่งส่งงานแล้วทำรายการต่อ ไม่มี API contract/schema ใหม่
+- รายการที่เหลือยังต้องทบทวนชนิด/สภาพและ source เช่น อะโวคาโด พริกหวาน เนย แตงกวา ถั่วแระญี่ปุ่น โรสแมรี และรายการ proxy การมี English lookup ไม่ใช่สิทธิ์ให้เพิ่ม Thai alias อัตโนมัติ คงงานประเมิน/ชุดวัดและฟีเจอร์ใหม่ไว้นอก cleanup รอบนี้
+
 ## ส่งมอบเป้าโปรตีนและชื่ออ้างอิง (2026-11-18 Bangkok)
 
+- Commit และ push สำเร็จที่ `8511bcb678a209390a93674c3cfbc4aef88be506` (18 ไฟล์) ตรวจ `origin/main` ด้วย `ls-remote` SHA ตรงกับ HEAD เหลือไฟล์ presentation HTML สองไฟล์เดิมนอก commit จากนั้นเริ่ม review nutrition alias ตามรายการ cleanup ต่อแบบ read-only
+- งานถัดไปที่เตรียมแล้ว: ฐานจริงยังมี aliases 2,052 แถว ชื่อไทยหลักขาด 41/55 คัดได้ 7 ชื่อ/5 กลุ่ม (พริกไทยดำ ผักชี เคล/ผักเคล น้ำมันมะกอก ผักปวยเล้ง/ปวยเล้ง) ยืนยันคำอธิบายและ macro กับ USDA API หนึ่ง batch request แล้ว SQLite ผ่าน importer/lookup/calculator จริง แถวสารอาหารไม่เปลี่ยน ไม่มี LLM fallback คงต้นหอมที่ชี้ INMU เดิมและพักชนิดที่ยังไม่ตรง ร่าง backend manifest + insert เฉพาะ alias 7 แถวใน PostgreSQL อยู่ `docs/nutrition-thai-alias-batch-2026-11-18.md` ยังไม่แก้ backend/DB สำหรับชุดใหม่ รออนุมัติ
+- Importer regression ก่อนแก้ manifest ผ่าน 12/12 guard 0 แล้ว ส่งคำขออนุมัติ backend/DB สำหรับเจ็ดชื่อแยกตาม AGENTS.md; source ที่ push ไม่มี diff เพิ่ม มีเพียงบันทึกงานถัดไปใน spec/MEMORY กับไฟล์ presentation เดิมที่ยังอยู่นอก commit
 - ผู้ใช้สั่ง commit/push งานที่เสร็จแล้วและให้ทำรายการเดิมต่อ เตรียมส่ง source ของเป้าโปรตีนต่อเสิร์ฟ การเก็บผลใน History และชื่ออ้างอิงพร้อม regression ที่อนุมัติ รวม project notes ที่เกี่ยวข้อง คงไฟล์ presentation HTML สองไฟล์และเอกสารใน docs/tmp ตามนโยบาย local-only เดิม
 - ตรวจส่งมอบ: backend offline ล่าสุดผ่าน 1,133 ข้าม 2 guard 0; frontend เฉพาะจุด 27/27, scoped ESLint และ production build ใหม่ผ่าน มี bundle-size warning เดิม เป้าโปรตีนยังเป็น best effort พร้อมผลเปรียบเทียบ ไม่รับประกัน fixed target
 - หลังส่ง Git ให้ทบทวนชื่อไทยด้าน nutrition matching ที่ยังไม่ครอบคลุมจากรายการ cleanup เดิม เริ่มด้วย read-only/source review ของชนิดและสภาพอาหาร แยกจากชื่ออ้างอิงสูตรที่ปิดแล้ว ไม่มีการเพิ่ม evaluator/ชุดวัดหรือเปิดฟีเจอร์ใหม่ในขั้นนี้ การเขียน backend/DB รายการใหม่ต้องเสนอ mapping และหลักฐานก่อนตามกติกาเดิม
