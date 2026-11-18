@@ -11,6 +11,7 @@ _NUMERIC_COMMA_RE = re.compile(r"\d\s*,\s*\d")
 _BAD_AMOUNT_PREFIX_RE = re.compile(r"(?:[+\-−–/]\s*|\d[.,]\s*|(?:^|\s)\d+(?:\.\d+)?[eE][+\-]?\s*)$")
 _MASS_SUFFIXES = {"g": "กรัม", "kg": "กิโลกรัม", "mg": "มิลลิกรัม"}
 _VOLUME_SUFFIXES = {"ml": "มล.", "cl": "cl", "dl": "dl", "l": "ลิตร"}
+_LITERAL_PARENTHESIZED_NAMES = {"pork belly (chashu)"}
 _QUANTITY_UNIT_RE = re.compile(
     r"^(?P<name>.+?)\s+(?P<quantity>\d+/\d+|\d+(?:\.\d+)?)\s*(?P<unit>kg|mg|g|(?i:[mcd]?l)|[ก-๙\.]+)\s*$"
 )
@@ -43,8 +44,12 @@ def _parse_quantity_token(token: str) -> float | None:
 
 def parse_ingredient_string(raw: str) -> ParsedIngredient:
     text = raw.strip()
-    # shortcut: notes may change ingredient identity; parse them only after a reviewed note contract.
-    if "(" in text or ")" in text or _NUMERIC_COMMA_RE.search(text):
+    match = _QUANTITY_UNIT_RE.match(text)
+    # Notes still abstain; only a reviewed full ingredient name may contain parentheses.
+    has_unreviewed_parentheses = ("(" in text or ")" in text) and (
+        match is None or match.group("name").strip().casefold() not in _LITERAL_PARENTHESIZED_NAMES
+    )
+    if has_unreviewed_parentheses or _NUMERIC_COMMA_RE.search(text):
         return ParsedIngredient(raw, text, None, None, "unparsed")
     core_text = text
 
@@ -58,7 +63,6 @@ def parse_ingredient_string(raw: str) -> ParsedIngredient:
         name = match.group("name").strip(" ,()") if match else core_text
         return ParsedIngredient(raw=raw, name=name or core_text, quantity=None, unit=None, parse_status="unparsed")
 
-    match = _QUANTITY_UNIT_RE.match(core_text)
     if not match:
         return ParsedIngredient(raw=raw, name=core_text, quantity=None, unit=None, parse_status="unparsed")
 

@@ -13,6 +13,31 @@ from test_nutrition_evidence import synthetic_match
 
 
 class ComputeRecipeNutritionTests(unittest.TestCase):
+    def test_literal_chashu_name_resolves_quantity_without_losing_proxy_or_label_precedence(self):
+        name = "pork belly (chashu)"
+        row = self._add(name, name, calories=100, protein_g=10, carbs_g=12, fat_g=2)
+        row.source, row.source_ref = "USDA", "167812"
+        row.derivation = {"proxy": USDA_PROXY_NOTES[name]}
+        self.db.commit()
+        raw = name + " 60 กรัม"
+        generated = compute_recipe_nutrition(self.db, [raw], [], 1, self.no_op_estimator)
+        explicit = compute_quantities_nutrition(self.db, [{"name": name, "quantity_g": 60}], 1)
+        self.assertEqual(generated.nutrition, explicit.nutrition)
+        self.assertEqual(generated.ingredient_evidence[0]["reason"], "proxy_composition")
+        self.assertEqual(generated.protein_status, "estimated")
+        unknown = compute_recipe_nutrition(self.db, [name + " 1 ชิ้น"], [], 1, self.no_op_estimator)
+        self.assertEqual(unknown.protein_status, "insufficient_data")
+        self.assertEqual(unknown.ingredient_evidence[0]["reason"], "quantity_unresolved")
+        label = {"barcode": "8859568700769", "product_name": "Synthetic parser fixture", "sets": [{
+            "label_source": "packaging", "carbohydrate_kind": "total", "basis": {"quantity": 100, "unit": "g"},
+            "macros": {"calories": 200, "protein_g": 20, "carbs_g": 24, "fat_g": 4}}]}
+        selected = compute_recipe_nutrition(self.db, [raw], [], 1, self.no_op_estimator, fridge_context={raw: (label, None)})
+        self.assertEqual(selected.nutrition["calories"], 120)
+        self.assertEqual(selected.nutrition["protein_g"], 12)
+        self.assertEqual(selected.protein_status, "calculated")
+        self.assertEqual(selected.ingredient_evidence[0]["source"], "product_label")
+        self.no_op_estimator.estimate.assert_not_called()
+
     def test_chashu_ramen_proxy_reasons_preserve_totals_and_product_label_precedence(self):
         for name, source_ref in [("ramen noodles", "171177"), ("pork belly (chashu)", "167812")]:
             self.assertIn(name, USDA_PROXY_NOTES)

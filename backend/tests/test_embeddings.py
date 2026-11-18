@@ -20,6 +20,12 @@ def _response_for(*vectors):
 
 
 class EmbeddingTextBuilderTests(unittest.TestCase):
+    def test_history_document_retains_literal_parentheses_and_other_composition_notes(self):
+        note = "กะปิเจ (ทำจากถั่วเหลืองหรือธัญพืช) 1 ช้อนโต๊ะ"
+        document = build_history_document("Fixture", [
+            "pork belly (chashu) 60 กรัม", "pork belly (chashu) 100g", note], [])
+        self.assertEqual(document, f"Fixture | วัตถุดิบ: pork belly (chashu), {note}")
+
     def test_history_document_uses_parser_names_and_stable_deduplication(self):
         result = build_history_document(
             "Thai Basil Pork",

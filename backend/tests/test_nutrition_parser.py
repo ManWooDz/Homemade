@@ -4,6 +4,42 @@ from nutrition.parser import parse_ingredient_string
 
 
 class ParseIngredientStringTests(unittest.TestCase):
+    def test_reviewed_parenthesized_canonical_name_preserves_identity_and_raw(self):
+        for raw, name, quantity, unit in [
+            ("pork belly (chashu) 60 กรัม", "pork belly (chashu)", 60, "กรัม"),
+            ("pork belly (chashu) 60g", "pork belly (chashu)", 60, "กรัม"),
+            ("Pork Belly (Chashu) 0.06 kg", "Pork Belly (Chashu)", .06, "กิโลกรัม"),
+            ("  pork belly (chashu) 1/2 g  ", "pork belly (chashu)", .5, "กรัม"),
+            ("pork belly (chashu) 0g", "pork belly (chashu)", 0, "กรัม"),
+            ("pork belly (chashu) 1 ชิ้น", "pork belly (chashu)", 1, "ชิ้น"),
+            ("pork belly (chashu) 60000mg", "pork belly (chashu)", 60000, "มิลลิกรัม"),
+            ("pork belly (chashu) 0.06 กิโลกรัม", "pork belly (chashu)", .06, "กิโลกรัม"),
+        ]:
+            with self.subTest(raw=raw):
+                parsed = parse_ingredient_string(raw)
+                self.assertEqual((parsed.name, parsed.quantity, parsed.unit, parsed.parse_status), (name, quantity, unit, "ok"))
+                self.assertEqual(parsed.raw, raw)
+
+    def test_literal_name_exception_does_not_admit_notes_or_malformed_quantities(self):
+        huge = "9" * 400
+        for raw in [
+            "pork belly (chashu) 60g (cooked)", "pork belly (chashu, cooked) 60g",
+            "pork belly (chashu) (raw) 60g", "pork belly ((chashu)) 60g",
+            "pork belly (chashu 60g", "pork belly chashu) 60g", "pork belly (chashu)) 60g",
+            "shrimp (peeled) 200g", "กุ้ง 200 กรัม (แกะเปลือก)",
+            "กะปิเจ (ทำจากถั่วเหลืองหรือธัญพืช) 1 ช้อนโต๊ะ",
+            "pork belly (chashu) with sauce 60g", "prefix pork belly (chashu) 60g",
+            *[f"pork belly (chashu) {token}g" for token in
+              ("60-80", "1,000", "-60", "+60", "1 1/2", "1e3", "1/0", "1.5/2", huge, huge + "/2", "1/" + huge)],
+            "pork belly (chashu) 60G", "pork belly (chashu) 1 lb", "pork belly (chashu) 60 grams",
+            "pork belly (chashu) ตามชอบ", "pork belly (chashu)",
+        ]:
+            with self.subTest(raw=raw):
+                parsed = parse_ingredient_string(raw)
+                self.assertEqual((parsed.name, parsed.raw, parsed.parse_status), (raw.strip(), raw, "unparsed"))
+                self.assertIsNone(parsed.quantity)
+                self.assertIsNone(parsed.unit)
+
     def test_grams_with_space(self):
         result = parse_ingredient_string("กุ้ง 200 กรัม")
         self.assertEqual(result.name, "กุ้ง")

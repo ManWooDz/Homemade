@@ -1,5 +1,14 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Parser ชื่อ canonical ที่มีวงเล็บ (2026-11-18 Bangkok)
+
+- หลังผู้ใช้อนุมัติ แก้ parser ให้ยกเว้นเฉพาะชื่อเต็ม `pork belly (chashu)` พร้อม quantity/unit โดยเทียบ casefold และเก็บ raw/name เดิม เพิ่ม regression parser/calculator/embeddings: Red ล้ม canonical 8 subcases + caller 2 cases ตามปัญหาเดิม จากนั้น Green 25/25, 50/50, 18/18 guard 0 คงหมายเหตุ/ปริมาณผิดรูปและ huge-number controls ไม่ให้ parser เดา
+- Source probe จริงผ่าน และ PostgreSQL read-only ตรวจกรัม/กิโลกรัม/มิลลิกรัมเทียบ explicit helper ตรงกัน (60 g → 310.8 kcal/protein 5.6 g แบบ proxy/estimated) หน่วยนับไร้ portion ยัง insufficient ฉลากสังเคราะห์มาก่อน และ History document รักษาชื่อ/หมายเหตุ/การ dedup ไม่มี provider call/DB write/re-embedเก่า ข้อมูลสารอาหารและ alias fingerprint เท่าเดิม รายละเอียด `docs/canonical-parentheses-parser-2026-11-18.md` หลักฐาน `tmp/canonical-parentheses-live-20261118.json`
+- Backend offline ทั้งชุดหลังแก้ 1,146 รายการ ผ่าน 1,144 ข้าม 2 guard 0 ใน 97.549s exit 0 (`tmp/canonical-parser-backend-final-20261118.log`) อัปเดต semantics ของ literal exception ใน data contract แล้ว งาน parser รอบนี้เสร็จในขอบเขต canonical หนึ่งชื่อ เตรียมส่งมอบสี่ไฟล์ backend/tests และ spec ผ่าน commit/push; ข้อมูลต้นทางที่ยังเป็น proxy กับชื่อวงเล็บอื่นยังต้อง review แยก
+- ผู้ใช้ให้ทำต่อ ตรวจ root cause พบ guard ปฏิเสธวงเล็บทั้งหมดทำให้ canonical `pork belly (chashu)` อ่านจำนวนไม่ได้ เสนอ literal exception เฉพาะชื่อเต็มนี้เมื่อ quantity/unit ชัดเจน เก็บวงเล็บ/name/raw เดิม และคง abstain สำหรับหมายเหตุอื่น ไม่ลบข้อความที่เปลี่ยน identity
+- ทดลองใน tmp/process เท่านั้น canonical 8 รูปแบบผ่าน, negative 25 กรณียังคง unparsed, legacy parser 23/23 กับ embeddings 17/17 guard 0; SQLite calculator เทียบ explicit quantity ตรงกันและยัง proxy/estimated หน่วยนับไม่มี portion ยัง insufficient ฉลากมาก่อน และ History document รักษาชื่อเต็ม/หมายเหตุ ไม่เรียก LLM/embedding หรือเขียน DB
+- ร่าง `docs/canonical-parentheses-parser-2026-11-18.md` ครอบคลุม parser กับ tests parser/calculator/embeddings รวมสี่ไฟล์ backend หลักฐาน `tmp/canonical-parentheses-preview-20261118.json` ยังไม่แก้ source backend รออนุมัติ การแก้รอบนี้ไม่ใช่ source replacement หรือการเปิดรองรับวงเล็บทั่วไป
+
 ## Source review ชาชู/ราเมน (2026-11-18 Bangkok)
 
 - หลังอนุมัติ เพิ่มสอง proxy notes และ staged metadata-only backfill ใน `seed_usda.py` แล้ว คง current-row counters, note เดิม, reviewed/malformed metadata และรอ validation ทั้ง batch ก่อนเขียน เทสต์ Red จาก missing flags แล้ว Green seed/importer 24/24 และ calculator 49/49 guard 0; source-based SQLite proof ผ่านพร้อม label precedence
