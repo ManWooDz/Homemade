@@ -150,7 +150,7 @@ _add(
 
 # ---- egg ----------------------------------------------------------------
 _add(
-    ["มายองเนส", "ไมโยเนส", "mayonnaise", "meringue", "เมอแรงก์"],
+    ["มายองเนส", "ไมโยเนส", "mayonnaise", "mayo", "meringue", "เมอแรงก์"],
     "allergen:egg",
     f"{GTK} (mayonnaise and meringue are made from egg)",
 )
@@ -211,7 +211,7 @@ _add(
     f"{GTK} (wheat noodles, pasta, bread and crackers are wheat-flour products; gluten-free variants not modeled)",
 )
 _add(
-    ["ซีอิ๊ว", "ซอสถั่วเหลือง", "ซอสปรุงรส", "เบชาเมล", "เบซาเมล", "bechamel"],
+    ["ซีอิ๊ว", "ซีอิ้ว", "ซอสถั่วเหลือง", "ซอสปรุงรส", "เบชาเมล", "เบซาเมล", "bechamel"],
     "แป้งสาลี",
     f"{GTK} (conventional brewed soy sauce and seasoning sauce use wheat; béchamel is a wheat-flour roux; tamari/gluten-free soy sauce not modeled)",
 )
@@ -221,7 +221,7 @@ _add(["malt extract"], "barley", f"{GTK} (malt extract is made from barley)")
 
 # ---- soy ----------------------------------------------------------------
 _add(
-    ["เต้าเจี้ยว", "มิโซะ", "miso", "เทมเป้", "tempeh", "นัตโตะ", "natto", "เอดามาเมะ", "edamame", "ฮอยซิน", "hoisin", "ซอสปรุงรส"],
+    ["เต้าเจี้ยว", "มิโซะ", "miso", "เทมเป้", "tempeh", "นัตโตะ", "natto", "เอดามาเมะ", "ถั่วแระญี่ปุ่น", "edamame", "ฮอยซิน", "hoisin", "ซอสปรุงรส"],
     "ถั่วเหลือง",
     f"{GTK} (fermented soybean pastes, tempeh, natto, edamame, hoisin and seasoning sauce are soybean products)",
 )

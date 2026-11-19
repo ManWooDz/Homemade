@@ -22,6 +22,14 @@ def shrimp_with(extra_terms):
 
 
 class FindViolationTests(unittest.TestCase):
+    def test_food_aliases_preserve_floor_blocks_and_thai_compound_boundaries(self):
+        for name, key in (("feta", "milk"), ("shrimps", "shrimp"), ("prawns", "shrimp"), ("ซีอิ้ว", "soy")):
+            with self.subTest(name=name):
+                self.assertIsNotNone(find_allergy_violation(recipe(name), {}, {key: floor_only(key, "empty")}))
+        milk = {"milk": floor_only("milk", "empty")}
+        self.assertIsNone(find_allergy_violation(recipe("น้ำมันมะกอก 100 g"), {}, milk))
+        self.assertIsNotNone(find_allergy_violation(recipe("น้ำมันมะกอกผสมนมผง 100 g"), {}, milk))
+
     def test_two_hop_kg_match_reports_path(self):
         blocks = shrimp_with({
             "alpha": TermInfo("kg", ("alpha",)),

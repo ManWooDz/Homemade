@@ -17,12 +17,12 @@ ALLERGEN_MAP = {
                   # (2026-09-19). It stays as part of the floor; derived
                   # ingredients in general are now covered by the allergen
                   # Knowledge Graph (allergen_kg/graph.py) when it is seeded.
-                  "blocks":   ["shrimp", "prawn", "กุ้ง", "กะปิ"]},
+                  "blocks":   ["shrimp", "shrimps", "prawn", "prawns", "กุ้ง", "กะปิ"]},
     "peanut":    {"triggers": ["peanut", "peanuts", "ถั่วลิสง", "ถั่ว"],
                   "blocks":   ["peanut", "peanuts", "ถั่วลิสง", "เนยถั่ว"]},
     "milk":      {"triggers": ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม",
                                "แลคโตส", "แล็กโทส", "lactose", "โยเกิร์ต", "yogurt", "whey"],
-                  "blocks":   ["milk", "dairy", "cream", "butter", "cheese", "ชีส", "นม", "เนย", "ครีม"]},
+                  "blocks":   ["milk", "dairy", "cream", "butter", "cheese", "feta", "ชีส", "นม", "เนย", "ครีม"]},
     "egg":       {"triggers": ["egg", "eggs", "ไข่"],
                   "blocks":   ["egg", "eggs", "ไข่"]},
     "gluten":    {"triggers": ["wheat", "flour", "gluten", "แป้งสาลี", "แป้ง",
@@ -41,7 +41,7 @@ ALLERGEN_MAP = {
     # blocked for a user who only said "แพ้ถั่ว" (peanut allergy) -- found
     # and verified 2026-09-19 via the expanded eval fixtures.
     "soy":       {"triggers": ["soy", "ถั่วเหลือง", "เต้าหู้", "ซีอิ๊ว", "เต้าเจี้ยว", "tofu", "soya", "edamame"],
-                  "blocks":   ["soy sauce", "soy", "tofu", "เต้าหู้", "ถั่วเหลือง", "ซีอิ๊ว", "ซอสถั่วเหลือง"]},
+                  "blocks":   ["soy sauce", "soy", "tofu", "เต้าหู้", "ถั่วเหลือง", "ซีอิ๊ว", "ซีอิ้ว", "ซอสถั่วเหลือง"]},
     "nut":       {"triggers": ["almond", "cashew", "walnut", "hazelnut", "อัลมอนด์", "มะม่วงหิมพานต์",
                                 "พิสตาชิโอ", "pistachio", "แมคคาเดเมีย", "macadamia", "พีแคน", "pecan",
                                 "วอลนัท", "เฮเซลนัท", "เกาลัด", "เม็ดมะม่วง", "ถั่วเปลือกแข็ง", "tree nut"],
@@ -75,7 +75,7 @@ ALLERGEN_LABELS = {
 # regressions if new collisions appear, rather than guessing a Thai tokenizer.
 UNRELATED_COMPOUNDS = {
     "fish": ("ปลาหมึก",),
-    "milk": ("ขนม", "แหนม"),
+    "milk": ("ขนม", "แหนม", "น้ำมันมะกอก"),
     "egg": ("ไข่มดแดง", "ไข่ปลา"),
     "gluten": ("แป้งข้าวเจ้า", "แป้งข้าวเหนียว", "แป้งข้าวโพด", "แป้งมันสำปะหลัง", "แป้งมัน"),
     "peanut": ("ถั่วเหลือง", "ถั่วเปลือกแข็ง"),
@@ -86,9 +86,9 @@ UNRELATED_COMPOUNDS = {
 DERIVED_FLOOR_TERMS = {
     "shrimp": ("กะปิ",),
     "peanut": ("เนยถั่ว",),
-    "milk": ("dairy", "cream", "butter", "cheese", "ชีส", "เนย", "ครีม"),
+    "milk": ("dairy", "cream", "butter", "cheese", "feta", "ชีส", "เนย", "ครีม"),
     "fish": ("น้ำปลา", "fish sauce", "ปลาร้า"),
-    "soy": ("soy sauce", "tofu", "เต้าหู้", "ซีอิ๊ว", "ซอสถั่วเหลือง"),
+    "soy": ("soy sauce", "tofu", "เต้าหู้", "ซีอิ๊ว", "ซีอิ้ว", "ซอสถั่วเหลือง"),
     "sesame": ("น้ำมันงา", "sesame oil", "ซอสงา", "sesame sauce", "ทาฮินี", "tahini"),
 }
 

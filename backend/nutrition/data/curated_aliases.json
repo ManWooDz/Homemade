@@ -33,5 +33,22 @@
   {"alias": "น้ำปลา", "food_code": "N72", "note": "น้ำปลา, เกรด1, ต่อ 100 มล. -- exact prompt staple word"},
   {"alias": "ซีอิ๊ว", "food_code": "N134", "note": "ซีอิ๊วขาว, สูตร 1 -- exact prompt staple word"},
   {"alias": "น้ำมัน", "food_code": "K41", "note": "น้ำมันถั่วเหลือง (generic vegetable-oil proxy, documented approximation) -- exact prompt staple word"},
-  {"alias": "น้ำตาล", "food_code": "746784", "note": "USDA Sugars, granulated (fdcId 746784) -- exact prompt staple word; portion ช้อนโต๊ะ=15 g (granulated sugar) from a user-supplied standard home-cooking unit-conversion reference (not a USDA/INMU citation)", "portion_grams": {"ช้อนโต๊ะ": 15.0}}
+  {"alias": "น้ำตาล", "food_code": "746784", "note": "USDA Sugars, granulated (fdcId 746784) -- exact prompt staple word; portion ช้อนโต๊ะ=15 g (granulated sugar) from a user-supplied standard home-cooking unit-conversion reference (not a USDA/INMU citation)", "portion_grams": {"ช้อนโต๊ะ": 15.0}},
+  {"alias": "carrots", "food_code": "170393", "note": "Exact name variant of existing carrot; source and preparation limits unchanged"},
+  {"alias": "coriander leaves", "food_code": "169997", "note": "Exact name variant of existing cilantro; source and preparation limits unchanged"},
+  {"alias": "ใบผักชี", "food_code": "169997", "note": "Exact name variant of existing cilantro; source and preparation limits unchanged"},
+  {"alias": "cucumbers", "food_code": "168409", "note": "Exact name variant of existing cucumber; source and preparation limits unchanged"},
+  {"alias": "feta", "food_code": "173420", "note": "Exact name variant of existing feta cheese; source and preparation limits unchanged"},
+  {"alias": "ground pork", "food_code": "2514745", "note": "Exact name variant of existing minced pork; source and preparation limits unchanged"},
+  {"alias": "pork mince", "food_code": "2514745", "note": "Exact name variant of existing minced pork; source and preparation limits unchanged"},
+  {"alias": "peanut", "food_code": "2515376", "note": "Exact name variant of existing peanuts; source and preparation limits unchanged"},
+  {"alias": "red cabbage", "food_code": "2346408", "note": "Exact name variant of existing purple cabbage; source and preparation limits unchanged"},
+  {"alias": "red onions", "food_code": "790577", "note": "Exact name variant of existing red onion; source and preparation limits unchanged"},
+  {"alias": "ซีอิ้ว", "food_code": "N134", "note": "Exact name variant of existing soy sauce; source and preparation limits unchanged"},
+  {"alias": "yellow bell peppers", "food_code": "169383", "note": "Exact name variant of existing yellow bell pepper; source and preparation limits unchanged"},
+  {"alias": "chicken egg", "food_code": "H19", "note": "Exact name variant of existing ไข่ไก่; source and preparation limits unchanged"},
+  {"alias": "chicken eggs", "food_code": "H19", "note": "Exact name variant of existing ไข่ไก่; source and preparation limits unchanged"},
+  {"alias": "firm tofu", "food_code": "172475", "note": "Exact name variant of existing เต้าหู้แข็ง; source and preparation limits unchanged"},
+  {"alias": "potatoes", "food_code": "B11", "note": "Exact name variant of existing มันฝรั่ง; source and preparation limits unchanged"},
+  {"alias": "mayo", "food_code": "K14", "note": "Exact name variant of existing มายองเนส; source and preparation limits unchanged"}
 ]

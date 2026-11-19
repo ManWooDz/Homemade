@@ -43,6 +43,8 @@ def instruction_registry(ingredients):
 
 def _label(name):
     from recipe_checks import CATALOG_ALIASES, _EXTRA_ALIASES
+    if re.search(r"[ก-๙]", name):
+        return name
     return (CATALOG_ALIASES.get(name) or _EXTRA_ALIASES.get(name) or (name,))[0]
 
 

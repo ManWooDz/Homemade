@@ -1,5 +1,18 @@
 # Homemade — สร้างสูตรอาหารไทยจากวัตถุดิบในตู้เย็น ที่ grounded และตรวจสอบได้
 
+## Alias inventory / brainstorm รวมรอบเดียว (2026-11-19 Bangkok)
+
+- ผู้ใช้อนุมัติและลงชุดชื่อความหมายชัดแล้ว เพิ่มชื่อที่ใช้แทนกันในรายการสูตร 50 ชื่อ และเพิ่ม 17 nutrition aliases ใน manifest และ PostgreSQL `homemade` จาก 2,071 → 2,088 แถว พร้อมเพิ่ม allergen graph 6 nodes / 7 edges และแก้คำ `นม` ที่ซ้อนใน `น้ำมันมะกอก` เฉพาะตำแหน่งนั้น
+- เปิด read-only session หลัง commit DB ยืนยัน nutrition rows 1,053 แถวและทุกค่าเดิม, aliases/graph เดิมครบ ผล lookup และผลคำนวณ/สถานะตรงกับชื่อเดิมทั้ง 17 คู่ ตรวจแพ้อาหาร 9 กรณีผ่าน ไม่มี provider calls; `ซีอิ้ว` หา N134 ต่อ 100 mL ได้เหมือน `ซีอิ๊ว` และมีปริมาณที่ยังคำนวณไม่ได้ตามเส้นทางทั่วไปเดิม ผล PostgreSQL `tmp/alias-batch-live-20261119.json` nutrition hash `fd36cc5fb0e73903b999e017f82e25aa465e99099ef53042bd707bcb60baba8e` alias hash `c99b36fe5b5b4cf615431fe49aabd7e7807a0b9193b7ae22673d8ef3962711a2`
+- ชุดเต็มรอบแรกกับไฟล์จริงพบ test B11 ยังนับสองชื่อ เพิ่ม regression ให้ตรวจ `มันฝรั่ง`, `potato`, `potatoes` พร้อมกันแล้วรักษา `assumed_raw_potato_weight` และค่าต่อเสิร์ฟของทั้งสามชื่อ ชุดโภชนาการ 51/51 ผ่าน และ backend offline จากไฟล์จริงทั้งหมด 1,149 รายการ ผ่าน 1,147 ข้าม 2 guard 0 ใน 125.182s exit 0 (`tmp/alias-batch-source-final-20261119.log`)
+- ผู้ใช้ให้เดินหน้าชื่อที่ความหมายชัด และให้รวบรวมชื่อกว้างมายืนยันก่อนเลือกค่าเริ่มต้น สรุป 27 กลุ่มใน catalog พร้อมกลุ่มชื่อเนื้อ/คำอ้างอิงและ 7 คู่แหล่งต่างกันไว้ใน `docs/alias-defaults-to-confirm-2026-11-19.md`
+- รายชื่อทั้งหมด เหตุผลที่พักรูปสะกดบางชื่อ และบันทึกการตรวจร่างอยู่ใน `docs/alias-exact-batch-plan-2026-11-19.md` คงชื่อไทยในขั้นตอนทำอาหาร และเกณฑ์ snapshot ของ prompt ตรวจข้อความเดิมหลังแยกเฉพาะคำที่เพิ่มตามร่าง
+- ผู้ใช้ขอทบทวนชื่อให้ครอบคลุมก่อนเพิ่มอีก จัดทำบัญชี catalog 55 กลุ่ม + 7 กลุ่มที่โค้ดอ้างถึงนอก catalog และ candidate เพิ่มเติม 49 ชื่อใน `docs/alias-comprehensive-review-2026-11-19.md` รายชื่อยังเป็นข้อเสนอ ไม่ใช่ backend/DB approval
+- อ่าน PostgreSQL เดิมแบบ READ ONLY: nutrition 1,053 rows / aliases 2,071; English 55/55; ชื่อไทยหลักขาด 28 (รวมเกลือ constant) แต่ถ้านับชื่อไทยสะกดอื่นใน catalog ขาด 41 ชื่อ มี source/type/state ค้าง 27 กลุ่ม และชื่อไทย/อังกฤษมี nutrition owner ต่างกัน 7 กลุ่ม ห้ามเลือก English owner อัตโนมัติหรือสรุปทุกความต่างเป็น bug
+- Replay detector ปัจจุบันกับชื่อเดี่ยวและ graph ทั้ง 10 หมวดสถานะ ok พบความต่างเดิม edamame/ถั่วแระญี่ปุ่น, olive oil/น้ำมันมะกอก, ramen noodles/เส้นราเมน และ chili paste/น้ำพริกเผา; ชื่อเสนอ feta, shrimps, prawns, ซีอิ้ว และ mayo ยังไม่ตรวจแพ้เท่าชื่อเดิม ต้องทบทวนคำ/ส่วนผสมและ false positives ก่อนเพิ่ม admission ไม่ใช่ผลประเมินความปลอดภัยหรือ benchmark
+- หลักฐาน `tmp/alias-comprehensive-audit-20261118.py` / `.json` มี owners, source refs, recipe identities, allergen terms/paths และเวลา UTC ไม่มี provider calls หรือ DB writes ยังไม่แก้ backend/manifest หรือทดสอบ candidate ทั้งสูตร; ไม่รัน offline suite ซ้ำเมื่อไม่มี source change
+- ขั้นถัดไปรอผู้ใช้เลือกชนิด/สภาพของชื่อกว้างจากบัญชีรวม หากจะกำหนดค่าเริ่มต้นเพิ่มเติม คง default แตงกวาที่อนุมัติแล้ว
+
 ## Source review แตงกวา (2026-11-18 Bangkok)
 
 - ผู้ใช้อนุมัติค่าเริ่มต้นดิบมีเปลือกแล้ว เพิ่ม pinned source key/curated aliases พร้อม regression แล้ว PostgreSQL เพิ่ม row 1053/USDA 168409 แยกแถวเดิม, เพิ่ม source-key/Thai aliases สองแถว และ remap generic `cucumber` จาก 1005 → 1053 เท่านั้น Alias count 2,071 ชื่อไทยหลักขาด 28/55 (ยังรวมเกลือที่มี constant) English match 55/55

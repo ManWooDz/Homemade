@@ -1,5 +1,15 @@
 # MEMORY — สิ่งที่พลาดมาแล้ว ห้ามพลาดซ้ำ
 
+**Check the callers of ingredient alias maps before promoting reference names (2026-11-19):**
+- what happened: the first in-memory alias draft passed focused validation but the offline suite found Thai chicken-egg instructions rendering in English, a curvature apostrophe rejected in generated ingredient lines, and changed prompt bytes.
+- root cause: recipe identity maps also feed Thai display, generated text validation, and generation guidance; the focused validation did not cover those callers.
+- correct behavior: trace every consumer of the alias maps. Preview identity, rendered Thai, generated text grammar, and the prompt before modifying source. Keep the prompt snapshot strict by removing only the reviewed wording in the assertion and leave incompatible spellings pending.
+
+**Read the proposed manifest in alias previews (2026-11-19):**
+- what happened: the in-memory preview passed while the full suite against source caught the B11 alias count regression. The expanded check also caught that `potatoes` omitted the raw-weight assumption shown for `potato`.
+- root cause: the preview fed proposed entries to the importer but left file-backed tests on the original manifest, and the calculator has a named exception for this source.
+- correct behavior: run file-backed manifest tests against the proposed manifest before review. Check nutrition amounts, status, and reason parity against the old alias, including source-specific exceptions, before the DB transaction.
+
 **Keep canonical seed quantities separate from free-text parser assumptions (2026-11-18):**
 - what happened: the first chashu source-preview assertion failed because `pork belly (chashu) 60 กรัม` is unparsed by the current free-text grammar, before the intended metadata comparison.
 - root cause: treated a canonical seed name with parentheses as a supported generated ingredient line instead of using the explicit quantities already stored for the base recipe.

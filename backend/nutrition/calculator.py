@@ -141,7 +141,7 @@ def compute_recipe_nutrition(db, adjusted_ingredients, instructions, servings, l
                            if not reason.startswith("nutrition evidence portion"))
             derivation = match.derivation if isinstance(match.derivation, dict) else {}
             generic_potato = (match.source == "INMU" and match.source_ref == "B11"
-                              and normalize_alias(item.name) in {"มันฝรั่ง", "potato"})
+                              and normalize_alias(item.name) in {"มันฝรั่ง", "potato", "potatoes"})
             if generic_potato:
                 reasons.append(f"assumed raw weight for potato: {item.name}")
             if "proxy" in derivation:

@@ -153,6 +153,11 @@ class PersonalizationGenerationPromptTests(unittest.TestCase):
             '"instructions": [{"action": "mix", "ingredients": ["i1"], "excluded": []}]',
             '"instructions": ["1. ขั้นตอนแรก (IN THAI)...", "2. ขั้นตอนต่อไป (IN THAI)..."]',
         ).replace(time_example, "")
+        # Strip exactly the reviewed additions to the selected ingredient and pantry.
+        for name, added in (("minced pork / หมูสับ / เนื้อหมูบด", " / ground pork / pork mince"),
+                            ("soy sauce / ซีอิ๊ว / ซอสถั่วเหลือง", " / ซีอิ้ว")):
+            self.assertEqual(legacy.count(name + added), 1)
+            legacy = legacy.replace(name + added, name)
         self.assertNotEqual(prompt, legacy)
         digest = hashlib.sha256(legacy.encode("utf-8")).hexdigest()
         self.assertEqual(
